@@ -7,7 +7,7 @@
 // Editor rules for the layout view: where each feature sits on the module and
 // how a placement, swap or removal changes the six-byte entries. Every result
 // goes through normalise(), so the validator stays the final gate.
-import { normalise, initialEntry } from './profile.js?v=33ce6c8faf3c37bc';
+import { normalise, initialEntry } from './profile.js?v=16766575c2758e9e';
 
 export const KNOBS = ['FEEDBACK', 'DRY/WET', 'REVERB'];
 // Entry byte for each kind of destination, and how many there are.
@@ -100,10 +100,10 @@ export function place(entries, profile, id, kind, slot, mode = 'replace') {
   if (own[index] === slot) return normalise(next, profile);
   const taken = occupant(next, kind, slot);
   if (taken && mode === 'swap' && own[index]) {
-    taken[index] = 0;
-    const from = own[index];
-    next = edit(next, profile, f, index, slot);
-    return edit(next, profile, feature(profile, taken[0]), index, from);
+    // Both already fit this kind; change the two slots together.
+    taken[index] = own[index];
+    own[index] = slot;
+    return normalise(next, profile);
   }
   if (taken) next = unplace(next, profile, taken[0], kind);
   const e = entryOf(next, f);

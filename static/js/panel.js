@@ -7,7 +7,7 @@
 // The upper Beads panel, drawn with the printable guide's geometry
 // (Mutable Instruments Beads panel file, geometry only, CC BY-SA 3.0), with
 // the controls of one destination highlighted.
-import { pageOf, KNOBS } from './layout.js?v=33ce6c8faf3c37bc';
+import { pageOf, KNOBS } from './layout.js?v=16766575c2758e9e';
 
 const SVG = 'http://www.w3.org/2000/svg';
 // Guide coordinates, shifted so the labels fit.

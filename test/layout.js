@@ -107,6 +107,11 @@ assert.deepEqual(entryOf(unplace(drizzlet, profile, 14, 'action'), features[13])
 const manual = edit(edit(drizzlet, profile, features[8], 2, 1), profile, features[8], 1, 1);
 assert.deepEqual(entryOf(manual, features[8]), [9, 1, 1, 0, 0, 3]);
 assert.deepEqual(entryOf(unplace(manual, profile, 9, 'action'), features[8]), [9, 0, 0, 0, 0, 0]);
+// Swapping gestures with Fixed Manual Synth start keeps both valid.
+const swapped = place(manual, profile, 13, 'action', 3, 'swap');
+assert.deepEqual(entryOf(swapped, features[8]), [9, 1, 1, 0, 0, 1]);
+assert.equal(entryOf(swapped, features[12])[5], 3);
+assert.deepEqual(entryOf(place(manual, profile, 9, 'action', 2, 'swap'), features[13]), [14, 1, 1, 0, 0, 3]);
 // A Fixed stateless setting keeps Fixed when its gesture moves.
 assert.deepEqual(entryOf(place(drizzlet, profile, 14, 'action', 1, 'swap'), features[13]), [14, 1, 1, 0, 0, 1]);
 assert.equal(entryOf(place(drizzlet, profile, 14, 'action', 1, 'swap'), features[12])[5], 2);

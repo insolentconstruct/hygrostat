@@ -341,7 +341,15 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     await phonePage.keyboard.press('ArrowDown');
     assert.equal(await phonePage.evaluate(() => document.activeElement.id), 'cell-10');
     assert(await phonePage.isVisible('#cell-10'));
-    for (const id of ['cell-10', 'tab-1', 'build', 'browse']) {
+    // A swap from the inspector shows the destination's page and focuses it.
+    await phonePage.click('#tab-1');
+    await phonePage.click('#cell-1');
+    await phonePage.selectOption('#where-page', '5');
+    await phonePage.click('#confirm-swap');
+    await phonePage.waitForFunction(() => document.activeElement?.id === 'cell-5');
+    assert.equal(await phonePage.getAttribute('#tab-2', 'aria-selected'), 'true');
+    assert(await phonePage.isVisible('#cell-5'));
+    for (const id of ['cell-5', 'tab-1', 'build', 'browse']) {
       const box = await phonePage.locator('#' + id).boundingBox();
       assert(box.height >= 44, `${id} is a 44 px target`);
     }
