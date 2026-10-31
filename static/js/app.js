@@ -8,13 +8,13 @@
 // check the release's app image against the manifest, encode the update .wav
 // in the browser, check the .wav, offer it for download.
 
-import { defaults, decodeProfile, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, cpuUsage, featureDelta, modes, normalise } from './profile.js?v=16766575c2758e9e';
-import { guide } from './guide.js?v=16766575c2758e9e';
-import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=16766575c2758e9e';
-import { featureHelp, actionHelp } from './help.js?v=16766575c2758e9e';
+import { defaults, decodeProfile, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, cpuUsage, featureDelta, modes, normalise } from './profile.js?v=8abf8482d8b410ba';
+import { guide } from './guide.js?v=8abf8482d8b410ba';
+import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=8abf8482d8b410ba';
+import { featureHelp, actionHelp } from './help.js?v=8abf8482d8b410ba';
 import { KNOBS, KINDS, GROUPS, ACTION_DOES, placeName, pageOf, entryOf, occupant, places, valueLabel, stateLabel,
-  summary, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, fits } from './layout.js?v=16766575c2758e9e';
-import { drawPanel, highlight } from './panel.js?v=16766575c2758e9e';
+  summary, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, fits } from './layout.js?v=8abf8482d8b410ba';
+import { drawPanel, highlight } from './panel.js?v=8abf8482d8b410ba';
 
 const $ = (id) => document.getElementById(id);
 const cap = (text) => text.replace(/^./, (c) => c.toUpperCase());
@@ -37,7 +37,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=16766575c2758e9e', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=8abf8482d8b410ba', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.ready) return;
       if (data.progress !== undefined) {
@@ -645,8 +645,12 @@ function focusSelection() {
   target?.focus();
 }
 
+// A new selection shows its page on phones; a tab chosen by hand stays.
+let shown = '';
 function render() {
-  if (selection.kind === 'page') pageTab = pageOf(selection.slot);
+  const key = JSON.stringify(selection);
+  if (key !== shown && selection.kind === 'page') pageTab = pageOf(selection.slot);
+  shown = key;
   const focused = document.activeElement?.id;
   renderPresets(); renderGrid(); renderSlots(); renderExtras(); renderInspector();
   if (focused && document.activeElement === document.body) $(focused)?.focus({ preventScroll: true });
@@ -710,7 +714,7 @@ async function checkCapabilities() {
   }
   // A constructor alone does not establish support for module workers.
   await new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=16766575c2758e9e', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=8abf8482d8b410ba', { type: 'module' });
     const done = (error) => {
       clearTimeout(timer); worker.terminate();
       error ? reject(error) : resolve();
@@ -729,7 +733,7 @@ async function init() {
   }
   $('compatibility').hidden = true;
   try {
-    const response = await fetch('manifest.json?v=16766575c2758e9e', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=8abf8482d8b410ba', { cache: 'no-cache' });
     manifest = await response.json();
   } catch (error) {
     status('Could not load the release list.', 'error');

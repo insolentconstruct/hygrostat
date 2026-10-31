@@ -341,6 +341,12 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     await phonePage.keyboard.press('ArrowDown');
     assert.equal(await phonePage.evaluate(() => document.activeElement.id), 'cell-10');
     assert(await phonePage.isVisible('#cell-10'));
+    // A tab chosen by hand stays when a setting changes elsewhere.
+    await phonePage.click('#tab-4');
+    await phonePage.check('#extra-15');
+    await phonePage.waitForFunction(() => document.querySelector('#extra-15')?.checked);
+    assert.equal(await phonePage.getAttribute('#tab-4', 'aria-selected'), 'true');
+    await phonePage.uncheck('#extra-15');
     // A swap from the inspector shows the destination's page and focuses it.
     await phonePage.click('#tab-1');
     await phonePage.click('#cell-1');
