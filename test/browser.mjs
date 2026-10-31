@@ -145,6 +145,13 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     assert((await page.textContent('#panel-caption')).includes('press SEED'));
     await page.click('#preset-drizzlet');
     await waitFingerprint(releaseFP);
+    // Emptying from the inspector keeps keyboard focus on the position.
+    await page.click('#cell-9');
+    await page.click('#clear-position');
+    await waitFingerprint(await fingerprint(encodeProfile(layout.unplace(defaults(release.profile), release.profile, 9, 'page'), release.profile)));
+    assert.equal(await page.evaluate(() => document.activeElement.id), 'cell-9');
+    await page.click('#preset-drizzlet');
+    await waitFingerprint(releaseFP);
     assert.equal(await page.locator('#cpu').getAttribute('role'), null);
     assert.equal(await page.locator('#cpu-status').getAttribute('role'), 'status');
     assert((await page.textContent('#cpu-status')).length < 100);
@@ -329,6 +336,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     assert(await phonePage.isVisible('#cell-8'));
     assert(!await phonePage.isVisible('#cell-1'));
     assert.equal(await phonePage.getAttribute('#tab-3', 'aria-selected'), 'true');
+    assert.equal(await phonePage.getAttribute('#cell-7', 'tabindex'), '0', 'a visible cell keeps the tab stop');
     await phonePage.focus('#cell-7');
     await phonePage.keyboard.press('ArrowDown');
     assert.equal(await phonePage.evaluate(() => document.activeElement.id), 'cell-10');

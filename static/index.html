@@ -72,12 +72,14 @@
   .chip { min-height: 44px; padding: .4rem .95rem; border: 1px solid var(--rule); border-radius: 999px; background: var(--plate); }
   .chip[aria-pressed=true] { border-color: var(--ink); background: var(--ink); color: var(--paper); }
   .how { color: var(--muted); max-width: 70ch; }
+  .steps { margin-top: -.6rem; }
   .how b { color: var(--ink); }
 
   /* Workspace */
   #workspace { display: grid; gap: 1.5rem 2rem; grid-template-columns: minmax(0, 1fr) 24rem;
-    grid-template-areas: "controls inspector" "extras inspector"; align-items: start; padding-bottom: 1.5rem; }
+    grid-template-areas: "controls inspector" "slots inspector" "extras inspector"; align-items: start; padding-bottom: 1.5rem; }
   .controls { grid-area: controls; }
+  .slots-area { grid-area: slots; }
   .extras { grid-area: extras; }
   .inspector { grid-area: inspector; position: sticky; top: 1rem; background: var(--plate);
     border: 1px solid var(--rule); border-radius: 10px; padding: 1rem 1.1rem 1.1rem; }
@@ -107,7 +109,7 @@
   .cell-name { font-weight: 600; line-height: 1.25; }
   .cell-value { font-size: .85rem; color: var(--muted); }
 
-  .slots { display: grid; grid-template-columns: 2fr 3fr; gap: 1rem 1.25rem; margin-top: 1.25rem; }
+  .slots { display: grid; grid-template-columns: 2fr 3fr; gap: 1rem 1.25rem; }
   .slot-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 6px; }
   .slot { display: flex; flex-direction: column; align-items: flex-start; width: 100%; min-height: 4.2rem; padding: .5rem .7rem;
     border: 1px solid var(--rule); border-radius: 6px; background: var(--plate); text-align: left; }
@@ -116,7 +118,7 @@
   .slot .gesture { font-family: var(--heading); font-size: .78rem; letter-spacing: .04em; font-weight: 600; color: var(--muted); }
   .slot .does { font-weight: 600; line-height: 1.25; }
   .slot .what { font-size: .85rem; color: var(--muted); }
-  #unplaced { margin-top: 1rem; }
+  #unplaced { margin: 1rem 0 0; }
   #unplaced button { min-height: 44px; padding: 0 .2rem; border: 0; background: none; color: var(--link); text-decoration: underline; }
 
   /* Inspector */
@@ -142,7 +144,9 @@
   .choice { display: flex; align-items: center; gap: .6rem; min-height: 44px; padding: 0 .7rem; margin-top: 4px;
     border: 1px solid var(--rule); border-radius: 6px; cursor: pointer; }
   .choice:has(input:checked) { border-color: var(--ink); background: var(--sunk); font-weight: 600; }
-  .choice input { width: 1.1rem; height: 1.1rem; margin: 0; accent-color: var(--ink); }
+  .choice input { flex: none; width: 1.1rem; height: 1.1rem; margin: 0; accent-color: var(--ink); }
+  .choice span { display: flex; flex-direction: column; padding: .35rem 0; line-height: 1.3; }
+  .choice small { font-weight: 400; font-size: .82rem; }
   .confirm { margin-top: .85rem; padding: .75rem; border-radius: 6px; background: var(--sunk); }
   .confirm p { margin-bottom: .5rem; }
   .confirm .options { display: grid; gap: 6px; }
@@ -242,7 +246,7 @@
     #download-counts { text-align: left; }
     .lead { margin-bottom: .6rem; }
     .chip { padding: .4rem .8rem; }
-    #workspace { grid-template-columns: minmax(0, 1fr); grid-template-areas: "controls" "inspector" "extras"; }
+    #workspace { grid-template-columns: minmax(0, 1fr); grid-template-areas: "controls" "inspector" "slots" "extras"; }
     .inspector { position: static; }
     #panel { max-height: 11rem; }
     .page-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: .5rem; }
@@ -284,6 +288,7 @@
     </div>
   </div>
   <p class="lead">Choose Beads features and where you control them.</p>
+  <p class="steps">Select a position, choose a feature and its starting value, then build the update.</p>
   <div class="presets" role="group" aria-labelledby="presets-label">
     <span id="presets-label">Start from</span>
     <div id="presets"></div>
@@ -305,6 +310,9 @@
       <thead><tr><td></td><th scope="col">FEEDBACK</th><th scope="col">DRY/WET</th><th scope="col">REVERB</th></tr></thead>
       <tbody></tbody>
     </table>
+  </section>
+
+  <div class="slots-area">
     <div class="slots">
       <section aria-labelledby="amounts-title">
         <h3 id="amounts-title">Hold [A] and turn</h3>
@@ -316,7 +324,7 @@
       </section>
     </div>
     <p id="unplaced" class="note" hidden></p>
-  </section>
+  </div>
 
   <aside class="inspector" aria-label="Selected">
     <svg id="panel" role="img" aria-labelledby="panel-caption" xmlns="http://www.w3.org/2000/svg"></svg>
@@ -372,6 +380,7 @@
       <li>Disconnect your speakers (the update is loud) and all CV cables. Close other apps that make sound.</li>
       <li>Patch your audio output to <strong>IN L</strong>. Set <strong>TIME</strong> about halfway.</li>
       <li>Power on holding <strong>FREEZE</strong>, then play the update. Yellow on <strong>[A]</strong> means the level is right; adjust with <strong>TIME</strong>.</li>
+      <li>When the file ends, Beads restarts by itself. If it doesn’t, start again.</li>
     </ol>
     <p class="note">All LEDs blinking red means the level was wrong: press <strong>FREEZE</strong> and play it again louder. Other problems: see the <a href="https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/#firmware">Beads manual</a>.</p>
     <p class="note">Stuck at startup? Read the <a href="https://github.com/insolentconstruct/eurorack/releases/tag/storage-recovery-2026.10.27">storage recovery warnings</a>: recovery erases settings and may reset calibration.</p>
@@ -410,6 +419,6 @@
   </div>
   <div id="library-body"></div>
 </dialog>
-<script type="module" src="js/app.js?v=424ad817ffffa9f5"></script>
+<script type="module" src="js/app.js?v=33ce6c8faf3c37bc"></script>
 </body>
 </html>

@@ -8,13 +8,13 @@
 // check the release's app image against the manifest, encode the update .wav
 // in the browser, check the .wav, offer it for download.
 
-import { defaults, decodeProfile, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, cpuUsage, featureDelta, modes, normalise } from './profile.js?v=424ad817ffffa9f5';
-import { guide } from './guide.js?v=424ad817ffffa9f5';
-import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=424ad817ffffa9f5';
-import { featureHelp, actionHelp } from './help.js?v=424ad817ffffa9f5';
+import { defaults, decodeProfile, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, cpuUsage, featureDelta, modes, normalise } from './profile.js?v=33ce6c8faf3c37bc';
+import { guide } from './guide.js?v=33ce6c8faf3c37bc';
+import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=33ce6c8faf3c37bc';
+import { featureHelp, actionHelp } from './help.js?v=33ce6c8faf3c37bc';
 import { KNOBS, KINDS, GROUPS, ACTION_DOES, placeName, pageOf, entryOf, occupant, places, valueLabel, stateLabel,
-  summary, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, fits } from './layout.js?v=424ad817ffffa9f5';
-import { drawPanel, highlight } from './panel.js?v=424ad817ffffa9f5';
+  summary, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, fits } from './layout.js?v=33ce6c8faf3c37bc';
+import { drawPanel, highlight } from './panel.js?v=33ce6c8faf3c37bc';
 
 const $ = (id) => document.getElementById(id);
 const cap = (text) => text.replace(/^./, (c) => c.toUpperCase());
@@ -37,7 +37,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=424ad817ffffa9f5', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=33ce6c8faf3c37bc', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.ready) return;
       if (data.progress !== undefined) {
@@ -138,7 +138,7 @@ let busy = false;
 async function run(getApp) {
   if (busy) return;
   busy = true;
-  $('workspace').inert = true;
+  $('workspace').inert = $('presets').inert = true;
   $('build').disabled = $('release').disabled = $('local').disabled = true;
   $('result').hidden = true;
   try {
@@ -152,7 +152,7 @@ async function run(getApp) {
     $('build').disabled = $('release').disabled = $('local').disabled = false;
     busy = false;
     if (pendingShare) { pendingShare = false; loadSharedProfile(); }
-    $('workspace').inert = false;
+    $('workspace').inert = $('presets').inert = false;
     const blocked = cpuUsage(entries, selected()).blocked;
     $('build').disabled = $('local').disabled = blocked;
   }
@@ -221,7 +221,7 @@ function cellLabel(kind, slot) {
 const isSelected = (kind, slot) => selection.kind === kind && selection.slot === slot;
 
 function renderGrid() {
-  const focus = selection.kind === 'page' ? selection.slot : 1;
+  const focus = selection.kind === 'page' && pageOf(selection.slot) === pageTab ? selection.slot : (pageTab - 1) * 3 + 1;
   const rows = [1, 2, 3, 4].map((page) => el('tr', { class: page === pageTab ? 'current' : '', 'data-page': page },
     el('th', { scope: 'row' }, el('span', { class: 'page-name', text: `Page ${page}` }), leds(page)),
     ...[0, 1, 2].map((knob) => {
@@ -396,6 +396,7 @@ function choose(kind, slot) {
   pending = null;
   render();
   if (!occupant(entries, kind, slot)) openLibrary({ kind, slot });
+  else if (matchMedia('(max-width: 760px)').matches) $('inspector').scrollIntoView({ block: 'nearest' });
 }
 
 function clear(kind, slot) {
@@ -424,10 +425,10 @@ function confirmChoices(id, kind, slot, done, back) {
   const options = [];
   if (canSwap(entries, profile(), id, kind, slot)) {
     options.push(el('button', { type: 'button', id: 'confirm-swap', onclick: () => done('swap') },
-      el('b', { text: 'Swap' }), `${other.name} moves to ${placeName(kind, from)}`));
+      el('b', { text: 'Swap' }), `${f.name} goes here, ${other.name} to ${placeName(kind, from)}`));
   }
   options.push(el('button', { type: 'button', id: 'confirm-replace', onclick: () => done('replace') },
-    el('b', { text: 'Replace' }), `${other.name} ${afterUnplace(entries, profile(), other.id, kind)}`));
+    el('b', { text: 'Replace' }), `${f.name} goes here, ${other.name} ${afterUnplace(entries, profile(), other.id, kind)}`));
   options.push(el('button', { type: 'button', id: 'confirm-back', onclick: back }, el('b', { text: 'Cancel' })));
   return el('div', { class: 'confirm', role: 'group', 'aria-labelledby': 'confirm-text' },
     el('p', { id: 'confirm-text', text: `${cap(placeName(kind, slot))} has ${other.name}.` }),
@@ -442,6 +443,12 @@ function costLine(f, e) {
       return `${engine}${engines.length === 1 ? ' only' : ''} ${delta >= 0 ? '+' : ''}${delta.toFixed(1)}`;
     }).join(', ') + ' points vs default · calibrated board';
 }
+
+const STATE_HINTS = [
+  (f) => f.id === 12 ? 'Grains go to the reverb unsoftened.' : 'As in Mutable Instruments’ firmware.',
+  () => 'No control on the module.',
+  () => 'On a control; your changes are saved.'
+];
 
 function renderInspector() {
   const kind = selection.kind, slot = selection.slot;
@@ -472,7 +479,8 @@ function renderInspector() {
       const input = el('input', { type: 'radio', name: 'state', id: `state-${state}`, value: state,
         onchange: () => setState(f, state) });
       input.checked = e[1] === state;
-      return el('label', { class: 'choice', for: `state-${state}` }, input, stateLabel(f, state));
+      return el('label', { class: 'choice', for: `state-${state}` }, input,
+        el('span', {}, stateLabel(f, state), el('small', { text: STATE_HINTS[state](f) })));
     })));
   if (e[1]) {
     const label = e[1] === 1 ? 'Value' : 'Starting value';
@@ -496,7 +504,7 @@ function renderInspector() {
       };
       body.push(el('label', { class: 'field', for: 'value' }, `${label} (0–255)`, input));
     }
-    if (e[1] === 2) body.push(el('p', { class: 'note', text: 'Used after installing and after a settings reset; your changes on the module are saved.' }));
+    if (e[1] === 2) body.push(el('p', { class: 'note', text: 'Used after installing and after a settings reset.' }));
   }
   for (const [where, allowed, title] of [['page', f.page && e[1] === 2, 'Options page position'],
     ['amount', f.amount && e[1] === 2, 'Hold [A] and turn'],
@@ -526,7 +534,7 @@ function renderInspector() {
     body.push(el('label', { class: 'field', for: `where-${where}` }, title, select));
     if (pending && pending.id === f.id && pending.kind === where) {
       const { slot: s } = pending;
-      body.push(confirmChoices(f.id, where, s, (mode) => { selection = { kind: where, slot: s }; move(f.id, where, s, mode); },
+      body.push(confirmChoices(f.id, where, s, (mode) => { selection = { kind: where, slot: s }; move(f.id, where, s, mode); focusSelection(); },
         () => { pending = null; render(); $(`where-${where}`).focus(); }));
     }
   }
@@ -534,7 +542,7 @@ function renderInspector() {
   if (kind) {
     body.push(el('div', { class: 'inspector-actions' },
       el('button', { type: 'button', class: 'quiet', id: 'choose-feature', onclick: () => openLibrary({ kind, slot }) }, 'Choose another feature'),
-      el('button', { type: 'button', class: 'quiet', id: 'clear-position', onclick: () => clear(kind, slot) }, kind === 'action' ? 'Remove gesture' : 'Empty this position')));
+      el('button', { type: 'button', class: 'quiet', id: 'clear-position', onclick: () => { clear(kind, slot); focusSelection(); } }, kind === 'action' ? 'Remove gesture' : 'Empty this position')));
   }
   body.push(el('small', { class: 'cost', text: costLine(f, e) }));
   $('inspector').replaceChildren(...body);
@@ -592,7 +600,7 @@ function renderLibrary(confirm = null) {
       .filter((f) => !query || `${f.name} ${featureHelp(f, selected()).description}`.toLowerCase().includes(query))
       .map((f) => {
         const e = entryOf(entries, f);
-        const at = places(e).map((p) => placeName(p.kind, p.slot)).join(', ') || summary(f, e);
+        const at = places(e).length ? 'On ' + places(e).map((p) => placeName(p.kind, p.slot)).join(', ') : `No control · ${summary(f, e)}`;
         return el('button', { type: 'button', class: `library-item${here && here[0] === f.id ? ' here' : ''}`, id: `lib-${f.id}`,
           'aria-describedby': `lib-${f.id}-about`, onclick: () => pick(f.id) },
         el('span', { class: 'name', text: f.name }), el('span', { class: 'at', text: at }),
@@ -701,7 +709,7 @@ async function checkCapabilities() {
   }
   // A constructor alone does not establish support for module workers.
   await new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=424ad817ffffa9f5', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=33ce6c8faf3c37bc', { type: 'module' });
     const done = (error) => {
       clearTimeout(timer); worker.terminate();
       error ? reject(error) : resolve();
@@ -720,7 +728,7 @@ async function init() {
   }
   $('compatibility').hidden = true;
   try {
-    const response = await fetch('manifest.json?v=424ad817ffffa9f5', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=33ce6c8faf3c37bc', { cache: 'no-cache' });
     manifest = await response.json();
   } catch (error) {
     status('Could not load the release list.', 'error');
