@@ -38,6 +38,7 @@ jobs:
           node test/profile.js
           node test/downloads.js
           node test/help.js
+          node test/layout.js
           node test/readiness.js
           node --input-type=module -e '
             import { readFileSync } from "node:fs";
