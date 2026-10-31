@@ -7,7 +7,7 @@
 // All network access is stubbed; never contact analytics from tests.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { downloadCounts, countLine, eventName, recordDownload, recordBuild, afterInteraction } from '../static/js/downloads.js';
+import { downloadCounts, countLine, eventName, recordDownload, recordBuild, recordVisit, afterInteraction } from '../static/js/downloads.js';
 const html = readFileSync(new URL('../static/index.html', import.meta.url), 'utf8');
 function checkScripts(source) {
   for (const tag of source.matchAll(/<script\b[^>]*>/gi)) {
@@ -27,6 +27,12 @@ assert.throws(() => checkScripts(html.replace("script-src 'self'", "script-src '
 globalThis.fetch = () => { throw new Error('Live network forbidden'); };
 const release = { name: 'Beta 2 (Fog)', tag: 'drizzlet-test', slug: 'beta-2-fog', date: '2026-10-29' };
 assert.equal(eventName(release), 'download/beta-2-fog');
+{
+  const urls = [];
+  recordVisit((url, options) => { urls.push([url, options.credentials]); return Promise.resolve(); }, '0');
+  assert.deepEqual(urls, [['https://insolentconstruct.goatcounter.com/count?p=%2F', 'omit']], 'a visit is a page view, not an event');
+  recordVisit(() => { throw new Error('do not track ignored'); }, '1');
+}
 const response = (data) => ({ ok: true, json: async () => data });
 const assets = { assets: [{ name: 'a-wav.zip', download_count: 3 }, { name: 'b-wav.zip', download_count: 2 }, { name: 'app.zip', download_count: 1000 }] };
 for (const [goat, github, total] of [
@@ -150,5 +156,7 @@ const offline = container();
 await mountCounts(offline, [release], async () => { throw new Error('offline'); }, async () => { throw new Error('offline'); })();
 assert.equal(offline.children[0].textContent, release.date);
 assert(offline.children[1].hidden);
-assert(app.includes("afterInteraction(document, mountCounts($('download-counts'), manifest.releases))"));
+assert(app.includes("const showCounts = mountCounts($('download-counts'), manifest.releases);\n  afterInteraction(document, () => {\n    recordVisit();\n    showCounts();\n  });"),
+  'counts and the visit wait for the first interaction');
+assert(!/recordVisit\(\)/.test(app.replace(/afterInteraction\(document, \(\) => \{[^}]*\}\);/, '')), 'no visit before an interaction');
 console.log('PASS deferred downloads-first release totals, secondary visitors, public endpoint, independent failures and cache');

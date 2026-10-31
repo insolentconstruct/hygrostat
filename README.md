@@ -2,6 +2,8 @@
 
 The Drizzlet Hygrostat: set your firmware's climate. (A hygrostat is the industrial humidity controller; this one controls drizzle.)
 
+This standalone repository builds the Drizzlet Hygrostat page with Hugo and deploys it to GitHub Pages. Firmware lives in [insolentconstruct/eurorack, branch drizzlet](https://github.com/insolentconstruct/eurorack/tree/drizzlet); [firmware releases and update downloads](https://github.com/insolentconstruct/eurorack/releases) remain there.
+
 A static page that makes the Beads firmware update file (`.wav`) in the browser, from a release's app image. Nothing is uploaded; no server or build step.
 
 The profile editor targets profile-capable Beta 2 and later firmware. It offers
@@ -57,28 +59,38 @@ Layout: everything served as-is is under `static/`, where a Hugo site expects it
 - `static/index.html`, `static/js/app.js`, `static/js/worker.js`: the page; encoding and decode-back verification run in a worker.
 - `static/manifest.json` and `static/images/`: the releases offered, with each app image and update file pinned by SHA-256. GitHub release downloads cannot be fetched from another site, so the images are served with the page.
 
-Tests (Node 18 or later, g++, and the pinned stmlib submodule):
+Running tests locally requires Node 18 or later, g++, and a firmware checkout
+with full history, tags and its stmlib submodule. From this repository, clone
+firmware into `./firmware` (the default), or clone it beside this repository and
+set `FIRMWARE_REPO=../eurorack`:
 
 ```sh
-node beads/build/hygrostat/test/manifest.js
-node beads/build/hygrostat/test/profile.js
-node beads/build/hygrostat/test/downloads.js
-node beads/build/hygrostat/test/help.js
-node beads/build/hygrostat/test/readiness.js
-node beads/build/hygrostat/test/golden.js APP.bin EXPECTED_WAV_SHA256
+git clone --branch drizzlet https://github.com/insolentconstruct/eurorack.git firmware
+git -C firmware submodule update --init stmlib
 ```
 
-`beads/build/hygrostat/test/browser.mjs` adds every-feature Fixed/Off byte round trips and
+Run from this repository's root:
+
+```sh
+node test/manifest.js
+node test/profile.js
+node test/downloads.js
+node test/help.js
+node test/readiness.js
+node test/golden.js APP.bin EXPECTED_WAV_SHA256
+```
+
+`test/browser.mjs` adds every-feature Fixed/Off byte round trips and
 same-document share-link regressions in Chromium, Firefox and WebKit. Run it
 with Playwright available in an offline Docker container serving the page;
 `SITE` names the static directory and `BASE` the local HTTP URL. Browser test
 dependencies belong to the test harness and are never served by the page.
 
 The profile test compiles a small oracle from the manifest source commit or release tag’s firmware parser and
-compares more than 26,000 candidate blocks. With stmlib already available in a
-separate checkout, `STMLIB_INCLUDE` can name that checkout's root. No firmware
-source or Git metadata needs changing. When the pinned firmware is an ancestor
-of HEAD, the working parser source and header must also match it byte for byte.
+compares more than 26,000 candidate blocks. The compiler uses stmlib from `FIRMWARE_REPO`. Firmware sources, catalogue and
+documentation are read with `git -C` from the manifest's source commit or release
+tag. When the pinned firmware is an ancestor of the firmware checkout's HEAD,
+its working parser source and header must also match it byte for byte.
 
 Manifest format 2 stores the profile offset, size, version, release ID and
 feature table per release. `default_in_block: false` omits a feature from the
@@ -96,9 +108,14 @@ encodes and decodes the WAV. The untouched default also checks the release WAV
 hash. Custom WAVs and guides carry the first eight hex digits of SHA-256 of the
 512-byte profile; share links carry all 512 bytes and the release tag.
 
-CI also encodes every build's `app.bin` and checks it against `beads/build/expected-wav.sha256`.
+CI also runs `test/golden.js` on each manifest app image against its `wav_sha256`. Firmware CI in eurorack separately checks built images against its release hashes.
 
-Publishing: `.github/workflows/pages.yml` runs on every push to `drizzlet` that touches `beads/build/hygrostat/`. Pull requests run all Hygrostat suites too; only the drizzlet branch can deploy. It reruns the manifest test, builds with a pinned Hugo (version and SHA-256 in the workflow), checks that the output is `static/` byte for byte, and publishes it with GitHub Pages. `hugo.toml` only tells Hugo to copy `static/`; there are no templates yet.
+Publishing: `.github/workflows/pages.yml` runs on pushes to `main`, pull requests
+and manual dispatch. It checks out eurorack with full history, tags and submodules,
+runs the Node suites and manifest golden checks, builds with the pinned Hugo,
+and checks that `public/` equals `static/` byte for byte. Only `main` can deploy
+to GitHub Pages at https://insolentconstruct.github.io/hygrostat/.
+`hugo.toml` only tells Hugo to copy `static/`; there are no templates yet.
 
 To update the page for a release:
 
@@ -115,17 +132,16 @@ To update the page for a release:
    the selected manifest release, so documentation follows the installed version.
 3. Run the Node suites above and the three-browser checks. Verify the untouched
    default WAV against the published release and a custom profile with both
-   guides. Run `node beads/build/hygrostat/tools/version-assets.js` after browser or manifest
-   edits, then rerun readiness. Remove the development-source fetch path from
-   the Pages workflow and its development-only manifest validation at release.
-4. Merge the page PR into `drizzlet` after the tag exists. Check the Pages
+   guides. Run `node tools/version-assets.js` after browser or manifest
+   edits, then rerun readiness. The workflow resolves released entries through firmware tags.
+4. Merge the page PR into `main` after the tag exists. Check the Pages
    deployment, offered release, default/custom WAVs, guides and deferred counts
    on the live site. GoatCounter public counts must be enabled; new counts can
    take up to four hours to appear. Record the last good deployment and release
    before publishing; follow [ROLLBACK.md](ROLLBACK.md) if a deploy or release
    entry needs withdrawing.
 
-Counting: Successful builds send `/render/<tag>` events; WAV download clicks send one
+Counting: the first interaction with the page sends one page view (`p=/`, no `e=true`), which is what GoatCounter's site visitor total counts. Successful builds send `/render/<tag>` events; WAV download clicks send one
 `download/<release-slug>` event through GoatCounter's scriptless `/count` endpoint (`p` is the event
 path and `e=true` marks an event). The event name is
 the only application data sent: no profile, fingerprint, custom/default marker,
@@ -147,10 +163,10 @@ in sessionStorage for the browser tab session, with an in-memory fallback.
 Requests time out after five seconds and never delay or block building. Tests use only stubbed fetches; the Docker test container runs
 without network access. See [public counter setup](https://www.goatcounter.com/help/visitor-counter).
 
-To try the page locally, serve `static/` over HTTP (`python3 -m http.server -d beads/build/hygrostat/static`); the hash check needs a secure context, which `localhost` is.
+To try the page locally, serve `static/` over HTTP (`python3 -m http.server -d static`); the hash check needs a secure context, which `localhost` is.
 
 Browser modules, worker dependencies and the manifest URL carry `?v=` versions
 bound to the manifest and module contents; image URLs carry their SHA-256.
 After changing browser code or manifest data, run
-`node beads/build/hygrostat/tools/version-assets.js`. The readiness suite verifies every
+`node tools/version-assets.js`. The readiness suite verifies every
 referenced browser asset has the matching version or hash.

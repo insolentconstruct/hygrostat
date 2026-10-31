@@ -7,11 +7,11 @@
 // The page: pick a release, check its app image against the manifest, encode
 // the update .wav in the browser, check the .wav, offer it for download.
 
-import { defaults, decodeProfile, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, cpuUsage, featureDelta, modes, initialEntry, normalise } from './profile.js?v=5ea88b9a31f82023';
-import { guide, pageName, AMOUNTS, ACTIONS } from './guide.js?v=5ea88b9a31f82023';
-import { mountCounts, recordDownload, recordBuild, afterInteraction } from './downloads.js?v=5ea88b9a31f82023';
+import { defaults, decodeProfile, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, cpuUsage, featureDelta, modes, initialEntry, normalise } from './profile.js?v=e1f764ab3cc2cda2';
+import { guide, pageName, AMOUNTS, ACTIONS } from './guide.js?v=e1f764ab3cc2cda2';
+import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=e1f764ab3cc2cda2';
 
-import { featureHelp, actionHelp } from './help.js?v=5ea88b9a31f82023';
+import { featureHelp, actionHelp } from './help.js?v=e1f764ab3cc2cda2';
 
 const $ = (id) => document.getElementById(id);
 
@@ -22,7 +22,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=5ea88b9a31f82023', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=e1f764ab3cc2cda2', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.ready) return;
       if (data.progress !== undefined) {
@@ -298,7 +298,7 @@ async function checkCapabilities() {
   }
   // A constructor alone does not establish support for module workers.
   await new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=5ea88b9a31f82023', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=e1f764ab3cc2cda2', { type: 'module' });
     const done = (error) => {
       clearTimeout(timer); worker.terminate();
       error ? reject(error) : resolve();
@@ -317,7 +317,7 @@ async function init() {
   }
   $('compatibility').hidden = true;
   try {
-    const response = await fetch('manifest.json?v=5ea88b9a31f82023', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=e1f764ab3cc2cda2', { cache: 'no-cache' });
     manifest = await response.json();
   } catch (error) {
     status('Could not load the release list.', 'error');
@@ -328,7 +328,11 @@ async function init() {
     status('Unsupported release list.', 'error'); return;
   }
   for (const release of manifest.releases) $('release').add(new Option(release.name, release.tag));
-  afterInteraction(document, mountCounts($('download-counts'), manifest.releases));
+  const showCounts = mountCounts($('download-counts'), manifest.releases);
+  afterInteraction(document, () => {
+    recordVisit();
+    showCounts();
+  });
   $('release').selectedIndex = manifest.releases.length - 1;
   entries = defaults(selected().profile);
   if (location.hash) loadSharedProfile();

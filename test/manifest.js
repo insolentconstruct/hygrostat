@@ -8,10 +8,10 @@
 // SHA-256, those hashes are the ones pinned at the release tag, and the image
 // encodes to the release's .wav byte for byte. Needs the release tags.
 //
-// node beads/build/hygrostat/test/manifest.js
+// node test/manifest.js
 
 import { createHash } from 'node:crypto';
-import { execFileSync } from 'node:child_process';
+import { firmwareShow } from './firmware.js';
 import { readFileSync } from 'node:fs';
 import { defaults, encodeProfile, equal, validateReleaseId } from '../static/js/profile.js';
 import { decode } from '../static/js/decoder.js';
@@ -38,7 +38,7 @@ for (const release of manifest.releases) {
   check(equal(decode(wav, app.length), app), `${release.tag}: WAV decodes byte for byte`);
   check(hash(wav) === release.wav_sha256, `${release.tag}: .wav byte-identical`);
   const ref = release.development ? release.source_commit : `refs/tags/${release.tag}`;
-  const header = execFileSync('git', ['show', `${ref}:beads/profile.h`], { encoding: 'utf8' });
+  const header = firmwareShow(ref, 'beads/profile.h', { encoding: 'utf8' });
   try { validateReleaseId(release, header); check(true, `${release.tag}: firmware and dated release ID`); }
   catch { check(false, `${release.tag}: firmware and dated release ID`); }
   if (release.development) {
@@ -46,12 +46,11 @@ for (const release of manifest.releases) {
         /unreleased/i.test(release.name), `${release.tag}: explicitly unreleased development entry`);
     // Development builds have no release tag. Bind their format to the
     // recorded source commit; the independently encoded WAV pins the build.
-    const source = execFileSync('git', ['show', `${release.source_commit}:beads/profile.h`], { encoding: 'utf8' });
+    const source = firmwareShow(release.source_commit, 'beads/profile.h', { encoding: 'utf8' });
     check(source.includes(`kProfileReleaseId = 0x${release.profile.release_id.toString(16)}`),
         `${release.tag}: profile release id pinned at source commit`);
   } else {
-    const pinned = (file) => execFileSync('git',
-        ['show', `refs/tags/${release.tag}:beads/build/${file}`],
+    const pinned = (file) => firmwareShow(`refs/tags/${release.tag}`, `beads/build/${file}`,
         { encoding: 'utf8' }).split('\n');
     check(pinned('expected-hashes.sha256').includes(`${release.app_sha256}  app.bin`),
         `${release.tag}: app SHA-256 pinned at the tag`);

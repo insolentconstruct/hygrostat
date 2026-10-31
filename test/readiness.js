@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
+import { firmwareShow } from './firmware.js';
 import { defaults, encodeProfile, equal, cpuUsage, profileKey, modes,
   releaseIdForTag, validateReleaseId, initialEntry } from '../static/js/profile.js';
 import { importedCost, costTable, tableBytes, tableSha256, importCosts } from '../tools/import-costs.js';
@@ -19,14 +19,17 @@ const manifest = JSON.parse(read('manifest.json'));
 const catalogue = JSON.parse(read('profile-features.json'));
 const release = manifest.releases[0], profile = release.profile;
 const firmwareRef = release.development ? release.source_commit : 'refs/tags/' + release.tag;
-const source = (file) => execFileSync('git', ['show', `${firmwareRef}:${file}`], { encoding: 'utf8' });
+const source = (file) => firmwareShow(firmwareRef, file, { encoding: 'utf8' });
 const catalogueBytes = readFileSync(new URL('profile-features.json', root));
-// Releases before the move to beads/build/hygrostat keep the catalogue in palette/.
+// Try the standalone firmware catalogue first, then historical page locations.
 const catalogueAt = (ref) => {
-  try {
-    return execFileSync('git', ['show', `${ref}:beads/build/hygrostat/static/profile-features.json`], { stdio: ['ignore', 'pipe', 'ignore'] });
-  } catch (error) {
-    return execFileSync('git', ['show', `${ref}:palette/static/profile-features.json`]);
+  for (const file of ['beads/build/profile-features.json',
+    'beads/build/hygrostat/static/profile-features.json', 'palette/static/profile-features.json']) {
+    try {
+      return firmwareShow(ref, file, { stdio: ['ignore', 'pipe', 'ignore'] });
+    } catch (error) {
+      if (file === 'palette/static/profile-features.json') throw error;
+    }
   }
 };
 assert.deepEqual(catalogueBytes, catalogueAt(firmwareRef), 'copy the authoritative firmware catalogue verbatim');
@@ -167,7 +170,7 @@ for (const path of paths) assert.equal(new URL(path, 'https://local.invalid/').s
 for (const r of manifest.releases) assert.equal(new URL(r.app, 'https://local.invalid/').searchParams.get('v'), r.app_sha256);
 const workflow = readFileSync('.github/workflows/pages.yml', 'utf8');
 assert(workflow.includes('  pull_request:'));
-assert(workflow.includes("github.event_name != 'pull_request' && github.ref == 'refs/heads/drizzlet'"));
+assert(workflow.includes("github.event_name != 'pull_request' && github.ref == 'refs/heads/main'"));
 const html = read('index.html');
 for (const text of ['How to install', 'storage-recovery-2026.10.27', ':focus-visible', 'min-height: 44px', 'Made by Insolent Construct']) assert(html.includes(text));
 console.log(`PASS readiness catalogue, default bytes, partial measurements, synthetic CPU thresholds and traced per-engine shipped costs (${cpuUsage(warning, measuredCosts(release)).percent}/${cpuUsage(heavy, measuredCosts(release)).percent}), guides, release IDs, assets and PR CI`);

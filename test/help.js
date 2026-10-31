@@ -1,12 +1,14 @@
 // Copyright 2026 Insolent Construct. MIT licence: see ../static/js/encoder.js.
 import assert from 'node:assert/strict';
+import { firmwareRef, firmwareShow } from './firmware.js';
 import { readFileSync } from 'node:fs';
 import { featureHelp, actionHelp } from '../static/js/help.js';
 const read = (file) => readFileSync(new URL(file, import.meta.url), 'utf8');
 const manifest = JSON.parse(read('../static/manifest.json'));
-const docs = read('../../docs/FEATURES.md');
-const headings = [...docs.matchAll(/^#{2,3} (.+)$/gm)].map((m) => m[1].toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s/g, '-'));
 for (const release of manifest.releases) {
+  const docs = firmwareShow(firmwareRef(release), 'beads/build/docs/FEATURES.md', { encoding: 'utf8' });
+  const headings = [...docs.matchAll(/^#{2,3} (.+)$/gm)].map((m) => m[1].toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s/g, '-'));
+
   for (const feature of release.profile.features) {
     const help = featureHelp(feature, release);
     assert(help.description.length > 15 && help.description.length < 180, feature.name);

@@ -26,6 +26,8 @@
 import assert from 'node:assert/strict';
 import { readFileSync, mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
 import { execFileSync, spawnSync } from 'node:child_process';
+import { firmwareRepo, firmwareShow } from './firmware.js';
+import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { webcrypto } from 'node:crypto';
@@ -60,14 +62,14 @@ for (const offset of [0, 4, 5, 6, 7, 8, 12, 13, 14, 15]) {
 }
 // The refusal table from beads/test/profile_test.cc, parsed so it cannot drift.
 const firmwareRef = release.development ? release.source_commit : 'refs/tags/' + release.tag;
-const firmwareFile = (file) => execFileSync('git', ['show', `${firmwareRef}:${file}`], { encoding: 'utf8' });
-const ancestor = spawnSync('git', ['merge-base', '--is-ancestor', firmwareRef, 'HEAD'], { encoding: 'utf8' });
+const firmwareFile = (file) => firmwareShow(firmwareRef, file, { encoding: 'utf8' });
+const ancestor = spawnSync('git', ['-C', firmwareRepo, 'merge-base', '--is-ancestor', firmwareRef, 'HEAD'], { encoding: 'utf8' });
 assert.ifError(ancestor.error);
 assert([0, 1].includes(ancestor.status), ancestor.stderr);
-// This page branch predates the pinned firmware; skip until it is merged.
+// Check the working firmware parser once its HEAD contains the pinned release.
 if (ancestor.status === 0) {
   for (const file of ['beads/profile.cc', 'beads/profile.h']) {
-    assert.deepEqual(readFileSync(file), execFileSync('git', ['show', `${firmwareRef}:${file}`]),
+    assert.deepEqual(readFileSync(join(firmwareRepo, file)), firmwareShow(firmwareRef, file),
       `${file}: working parser must match the pinned oracle`);
   }
 }
@@ -281,7 +283,7 @@ assert.deepEqual(unshare(share(release, block).replace(/profile=([0-9a-f]+)/, (_
 const unescape = (s) => s.replace(/&amp;/g, '&').replace(/&gt;/g, '>').replace(/&lt;/g, '<');
 for (const mobile of [false, true]) {
   const svg = guide(entries, release, fp, mobile);
-  const golden = readFileSync(new URL(`../../docs/options-guide${mobile ? '-mobile' : ''}.svg`, import.meta.url), 'utf8');
+  const golden = firmwareFile(`beads/build/docs/options-guide${mobile ? '-mobile' : ''}.svg`);
   assert.equal(svg.replace(/<text data-profile-fingerprint="true"[^>]*>.*?<\/text>\n/, ''), golden);
   const text = (s) => [...s.matchAll(/<text\b[^>]*>(.*?)<\/text>/g)].map((m) => unescape(m[1]));
   const actual = text(svg), expected = text(golden);
@@ -325,9 +327,8 @@ try {
   const oracle = join(scratch, 'profile-oracle');
   mkdirSync(join(scratch, 'beads'));
   for (const file of ['profile.h', 'profile.cc']) writeFileSync(join(scratch, 'beads', file), firmwareFile('beads/' + file));
-  execFileSync('g++', ['-std=c++98', '-Wall', '-Werror', '-I' + scratch, '-I.',
-    ...(process.env.STMLIB_INCLUDE ? ['-I' + process.env.STMLIB_INCLUDE] : []),
-    'beads/build/hygrostat/test/profile_oracle.cc', join(scratch, 'beads/profile.cc'), '-o', oracle]);
+  execFileSync('g++', ['-std=c++98', '-Wall', '-Werror', '-I' + scratch, '-I' + firmwareRepo,
+    fileURLToPath(new URL('profile_oracle.cc', import.meta.url)), join(scratch, 'beads/profile.cc'), '-o', oracle]);
   const answers = execFileSync(oracle, [], { input: Buffer.concat(cases.map((b) => Buffer.from(b))), maxBuffer: 40000000 });
   const stride = 493;
   assert.equal(answers.length, cases.length * stride);

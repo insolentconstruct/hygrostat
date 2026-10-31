@@ -4,22 +4,22 @@ The release owner authorizes and merges a rollback; the page maintainer prepares
 it and verifies the deployed page. Record the last good Pages deployment, its
 commit, and the last good release tag before each deploy.
 
-1. **Bad page deploy:** prepare a PR against `drizzlet` reverting the page merge
+1. **Bad page deploy:** prepare a PR against `main` in this repository reverting the page merge
    (`git revert -m 1 <page-merge-commit>` for a merge commit, or `git revert
    <page-squash-commit>` for a squash). Review the diff so it restores only the
    page and any page workflow changes, without reverting firmware. Run the page
    suites. The owner merges it; `.github/workflows/pages.yml` rebuilds and
-   deploys because `beads/build/hygrostat/` changed. Do not rely on rerunning an old workflow:
+   deploys on the revert to `main`. Do not rely on rerunning an old workflow:
    the branch must also contain the restored page for subsequent deploys.
-2. **Bad release entry:** in the rollback PR, restore `beads/build/hygrostat/static/manifest.json`
-   and the corresponding `beads/build/hygrostat/static/images/<previous-tag>/app.bin` from the
+2. **Bad release entry:** in the rollback PR, restore `static/manifest.json`
+   and the corresponding `static/images/<previous-tag>/app.bin` from the
    last good page commit. Restore the complete entry (profile catalogue, CPU
    data, source/tag and hashes), remove the bad entry from the offered releases,
-   and run `node beads/build/hygrostat/tools/version-assets.js`. Do not just rename a tag or
+   and run `node tools/version-assets.js`. Do not just rename a tag or
    reuse its image URL. If the previous release is Beta 1 (plain WAV), restore
    the complete previous builder as in step 1: this profile editor requires a
    profile-capable release and cannot offer a Beta 1 manifest entry.
-3. The owner marks a withdrawn GitHub release as a pre-release and explicitly
+3. The owner marks a withdrawn GitHub release in insolentconstruct/eurorack as a pre-release and explicitly
    makes the previous good published release Latest. Keep existing assets and
    tags for users who already downloaded them; document the withdrawal.
 4. After the Pages deployment succeeds, reload the live page (allow up to ten

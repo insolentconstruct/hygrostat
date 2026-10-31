@@ -24,8 +24,8 @@
 //
 // Decode the generated PCM, independently demodulating and checking each packet.
 // Timing is the encoder's fixed framing, not a decoder for recorded audio.
-import { crc32 } from './profile.js?v=5ea88b9a31f82023';
-import { sampleCount, MAX_APP_SIZE } from './encoder.js?v=5ea88b9a31f82023';
+import { crc32 } from './profile.js?v=e1f764ab3cc2cda2';
+import { sampleCount, MAX_APP_SIZE } from './encoder.js?v=e1f764ab3cc2cda2';
 
 export function decode(wav, size) {
   if (!Number.isInteger(size) || size < 1 || size > MAX_APP_SIZE) {
