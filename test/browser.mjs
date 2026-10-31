@@ -69,7 +69,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
         await input.press('Tab');
         assert.equal(await input.inputValue(), previous);
         assert.equal(await page.getAttribute('#share', 'href'), previousShare);
-        assert((await page.textContent('#status')).includes('previous value has been kept'));
+        assert((await page.textContent('#status')).includes('Previous value kept'));
       }
     }
     await page.emulateMedia({ media: 'print' });
@@ -83,20 +83,42 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     await page.selectOption('#template', 'Stock plus fixes');
     const stockFP = await fingerprint(encodeProfile(templates(release.profile)['Stock plus fixes'], release.profile));
     await waitFingerprint(stockFP);
-    assert.match(await page.textContent('#cpu'), /^Within the measured default\./);
-    assert(!/%|estimated/.test(await page.textContent('#cpu')));
+    assert.equal(await page.textContent('#cpu'),
+      '86.9% estimated. synth 86.9% estimated; granular 78.6% estimated. Provisional limit 92%. Within CPU limit.');
     const stockShare = await page.getAttribute('#share', 'href');
+    const manifestURL = /\/manifest\.json(?:\?|$)/;
+    // Missing costs still report the measured-default bound, without a percentage.
+    const boundedManifest = JSON.parse(readFileSync(`${site}/manifest.json`));
+    for (const f of boundedManifest.releases[0].profile.features) f.cpu = null;
+    let boundedRequests = 0;
+    const boundedRoute = (route) => {
+      boundedRequests++;
+      return route.fulfill({ json: boundedManifest });
+    };
+    await context.route(manifestURL, boundedRoute);
+    // Template selection updates the share link, not location.hash. Persist
+    // the exact Stock bytes explicitly before reloading the routed manifest.
+    await page.evaluate((hash) => history.replaceState(null, '', hash), stockShare);
+    await page.reload();
+    await waitFingerprint(stockFP);
+    assert.equal(boundedRequests, 1, 'reload fetched the versioned manifest fixture');
+    assert.equal(await page.textContent('#cpu'),
+      'Within measured default; savings unmeasured.');
+    assert(!/%|estimated/.test(await page.textContent('#cpu')));
+    await context.unroute(manifestURL, boundedRoute);
     // Preserve the enabled/unknown regression using an explicit Off-default fixture.
     const offManifest = JSON.parse(readFileSync(`${site}/manifest.json`));
-    for (const f of offManifest.releases[0].profile.features) f.default = [f.id, 0, 0, 0, 0, 0];
-    const manifestURL = /\/manifest\.json(?:\?|$)/;
+    for (const f of offManifest.releases[0].profile.features) {
+      f.default = [f.id, 0, 0, 0, 0, 0];
+      f.cpu = null;
+    }
     const offRoute = (route) => route.fulfill({ json: offManifest });
     await context.route(manifestURL, offRoute);
     await page.reload();
     await waitFingerprint(stockFP);
     for (const f of release.profile.features) {
       await mode(f, 1);
-      await until(async () => (await page.textContent('#cpu')).startsWith('CPU cost not yet measured for:'));
+      await until(async () => (await page.textContent('#cpu')).startsWith('CPU not measured for:'));
       assert((await page.textContent('#cpu')).includes(f.name));
       assert(!/%/.test(await page.textContent('#cpu')));
       assert.equal(await page.isDisabled('#build'), false);
@@ -107,6 +129,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
       assert.equal(await page.getAttribute('#share', 'href'), stockShare, `${f.name}: exact Off bytes`);
     }
     await context.unroute(manifestURL, offRoute);
+    await page.evaluate(() => history.replaceState(null, '', location.pathname + location.search));
     await page.reload();
     await waitFingerprint(releaseFP);
     await page.selectOption('#template', 'Drizzlet');
@@ -119,6 +142,13 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
       assert.equal(await page.getAttribute('#guide', 'download'), 'options-guide-dev.svg');
       assert.equal(await page.getAttribute('#guide-mobile', 'download'), 'options-guide-dev-mobile.svg');
     }
+    // Keep the unknown-cost share-link regression independent of shipped costs.
+    const unknownManifest = JSON.parse(readFileSync(`${site}/manifest.json`));
+    unknownManifest.releases[0].profile.features.find((f) => f.id === 1).cpu = null;
+    const unknownRoute = (route) => route.fulfill({ json: unknownManifest });
+    await context.route(manifestURL, unknownRoute);
+    await page.reload();
+    await waitFingerprint(releaseFP);
     // Change only the fragment in an already open document: no reload.
     const chosen = defaults(release.profile);
     chosen.find((e) => e[0] === 1)[2] = 3;
@@ -133,7 +163,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     assert((await page.getAttribute('#guide', 'download')).includes(customFP));
     assert((await page.getAttribute('#share', 'href')).includes(share(release, customBlock)));
     assert.equal(await page.isDisabled('#build'), false);
-    assert.equal(await page.textContent('#cpu'), 'CPU cost not yet measured for: Pitch scale.');
+    assert.equal(await page.textContent('#cpu'), 'CPU not measured for: Pitch scale.');
     // Invalid input reports its error and leaves the valid profile intact.
     await page.evaluate(() => { location.hash = 'release=missing&profile=00'; });
     await until(async () => await page.getAttribute('#status', 'class') === 'error');
@@ -143,9 +173,11 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     assert.equal(await page.inputValue('#template'), 'Drizzlet');
     assert((await page.textContent('#cpu')).includes('87.2%'));
     assert.equal(await page.isDisabled('#build'), false);
-    // Exact measured combinations take precedence with shipped null costs.
+    await context.unroute(manifestURL, unknownRoute);
+    // Exact measured combinations take precedence even with a missing feature cost.
     const measuredManifest = JSON.parse(readFileSync(`${site}/manifest.json`));
     const measured = measuredManifest.releases[0];
+    measured.profile.features.find((f) => f.id === 1).cpu = null;
     measured.cpu.combinations = [{ profile: profileKey(chosen, release.profile), synth: 90.4, granular: 89 }];
     const measuredRoute = (route) => route.fulfill({ json: measuredManifest });
     await context.route(manifestURL, measuredRoute);
@@ -173,10 +205,10 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     });
     const counterPage = await counters.newPage();
     await counterPage.goto(base);
-    await counterPage.waitForFunction(() => document.querySelector('#fingerprint').textContent.length > 0);
+    await until(async () => (await counterPage.textContent('#fingerprint')).length > 0);
     assert.deepEqual(counterRequests, [], 'counters remain deferred');
     await counterPage.keyboard.press('Tab');
-    await counterPage.waitForFunction(() => document.querySelector('#download-counts').textContent.includes('Site visitors: 400'));
+    await until(async () => (await counterPage.textContent('#download-counts')).includes('Site visitors: 400'));
     const lines = counterPage.locator('#download-counts p');
     assert.equal(await lines.count(), JSON.parse(readFileSync(`${site}/manifest.json`)).releases.length + 1);
     assert((await lines.first().textContent()).includes(`${release.name}: downloaded 20 times`));

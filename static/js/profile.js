@@ -123,19 +123,19 @@ export function unshare(text, releases) {
   const release = releases.find((r) => r.tag === params.get('release'));
   const hex = params.get('profile');
   if (!params.get('release') || !hex || !/^[0-9a-f]{1024}$/i.test(hex)) {
-    throw new Error('Invalid shared profile: copy the complete share address and try again.');
+    throw new Error('Invalid share link. Copy the full address.');
   }
-  if (!release) throw new Error('This share link was made for another release that this page no longer offers. Choose a release and make a new profile.');
+  if (!release) throw new Error('This link is for another release, no longer offered here. Choose a release and start again.');
   const block = Uint8Array.from(hex.match(/../g), (v) => parseInt(v, 16));
   const header = new DataView(block.buffer);
   if (header.getUint32(0, true) === 0x46505a44 &&
       (block[4] !== release.profile.version || header.getUint32(8, true) !== release.profile.release_id)) {
-    throw new Error('This share link was made for another profile version or release. Open it with the matching page, or make a new profile here.');
+    throw new Error('Share link version mismatch. Use its original page or start again.');
   }
   try {
     return { release, entries: decodeProfile(block, release.profile) };
   } catch (error) {
-    throw new Error('This shared profile is damaged or uses settings from another page version. Copy the complete share address, or make a new profile here.');
+    throw new Error('Damaged or outdated share link. Copy the full address or start again.');
   }
 }
 export function templates(profile) {

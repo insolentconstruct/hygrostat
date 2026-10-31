@@ -88,31 +88,31 @@
 </head>
 <body>
 <main>
-  <noscript><p class="warn">This page needs JavaScript to edit profiles and build and verify firmware files. Enable JavaScript and reload, or download a ready-made update from the <a href="https://github.com/insolentconstruct/eurorack/releases">releases page</a>.</p></noscript>
+  <noscript><p class="warn">Enable JavaScript to build firmware, or use a ready-made update from the <a href="https://github.com/insolentconstruct/eurorack/releases">releases page</a>.</p></noscript>
   <h1>Drizzlet Hygrostat</h1>
-  <p class="lead">Makes the firmware update file for Mutable Instruments Beads in your browser. Nothing is uploaded.</p>
+  <p class="lead">Build Beads firmware in your browser.</p>
 
-  <p id="compatibility" class="note">Loading the profile builder… If it does not load, enable JavaScript and use a current browser with module worker support over HTTPS (or localhost).</p>
-  <p class="print-note" hidden>This is the builder page. For your profile’s control layout, download the printable SVG guide before printing.</p>
+  <p id="compatibility" class="note">Loading… Requires JavaScript and a current browser over HTTPS (or localhost).</p>
+  <p class="print-note" hidden>For your controls, print the downloaded SVG guide.</p>
 
   <section class="panel" aria-labelledby="make">
-    <h2 id="make">Make the update file</h2>
+    <h2 id="make">Build update</h2>
     <label for="release" class="editor-label">Release</label>
     <select id="release"></select>
     <div id="download-counts" aria-live="polite"></div>
-    <p id="development" class="note" hidden>Development build for Beta 2. Unreleased. Feature CPU costs use measurements from a module-calibrated development board; final-image module measurements are still pending.</p>
+    <p id="development" class="note" hidden>Beta 2 development build. CPU estimates use a calibrated board; final module measurements are pending.</p>
     <fieldset id="editor">
       <legend>Profile options</legend>
       <label for="template" class="editor-label">Start from</label><select id="template"></select>
-      <p class="note">Off removes this feature’s controls and uses its stock behaviour (Diffusion Off removes grain diffusion). Fixed keeps the chosen value without an editable control. Adjustable starts from the chosen default and lets you change it on the module using a page knob, an [A]+knob amount or an action, where available. Saved adjustable values are kept when you move their controls. Other stock gestures keep their meaning.</p>
+      <p class="note">Off uses stock behaviour (Diffusion Off removes grain diffusion). Fixed keeps one value. Adjustable lets you assign controls; saved values follow them.</p>
       <p id="cpu"></p>
       <p id="cpu-status" class="sr-only" role="status" aria-atomic="true"></p>
-      <details><summary>CPU costs and measurement history</summary><p id="cpu-provenance" class="note"></p></details>
+      <details><summary>CPU measurements</summary><p id="cpu-provenance" class="note"></p></details>
       <div id="features"></div>
     </fieldset>
-    <p>Profile <code id="fingerprint"></code> · <a id="share" href="#">Share this profile</a></p>
-    <p id="guides" hidden><a id="guide">Download printable guide</a> · <a id="guide-mobile">Download phone guide</a></p>
-    <button id="build" disabled>Make the update file</button>
+    <p>Profile <code id="fingerprint"></code> · <a id="share" href="#">Share</a></p>
+    <p id="guides" hidden><a id="guide">Printable guide</a> · <a id="guide-mobile">Phone guide</a></p>
+    <button id="build" disabled>Build update</button>
     <progress id="progress" max="1" value="0" aria-label="Encoding progress" hidden></progress>
     <p id="status" role="status" aria-live="polite"></p>
     <div id="result" hidden>
@@ -124,9 +124,9 @@
       </dl>
     </div>
     <details>
-      <summary>Use an app image you already have</summary>
-      <p class="note">It must be the selected release's <code>app.bin</code>; anything else is refused.</p>
-      <label for="local">App image file</label>
+      <summary>Use a local app.bin</summary>
+      <p class="note">Choose the selected release’s <code>app.bin</code>.</p>
+      <label for="local">File</label>
       <input id="local" type="file" accept=".bin,application/octet-stream">
     </details>
   </section>
@@ -134,28 +134,22 @@
   <section aria-labelledby="install">
     <h2 id="install">How to install</h2>
     <ol>
-      <li>Unplug all CV cables. Patch your audio interface's output to <strong>IN L</strong> and set <strong>TIME</strong> to an intermediate position.</li>
-      <li>Power on your system with <strong>FREEZE</strong> held down.</li>
-      <li>Disconnect your speakers: the update file is loud and harsh. Close anything else that could make a sound.</li>
-      <li>Play the update file. The quality LED <strong>[A]</strong> shows the level: yellow is right; turn <strong>TIME</strong> to adjust.</li>
-      <li>At the end the module restarts by itself and runs the new firmware.</li>
+      <li>Disconnect your speakers (the update is loud) and all CV cables. Close other apps that make sound.</li>
+      <li>Patch your audio output to <strong>IN L</strong>. Set <strong>TIME</strong> about halfway.</li>
+      <li>Power on holding <strong>FREEZE</strong>, then play the update. Yellow on <strong>[A]</strong> means the level is right; adjust with <strong>TIME</strong>.</li>
     </ol>
-    <p class="note">If all LEDs blink red, the level was wrong: press <strong>FREEZE</strong> and play it again louder. Avoid equalizers or automatic gain in the signal chain. Full steps: the <a href="https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/#firmware">Beads manual</a>. <strong>Don't hold SEED at power-on:</strong> it resets your settings.</p>
-    <p class="note">Module stuck at startup even after reinstalling? Read the <a href="https://github.com/insolentconstruct/eurorack/releases/tag/storage-recovery-2026.10.27">storage recovery tool</a> and its warnings first: it erases your settings and may reset your calibration.</p>
+    <p class="note">All LEDs blinking red means the level was wrong: press <strong>FREEZE</strong> and play it again louder. Other problems: see the <a href="https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/#firmware">Beads manual</a>.</p>
+    <p class="note">Stuck at startup? Read the <a href="https://github.com/insolentconstruct/eurorack/releases/tag/storage-recovery-2026.10.27">storage recovery warnings</a>: recovery erases settings and may reset calibration.</p>
   </section>
 
-  <section aria-labelledby="about">
-    <h2 id="about">About</h2>
-    <p class="note">The default Drizzlet profile makes the release update file byte for byte. Each generated WAV is decoded and checked before download.</p>
-    <p class="note">Drizzlet is community firmware; it is not a Mutable Instruments product, so please do not contact Mutable Instruments about it.</p>
-    <p class="note">Visits that use the page, successful builds and WAV download clicks are counted (builds and downloads by version) with <a href="https://www.goatcounter.com">GoatCounter</a>, respecting “do not track”. Each event contains only its build or download event name; no profile or personal data is added. Requests expose your IP address and browser to the service. After your first interaction, download totals are requested from GoatCounter and api.github.com, and site visitor counts from GoatCounter; both services receive your IP address and browser. Totals include GitHub WAV downloads and may merge repeat downloads by the same visitor on the same day.</p>
+  <section aria-label="Privacy">
+    <p class="note"><a href="https://www.goatcounter.com">GoatCounter</a> counts visits, builds and downloads without cookies or profile data; do-not-track is respected, and requests reveal your IP and browser. Download totals are read from GoatCounter and GitHub after your first interaction.</p>
   </section>
 
   <footer>
     <p>Made by Insolent Construct; <a href="https://github.com/insolentconstruct/hygrostat">source on GitHub</a>. The encoder is based on Mutable Instruments' (MIT), with sine and cosine from the GNU C Library (LGPL 2.1 or later).</p>
-    <p>Not an ultrasonic humidifier. Please do not fill with water.</p>
   </footer>
 </main>
-<script type="module" src="js/app.js?v=e1f764ab3cc2cda2"></script>
+<script type="module" src="js/app.js?v=430c358e108a25cf"></script>
 </body>
 </html>

@@ -119,12 +119,12 @@ assert.throws(() => unshare('release=missing&profile=00', manifest.releases));
 assert.throws(() => unshare(share({ ...release, tag: 'another-release' }, block), manifest.releases), /another release/);
 for (const edit of [(b) => { b[4] = 2; }, (b) => { b[8] ^= 1; }]) {
   const incompatible = block.slice(); edit(incompatible); reseal(incompatible);
-  assert.throws(() => unshare(share(release, incompatible), manifest.releases), /another profile version or release/);
+  assert.throws(() => unshare(share(release, incompatible), manifest.releases), /version mismatch/);
 }
 const unknownFeature = block.slice(); unknownFeature[16] = 250; reseal(unknownFeature);
-assert.throws(() => unshare(share(release, unknownFeature), manifest.releases), /another page version/);
+assert.throws(() => unshare(share(release, unknownFeature), manifest.releases), /outdated/);
 const damagedShare = block.slice(); damagedShare[20] ^= 1;
-assert.throws(() => unshare(share(release, damagedShare), manifest.releases), /damaged/);
+assert.throws(() => unshare(share(release, damagedShare), manifest.releases), /Damaged/);
 
 assert.equal(filenames(release, fp, true).wav, release.tag + '.wav');
 assert.equal(filenames(release, fp, true).desktop, 'options-guide-dev.svg');

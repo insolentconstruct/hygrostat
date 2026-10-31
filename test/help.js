@@ -34,5 +34,5 @@ const app = read('../static/js/app.js');
 assert(app.includes('featureHelp(f, selected())') && app.includes('link.href = help.url'));
 assert(app.includes('action.textContent = actionHelp(f)'));
 const html = read('../static/index.html');
-for (const text of ['Off removes', 'Fixed keeps', 'Adjustable starts', 'Diffusion Off removes grain diffusion']) assert(html.includes(text));
+for (const text of ['Off uses stock behaviour', 'Fixed keeps', 'Adjustable lets', 'Diffusion Off removes grain diffusion']) assert(html.includes(text));
 console.log('PASS feature descriptions, real documentation anchors, release-tag resolution and action-only help');

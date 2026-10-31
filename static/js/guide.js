@@ -23,8 +23,8 @@
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
 // Knob cards port options_guide.py: 270-degree arcs and the same LED ladder.
-import { defaults, equal, encodeProfile } from './profile.js?v=e1f764ab3cc2cda2';
-import { RELEASE_GUIDES, RELEASE_GUIDE_ID } from './release_guides.js?v=e1f764ab3cc2cda2';
+import { defaults, equal, encodeProfile } from './profile.js?v=430c358e108a25cf';
+import { RELEASE_GUIDES, RELEASE_GUIDE_ID } from './release_guides.js?v=430c358e108a25cf';
 
 const KNOBS = ['FEEDBACK', 'DRY/WET', 'REVERB'];
 export const ACTIONS = ['None', '[A]+SEED', '[A]+FREEZE', '[A] hold'];
@@ -131,11 +131,11 @@ export function guide(entries, release, fp, mobile = false) {
   d.text(margin, 61, `Profile ${fp} · ${release.tag}`, 15);
   let y = 90;
   for (const line of (entries.some((e) => e[3]) ? [
-    'Open: hold the CV-assign button [M] 3 seconds, release.',
-    'Change page: tap [M]. Empty pages are skipped. Pages 1–4 pulse FEEDBACK, DRY/WET, REVERB, then all three.',
-    '[A] shows each stored value in turn. Turn a knob to change it; it saves by itself.',
-    'Close: hold [M] 3 seconds or press another button. With Scale selected, SEED taps step the scale.',
-    'Move a knob a little before it responds. Wait a moment before powering off.'
+    'Open: hold [M] 3 seconds, then release.',
+    'Change page: tap [M]; empty pages skip. LEDs: FEEDBACK, DRY/WET, REVERB, then all three.',
+    '[A] shows stored values. Turn knobs to change; changes save automatically.',
+    'Close: hold [M] 3 seconds or press another button. With Scale on, tap SEED to step.',
+    'Move knobs slightly to engage. Wait before powering off.'
   ] : ['This profile has no options pages. Hold [M] does nothing.'])) y = d.lines(margin, y, line, mobile ? 43 : 140) + 3;
   // Share the release's to-scale control sketch and LED legend.
   const reference = RELEASE_GUIDES[0];

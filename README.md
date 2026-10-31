@@ -39,7 +39,7 @@ After changing anything in `static/js/` or `static/manifest.json`, run `node too
 3. Run `node tools/version-assets.js` and the tests.
 4. Merge to `main`. CI tests, builds and deploys the page.
 
-If a deploy goes wrong, see [ROLLBACK.md](ROLLBACK.md).
+If a deploy goes wrong, see [ROLLBACK.md](ROLLBACK.md). Design notes for maintainers are in [docs/DESIGN.md](docs/DESIGN.md).
 
 ## Licence
 

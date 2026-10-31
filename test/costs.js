@@ -132,11 +132,11 @@ for (let i = 0; i < 100; ++i) {
   }
 }
 const app = readFileSync(new URL('../static/js/app.js', import.meta.url), 'utf8');
-assert(app.includes('points versus release default · ' + costSource));
-assert(app.includes('estimated from costs ' + costSource));
-assert(app.includes("e.measured ? ' measured on the module'"));
-assert.equal((app.match(/measured on the module/g) || []).length, 1);
-assert(app.includes('No CPU cost (no per-block work)'));
+assert(app.includes('points vs default · calibrated board'));
+assert(app.includes("e.measured ? ' measured' : ' estimated'"));
+assert(app.includes("e.measured ? ' measured'"));
+assert.equal((app.match(/' measured'/g) || []).length, 1);
+assert(app.includes('No CPU cost'));
 assert(app.includes("engines.length === 1 ? ' only'"));
 assert.equal(release.cpu.costs.source, costSource);
 console.log(`PASS real costs: templates, exhaustive deltas, random sums, measured precedence, labels; maxima ${maxima.join('; ')}`);

@@ -7,11 +7,11 @@
 // The page: pick a release, check its app image against the manifest, encode
 // the update .wav in the browser, check the .wav, offer it for download.
 
-import { defaults, decodeProfile, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, cpuUsage, featureDelta, modes, initialEntry, normalise } from './profile.js?v=e1f764ab3cc2cda2';
-import { guide, pageName, AMOUNTS, ACTIONS } from './guide.js?v=e1f764ab3cc2cda2';
-import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=e1f764ab3cc2cda2';
+import { defaults, decodeProfile, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, cpuUsage, featureDelta, modes, initialEntry, normalise } from './profile.js?v=430c358e108a25cf';
+import { guide, pageName, AMOUNTS, ACTIONS } from './guide.js?v=430c358e108a25cf';
+import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=430c358e108a25cf';
 
-import { featureHelp, actionHelp } from './help.js?v=e1f764ab3cc2cda2';
+import { featureHelp, actionHelp } from './help.js?v=430c358e108a25cf';
 
 const $ = (id) => document.getElementById(id);
 
@@ -22,7 +22,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=e1f764ab3cc2cda2', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=430c358e108a25cf', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.ready) return;
       if (data.progress !== undefined) {
@@ -57,11 +57,11 @@ async function build(release, app) {
   }
   const chosen = entries.map((e) => e.slice());
   validate(chosen, release.profile);
-  if (cpuUsage(chosen, release).blocked) throw new Error('This combination exceeds the CPU allowance.');
+  if (cpuUsage(chosen, release).blocked) throw new Error('CPU limit exceeded.');
   const block = encodeProfile(chosen, release.profile);
   const original = app.slice(release.profile.offset, release.profile.offset + 512);
   if (!equal(original, encodeProfile(defaults(release.profile), release.profile))) {
-    throw new Error('The release profile does not match the manifest.');
+    throw new Error('Release settings do not match the release list.');
   }
   const isDefault = equal(block, original);
   const base = app.slice();
@@ -70,11 +70,11 @@ async function build(release, app) {
   if (!equal(app.subarray(0, offset), base.subarray(0, offset)) ||
       !equal(app.subarray(offset + 512), base.subarray(offset + 512)) ||
       JSON.stringify(decodeProfile(app.subarray(offset, offset + 512), release.profile)) !== JSON.stringify(chosen)) {
-    throw new Error('Patched image verification failed.');
+    throw new Error('Updated firmware check failed.');
   }
   const fp = await fingerprint(block);
   const names = filenames(release, fp, isDefault);
-  status('Encoding and checking the update file…');
+  status('Building and checking…');
   const wav = await encodeInWorker(app.slice());
   const wavHash = await sha256(wav);
   $('app-hash').textContent = appHash;
@@ -88,7 +88,7 @@ async function build(release, app) {
   $('download').download = names.wav;
   $('download').textContent = `Download ${names.wav} (${(wav.length / 1e6).toFixed(1)} MB)`;
   $('result').hidden = false;
-  status(isDefault ? 'Done: identical to the release update file. WAV decoded and checked.' : `Done: profile ${fp}. WAV decoded and checked.`, 'ok');
+  status(isDefault ? 'Ready. Matches the release; audio checked.' : `Ready. Profile ${fp}; audio checked.`, 'ok');
   await updateGuides(release, chosen, fp, names);
   $('download').onclick = () => recordDownload(release);
   recordBuild(release);
@@ -124,7 +124,7 @@ async function run(getApp) {
 }
 
 async function fetchApp(release) {
-  status('Downloading the app image…');
+  status('Downloading firmware…');
   const response = await fetch(release.app, { cache: 'no-cache' });
   if (!response.ok) throw new Error(`could not download the app image (${response.status})`);
   return new Uint8Array(await response.arrayBuffer());
@@ -217,7 +217,7 @@ function renderEditor() {
         input.onchange = () => {
           if (input.value.trim() === '' || !input.validity.valid) {
             input.value = e[2];
-            status(`${f.name}: enter a whole number from 0 to 255. The previous value has been kept.`, 'error');
+            status(`${f.name}: use a whole number from 0 to 255. Previous value kept.`, 'error');
             return;
           }
           change(2, input.valueAsNumber);
@@ -236,11 +236,11 @@ function renderEditor() {
     }
     const cost = document.createElement('small');
     const engines = ['synth', 'granular'].filter((engine) => f.cpu?.engines?.[engine]);
-    cost.textContent = !f.cpu ? 'CPU cost not yet measured' : f.cpu.kind === 'zero' ?
-      'No CPU cost (no per-block work)' : 'CPU ' + engines.map((engine) => {
+    cost.textContent = !f.cpu ? 'CPU not measured' : f.cpu.kind === 'zero' ?
+      'No CPU cost' : 'CPU ' + engines.map((engine) => {
         const delta = featureDelta(e, f, engine);
         return `${engine}${engines.length === 1 ? ' only' : ''} ${delta >= 0 ? '+' : ''}${delta.toFixed(1)}`;
-      }).join(', ') + ' points versus release default · measured on a module-calibrated development board';
+      }).join(', ') + ' points vs default · calibrated board';
     row.querySelectorAll('select, input').forEach((control, i) => {
       control.id = `feature-${f.id}-control-${i}`;
       control.setAttribute('aria-label', `${f.name}: ${control.parentElement.firstChild.textContent}`);
@@ -256,14 +256,14 @@ async function refresh() {
   const release = selected();
   const cpu = cpuUsage(entries, release);
   document.body.classList.toggle('cpu-warning', cpu.warning);
-  $('cpu').textContent = cpu.withinMeasuredDefault ? 'Within the measured default. Savings from Off or lighter settings are not yet measured.' : cpu.percent === null ? `CPU cost not yet measured for: ${cpu.unknown.join(', ')}.` :
+  $('cpu').textContent = cpu.withinMeasuredDefault ? 'Within measured default; savings unmeasured.' : cpu.percent === null ? `CPU not measured for: ${cpu.unknown.join(', ')}.` :
       `${cpu.percent.toFixed(1)}% ${cpu.kind}. ` +
-      cpu.engines.map((e) => `${e.engine} ${e.percent.toFixed(1)}%${e.measured ? ' measured on the module' : ' estimated from costs measured on a module-calibrated development board'}`).join('; ') +
-      `. Provisional stock ceiling ${release.cpu.ceiling}%. ` +
-      (cpu.blocked ? 'This combination is blocked.' : cpu.warning ? 'Near the CPU limit.' : 'Within the CPU allowance.');
-  const announcement = cpu.blocked ? 'CPU allowance exceeded. Building is disabled.' :
-    cpu.warning ? 'Near the CPU limit. Building is allowed.' :
-    cpu.percent === null ? 'Some CPU costs are not yet measured. Building is allowed.' : 'Within the CPU allowance. Building is allowed.';
+      cpu.engines.map((e) => `${e.engine} ${e.percent.toFixed(1)}%${e.measured ? ' measured' : ' estimated'}`).join('; ') +
+      `. Provisional limit ${release.cpu.ceiling}%. ` +
+      (cpu.blocked ? 'Build blocked.' : cpu.warning ? 'Near the CPU limit.' : 'Within CPU limit.');
+  const announcement = cpu.blocked ? 'CPU limit exceeded. Build blocked.' :
+    cpu.warning ? 'Near the CPU limit. Build allowed.' :
+    cpu.percent === null ? 'Some CPU costs unmeasured. Build allowed.' : 'Within CPU limit. Build allowed.';
   if ($('cpu-status').textContent !== announcement) $('cpu-status').textContent = announcement;
   $('cpu-provenance').textContent = `Contributing settings: ${cpu.names}. ` +
       Object.entries(release.cpu.baselines).map(([engine, baseline]) => ({ engine, baseline })).map((e) => `${e.engine} baseline ${e.baseline.percent}% (${e.baseline.kind}, provisional): ${e.baseline.provenance.replace(/[.]+$/, '')}.`).join(' ') +
@@ -274,7 +274,7 @@ async function refresh() {
   if (token !== revision) return;
   $('fingerprint').textContent = fp;
   $('share').href = '#' + share(release, block);
-  $('share').onclick = () => { history.replaceState(null, '', $('share').href); status('Share this address to keep the profile.'); };
+  $('share').onclick = () => { history.replaceState(null, '', $('share').href); status('Copy this address to share.'); };
   await updateGuides(release, entries, fp, filenames(release, fp,
       equal(block, encodeProfile(defaults(release.profile), release.profile))));
 }
@@ -294,18 +294,18 @@ function loadSharedProfile() {
 
 async function checkCapabilities() {
   if (!globalThis.Worker || !globalThis.crypto?.subtle || !globalThis.AbortSignal?.timeout) {
-    throw new Error('This browser cannot build firmware here. Use a current Chrome, Firefox, Safari or Edge over HTTPS (or localhost).');
+    throw new Error('Use current Chrome, Firefox, Safari or Edge over HTTPS (or localhost).');
   }
   // A constructor alone does not establish support for module workers.
   await new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=e1f764ab3cc2cda2', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=430c358e108a25cf', { type: 'module' });
     const done = (error) => {
       clearTimeout(timer); worker.terminate();
       error ? reject(error) : resolve();
     };
-    const timer = setTimeout(() => done(new Error('The firmware worker could not start. Reload the page or use a current browser with module worker support.')), 10000);
+    const timer = setTimeout(() => done(new Error('Builder timed out. Reload or update your browser.')), 10000);
     worker.onmessage = ({ data }) => { if (data.ready) done(); };
-    worker.onerror = () => done(new Error('This browser could not load the firmware module worker. Reload the page or use a current browser.'));
+    worker.onerror = () => done(new Error('Builder could not load. Reload or update your browser.'));
   });
 }
 
@@ -317,7 +317,7 @@ async function init() {
   }
   $('compatibility').hidden = true;
   try {
-    const response = await fetch('manifest.json?v=e1f764ab3cc2cda2', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=430c358e108a25cf', { cache: 'no-cache' });
     manifest = await response.json();
   } catch (error) {
     status('Could not load the release list.', 'error');
