@@ -39,7 +39,7 @@ if (process.env.FIRMWARE_CATALOGUE_REF) {
 }
 const table = source('beads/profile.cc').split('kFeatureDefinitions[FEATURE_LAST] = {')[1].split('};')[0];
 const definitions = [...table.matchAll(/\{ (\d+), (\w+), (true|false), (true|false), (true|false), (true|false) \}/g)].slice(1);
-assert.equal(profile.features.length, 23);
+assert.equal(profile.features.length, definitions.length);
 assert.equal(catalogue.features.length, definitions.length);
 for (const [i, definition] of definitions.entries()) {
   const f = profile.features[i], c = catalogue.features[i];
@@ -114,7 +114,7 @@ assert.equal(cpuUsage(heavy, measuredCosts(release)).percent, 92.5);
 assert.equal(createHash('sha256').update(tableBytes).digest('hex'), tableSha256);
 assert.equal(release.cpu.costs.table_sha256, tableSha256);
 assert.deepEqual(importCosts(structuredClone(manifest)), manifest);
-for (const change of [(r) => r.profile.features.pop(), (r) => { r.profile.features[0].name += ' mismatch'; },
+for (const change of [(r) => r.profile.features.shift(), (r) => { r.profile.features[0].name += ' mismatch'; },
   (r) => { r.profile.features[0].id = 99; }]) {
   const r = structuredClone(release); change(r);
   assert.throws(() => importCosts({ releases: [r] }));

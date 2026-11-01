@@ -37,6 +37,7 @@ jobs:
           node test/manifest.js
           node test/profile.js
           node test/scales.js
+          node test/event_costs.js
           node test/scales_firmware.js
           node test/downloads.js
           node test/help.js

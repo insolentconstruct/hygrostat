@@ -12,6 +12,7 @@ const round = (v) => Math.round(v * 10) / 10;
 const tableFeature = (f) => costTable.features.find((row) => row.id === f.id);
 // Independent oracle: use only each engine's table fields, never its top-level maxima.
 function tableCost(entry, f, engine) {
+  if (f.id === 24) return 0; // Independently inspected event-only option, outside the historical table.
   const cpu = tableFeature(f).cpu;
   if (cpu.kind === 'inspection') return 0;
   const c = cpu.engines[engine];
@@ -34,7 +35,9 @@ function choices(f, extremes = false) {
     [f.id, state, value, 0, 0, f.id === 9 && state === 1 && value ? 1 : 0]));
 }
 for (const f of profile.features) {
-  const cpu = tableFeature(f).cpu;
+  const row = tableFeature(f);
+  assert(row || f.id === 24, 'unknown feature has no cost oracle');
+  const cpu = row?.cpu || { kind: 'inspection' };
   assert(!('off' in f.cpu) && !('fixed' in f.cpu) && !('adjustable' in f.cpu));
   for (const engine of engines) {
     if (cpu.kind === 'measured' && !cpu.engines[engine]) {

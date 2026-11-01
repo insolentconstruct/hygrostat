@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { chromium, firefox, webkit } from 'playwright';
+import { importedCost } from '../tools/import-costs.js';
 const base = process.env.BASE || 'http://127.0.0.1:8080/';
 const site = process.env.SITE || '/site';
 const until = async (test) => { for (let i = 0; i < 100; ++i) { if (await test()) return; await new Promise((done) => setTimeout(done, 100)); } throw new Error('Timed out waiting for editor.'); };
@@ -12,6 +13,12 @@ const release = manifest.releases[0];
 // Exercise the pending V2 editor without inventing or offering a firmware image.
 release.profile.version = 2; release.profile.size = 4096;
 release.profile.features.find((f) => f.id === 1).values = Array.from({ length: 16 }, (_, i) => `Scale ${i}`);
+const tail = { id: 24, name: 'Synth reverb tail', values: ['Keep (stock)', 'Clear'], states: ['Off', 'Fixed'],
+  field: null, page: false, amount: false, action: false, stateless: false, synth_path: true,
+  default_in_block: false, default: [24, 0, 0, 0, 0, 0] };
+tail.cpu = importedCost(tail);
+release.profile.features = release.profile.features.filter((f) => f.id !== 24);
+release.profile.features.push(tail);
 manifest.releases = [release];
 const { unshare } = await import(pathToFileURL(resolve(site, 'js/profile.js')).href);
 for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['webkit', webkit]]) {
@@ -30,6 +37,22 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     await page.goto(base);
     await until(async () => await page.isVisible('#scale-editor') && await page.getAttribute('#summary', 'data-fingerprint'));
     const bank = async () => unshare(await page.getAttribute('#share', 'href'), [release]).scales;
+    const startingFP = await page.textContent('#fingerprint');
+    assert.equal(await page.inputValue('#extra-24'), '0');
+    assert.deepEqual(await page.locator('#extra-24 option').allTextContents(), ['Keep (stock)', 'Clear']);
+    assert.equal(await page.locator('#extra-24-place').count(), 0, 'event-only setting has no page placement');
+    await page.selectOption('#extra-24', '1');
+    await until(async () => unshare(await page.getAttribute('#share', 'href'), [release]).entries.some((e) => e[0] === 24 && e[1] === 1 && e[2] === 1));
+    assert(!/not measured/.test(await page.textContent('#cpu-short')));
+    await page.click('#browse');
+    await page.click('#lib-24');
+    assert.equal(await page.textContent('#inspector-title'), 'Synth reverb tail');
+    assert.equal(await page.locator('#state-2').count(), 0);
+    assert.equal(await page.locator('#where-page').count(), 0);
+    assert((await page.getAttribute('#inspector a', 'href')).endsWith('#synth-reverb-tail'));
+    await page.selectOption('#extra-24', '0');
+    await until(async () => await page.textContent('#fingerprint') === startingFP);
+    assert(!unshare(await page.getAttribute('#share', 'href'), [release]).entries.some((e) => e[0] === 24));
     assert.equal(await bank(), null);
     assert.equal(await page.locator('.scale-list li').count(), 8);
     await page.getByRole('button', { name: 'Move Major up', exact: true }).click();

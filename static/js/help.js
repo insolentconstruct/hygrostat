@@ -25,7 +25,8 @@ const descriptions = {
   20: ['Keep FREEZE lit while saving.', 'small-beta-2-profile-options'],
   21: ['Choose latched SEED trigger behaviour.', 'small-beta-2-profile-options'],
   22: ['Show PITCH unison/octaves, ignoring CV and random pitch.', 'small-beta-2-profile-options'],
-  23: ['Scan the granular buffer when TIME CV is unplugged.', 'small-beta-2-profile-options']
+  23: ['Scan the granular buffer when TIME CV is unplugged.', 'small-beta-2-profile-options'],
+  24: ['Keep the synth reverb tail as stock does, or clear it when synth playback stops.', 'synth-reverb-tail']
 };
 
 export function featureHelp(feature, release) {

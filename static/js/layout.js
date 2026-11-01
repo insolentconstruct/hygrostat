@@ -22,7 +22,7 @@ export function placeName(kind, slot) {
 // What an action does, by feature.
 export const ACTION_DOES = { 9: 'Start the synth', 13: 'Switch monophonic grains', 14: 'Trim the buffer' };
 export const GROUPS = [
-  ['Sound', [2, 4, 5, 6, 7, 11, 12]],
+  ['Sound', [2, 4, 5, 6, 7, 11, 12, 24]],
   ['Playback', [1, 3, 8, 10, 13, 14, 23]],
   ['Controls', [9, 16, 21]],
   ['Indicators', [15, 17, 18, 19, 20, 22]]

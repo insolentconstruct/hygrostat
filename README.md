@@ -27,7 +27,7 @@ The tests check the page against the firmware it offers. They need Node 18+, g++
 ```sh
 git clone --branch drizzlet https://github.com/insolentconstruct/eurorack.git firmware
 git -C firmware submodule update --init stmlib
-for t in manifest profile scales scales_firmware downloads help layout readiness costs; do node test/$t.js; done
+for t in manifest profile scales scales_firmware event_costs downloads help layout readiness costs; do node test/$t.js; done
 ```
 
 `test/browser.mjs` and `test/scales_browser.mjs` run the page in Chromium, Firefox and WebKit (CI runs it in the Playwright 1.48.2 image). It needs Playwright with its browsers and the page served locally: `SITE=static BASE=http://localhost:8000/ node test/browser.mjs` (and the same command with `test/scales_browser.mjs`). The scale browser test uses a synthetic release list and never builds or offers a synthetic firmware image. `test/scales_firmware.js` checks the V2 codec against the current firmware parser; it needs firmware with scale-bank support.

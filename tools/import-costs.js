@@ -12,8 +12,33 @@ if (createHash('sha256').update(tableBytes).digest('hex') !== tableSha256) {
 }
 export const costTable = JSON.parse(tableBytes);
 
+// Later event-only options are inspected separately; never rewrite the historical table.
+const eventOnly = new Map([[24, {
+  name: 'Synth reverb tail', values: ['Keep (stock)', 'Clear'], states: ['Off', 'Fixed'],
+  note: 'clearing the synth reverb happens only when leaving synth playback; no per-block or per-tick work'
+}]]);
+
+function inspectedCost(feature) {
+  const known = eventOnly.get(feature.id);
+  if (!known || feature.name !== known.name || JSON.stringify(feature.values) !== JSON.stringify(known.values) ||
+      JSON.stringify(feature.states) !== JSON.stringify(known.states) || feature.field !== null ||
+      feature.page !== false || feature.amount !== false || feature.action !== false || feature.stateless !== false ||
+      feature.default_in_block !== false || JSON.stringify(feature.default) !== JSON.stringify([feature.id, 0, 0, 0, 0, 0])) {
+    throw new Error(`Unknown event-only feature definition: ${feature.id} ${feature.name}`);
+  }
+  return { kind: 'zero', source: 'no per-block work (code inspection)',
+    engines: Object.fromEntries(['synth', 'granular'].map((engine) =>
+      [engine, { off: 0, fixed: [0, 0], adjustable: [0, 0] }])),
+    uncertainty: { points: 0 }, note: known.note };
+}
+
 export function importedCost(feature, table = costTable) {
   const matches = table.features.filter((f) => f.id === feature.id);
+  if (eventOnly.has(feature.id)) {
+    if (matches.length) throw new Error('Event-only additions must not replace the historical cost table.');
+    return inspectedCost(feature);
+  }
+  if (!costTable.features.some((f) => f.id === feature.id)) throw new Error('Unknown cost feature.');
   if (matches.length !== 1 || matches[0].name !== feature.name) {
     throw new Error(`Cost table feature mismatch: ${feature.id} ${feature.name}`);
   }
@@ -32,15 +57,19 @@ export function importCosts(manifest) {
   const releases = manifest.releases.filter((r) => r.development);
   if (releases.length !== 1) throw new Error('Expected one development release.');
   const release = releases[0];
-  if (release.profile.features.length !== costTable.features.length ||
-      new Set(release.profile.features.map((f) => f.id)).size !== costTable.features.length) {
+  const ids = new Set(release.profile.features.map((f) => f.id));
+  const additions = release.profile.features.filter((f) => eventOnly.has(f.id));
+  if (ids.size !== release.profile.features.length ||
+      release.profile.features.length !== costTable.features.length + additions.length ||
+      !costTable.features.every((f) => ids.has(f.id))) {
     throw new Error('Cost table feature set mismatch.');
   }
   const costs = release.profile.features.map((f) => importedCost(f));
   release.profile.features.forEach((f, i) => { f.cpu = costs[i]; });
   release.cpu.costs = { source: costSource, firmware: costTable.firmware,
     table: 'costs/cost-table.json', table_sha256: tableSha256 };
-  release.cpu.release_note = 'Historical default-profile measurements include Clouds-style reverb. Per-feature costs were measured on a module-calibrated development board; estimates sum each engine’s costs. Measured module combinations take precedence. The final image still needs measurement. The default profile is always allowed.';
+  if (additions.length) release.cpu.costs.inspected_features = additions.map((f) => ({ id: f.id, name: f.name, source: 'code inspection' }));
+  release.cpu.release_note = 'Historical default-profile measurements include Clouds-style reverb. Per-feature costs were measured on a module-calibrated development board; estimates sum each engine’s costs. Measured module combinations take precedence. The final image still needs measurement. The default profile is always allowed.' + (additions.length ? ' Event-only additions are classified separately by code inspection; they have no per-block cost.' : '');
   return manifest;
 }
 

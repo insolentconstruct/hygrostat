@@ -474,7 +474,7 @@ function renderExtras() {
         el('label', { class: 'switch' }, input, el('span')), el('small', { id: `extra-${f.id}-about`, text: help.description }));
     }
     const select = el('select', { id: `extra-${f.id}`, 'aria-labelledby': `extra-${f.id}-name`, 'aria-describedby': `extra-${f.id}-about` });
-    f.values.forEach((v, i) => select.add(new Option(i === 0 && e[1] !== 2 ? `${valueLabel(f, i)} (stock)` : valueLabel(f, i), i)));
+    f.values.forEach((v, i) => select.add(new Option(i === 0 && e[1] !== 2 && !/\bstock\b/i.test(valueLabel(f, i)) ? `${valueLabel(f, i)} (stock)` : valueLabel(f, i), i)));
     select.value = e[1] ? e[2] : 0;
     select.onchange = () => {
       const v = Number(select.value);
@@ -485,8 +485,8 @@ function renderExtras() {
       });
     };
     const on = places(e).find((p) => p.kind === 'page');
-    const placement = el('span', { class: 'placement' }, on ? `On ${placeName('page', on.slot)}, starting value shown.` : '',
-      el('button', { type: 'button', id: `extra-${f.id}-place`, onclick: () => putOnPage(f) }, on ? 'Show' : 'Put on an options page'));
+    const placement = f.page ? el('span', { class: 'placement' }, on ? `On ${placeName('page', on.slot)}, starting value shown.` : '',
+      el('button', { type: 'button', id: `extra-${f.id}-place`, onclick: () => putOnPage(f) }, on ? 'Show' : 'Put on an options page')) : null;
     return el('div', { class: 'extra' }, el('label', { for: `extra-${f.id}` }, name), select,
       el('small', { id: `extra-${f.id}-about`, text: help.description }), placement);
   }));

@@ -129,6 +129,9 @@ assert.deepEqual([0, 1, 2].map((s) => stateLabel(features[0], s)),
   ['Use stock behaviour', 'Always use this value', 'Change on the module']);
 assert.equal(summary(features[0], [1, 2, 3, 1, 0, 0]), 'Starts Major');
 assert.equal(summary(features[4], [5, 1, 2, 0, 0, 0]), 'Always No limiter');
-assert.deepEqual(GROUPS.flatMap(([, ids]) => ids).sort((a, b) => a - b), features.map((f) => f.id));
+const grouped = GROUPS.flatMap(([, ids]) => ids);
+assert.equal(new Set(grouped).size, grouped.length, 'features occur in one group only');
+assert(grouped.every((id) => features.some((f) => f.id === id) || id === 24), 'only the known later event-only feature may be absent from an older release');
+assert.deepEqual(grouped.filter((id) => features.some((f) => f.id === id)).sort((a, b) => a - b), features.map((f) => f.id));
 for (const f of features.filter((f) => f.action)) assert(ACTION_DOES[f.id], f.name);
 console.log(`PASS layout: ${edits} edits match the previous editor, ${placements} placements and swaps valid and local, removals keep values`);
