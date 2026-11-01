@@ -24,6 +24,23 @@ with an explanation; unexpected codec or validation failures must remain
 visible. Prefer textContent and DOM construction over interpolating user text
 into markup. Keep untrusted scale names escaped in generated guides.
 
+Core lint rules reject eval, string-based timers, Function constructors and
+javascript: URLs in JavaScript, including tests, tools and generated/vendor
+sources. Use callbacks and explicit functions instead of compiling strings.
+
+Production browser modules also reject innerHTML/outerHTML writes,
+insertAdjacentHTML and document.write/writeln, including literal computed
+properties and qualified document access. Reading innerHTML/outerHTML and test
+DOM assertions remains allowed; parsing-method references are restricted too,
+so an alias cannot hide a direct method lookup. Use textContent, createElement/createElementNS,
+setAttribute with vetted attribute names/values, and append/replaceChildren for
+text, HTML and SVG construction. Use addEventListener rather than string event
+handler attributes, and validate URL-valued attributes before setting them.
+SVG downloads must keep escaping validated text and attributes in the dedicated
+guide renderer; do not inject the serialized drawing back into live markup.
+These are direct-use lint guards, not data-flow analysis or a sanitizer; review
+aliases and dynamic property access rather than evading the checks.
+
 HTML attributes use double quotes. Retain semantic elements, labels, keyboard
 access and existing focus behaviour. CSS stays in index.html unless a change
 has a clear reason to move it; Stylelint parses its style blocks and attributes
