@@ -23,6 +23,7 @@ Then open http://localhost:8000.
 ## Development
 
 Read [STYLE.md](docs/STYLE.md) before editing, including agent-assisted work.
+See [SECURITY.md](docs/SECURITY.md) for the static build, browser boundaries and deployment checks.
 Use Node 22.13+ on the 22 LTS line, or Node 24+, and the pinned lockfile:
 
 ```sh
@@ -46,6 +47,8 @@ for t in manifest profile scales scales_firmware event_costs downloads help layo
 ```
 
 `test/browser.mjs` and `test/scales_browser.mjs` run the page in Chromium, Firefox and WebKit (CI runs it in the Playwright 1.48.2 image). It needs Playwright with its browsers and the page served locally: `SITE=static BASE=http://localhost:8000/ node test/browser.mjs` (and the same command with `test/scales_browser.mjs`). The scale browser test uses a synthetic release list and never builds or offers a synthetic firmware image. `test/scales_firmware.js` checks the V2 codec against the current firmware parser; it needs firmware with scale-bank support.
+
+`BASE=http://localhost:8000/ node test/security_browser.mjs` checks actual CSP blocking and referrer behaviour in all three engines without re-encoding a WAV.
 
 After changing anything in `static/js/` or `static/manifest.json`, run `node tools/version-assets.js`.
 

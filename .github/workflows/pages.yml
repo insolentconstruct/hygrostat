@@ -110,6 +110,7 @@ jobs:
           for i in $(seq 50); do curl -fs -o /dev/null http://127.0.0.1:8080/ && break; sleep 0.2; done
           SITE=static BASE=http://127.0.0.1:8080/ node test/browser.mjs
           SITE=static BASE=http://127.0.0.1:8080/ node test/scales_browser.mjs
+          BASE=http://127.0.0.1:8080/ node test/security_browser.mjs
 
   deploy:
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'

@@ -7,3 +7,14 @@ disableKinds = ['section', 'taxonomy', 'term', 'rss', 'sitemap', 'robotstxt', '4
 # The home page is static/index.html: Hugo renders nothing for it.
 [outputs]
 home = []
+
+# This site only copies static files; Hugo needs no subprocesses, remote
+# resources or template access to environment variables.
+[security.exec]
+allow = []
+
+[security.http]
+urls = []
+
+[security.funcs]
+getenv = []
