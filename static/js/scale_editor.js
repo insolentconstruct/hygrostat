@@ -105,6 +105,7 @@ export function scaleEditor(root, { get, set, error, releaseKey }) {
         chosen = id;
         apply([...current, scale], 'Scala scale imported.');
       } catch (problem) { report(problem.message); }
+      finally { file.value = ''; }
     };
     const importLabel = node('label', 'Import Scala (.scl) '); importLabel.append(file);
     actions.append(add, importLabel);

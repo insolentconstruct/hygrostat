@@ -164,7 +164,7 @@ const renderScales = scaleEditor($('scale-editor'), {
     const available = effectiveScales(bank);
     const next = entries.map((e) => e[0] === 1 && e[2] >= 2 && !available.some((s) => s.id === e[2]) ?
       [e[0], e[1], 0, ...e.slice(3)] : e.slice());
-    validate(next, selected().profile);
+    encodeProfile(next, selected().profile, bank);
     scales = bank;
     commit(() => next, message);
   }
@@ -300,7 +300,7 @@ function renderTemplates() {
   const describe = (f, e) => [summary(f, e), ...places(e).map((p) => placeName(p.kind, p.slot))].join(' · ');
   const items = different.map((f) => el('li', {}, el('strong', { text: `${f.name}: ` }),
     `${describe(f, entryOf(entries, f))} → ${describe(f, entryOf(candidate, f))}`));
-  if (scales !== null) items.push(el('li', { text: 'Restore the factory scale bank, including its definitions, order and LED indications.' }));
+  if (selected().profile.version === 2 && scales !== null) items.push(el('li', { text: 'Restore the factory scale bank, including its definitions, order and LED indications.' }));
   $('template-preview-title').textContent = `${templatePreview}: ${items.length} change${items.length === 1 ? '' : 's'}`;
   $('template-changes').replaceChildren(...[items.length ? el('ul', {}, ...items.slice(0, 6)) :
     el('p', { text: 'Your setup already matches this starting point.' }),

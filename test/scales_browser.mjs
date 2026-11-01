@@ -56,7 +56,10 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     assert.deepEqual((await bank()).find((s) => s.id === 10), edited);
     await page.getByRole('button', { name: 'Remove <Custom & scale>', exact: true }).click();
     assert(!(await bank()).some((s) => s.id === 10));
-    // A delayed file read must preserve edits made while import is pending.
+    await page.setInputFiles('#scale-import', { name: 'example.scl', mimeType: 'text/plain', buffer: Buffer.from('Invalid Scala') });
+    await until(async () => (await page.textContent('#scale-error')).includes('Invalid Scala'));
+    assert.equal(await page.inputValue('#scale-import'), '', 'failed import clears the file selection for retry');
+    // Retry the same filename; a delayed read must preserve concurrent edits.
     await page.evaluate(() => {
       const original = File.prototype.text;
       File.prototype.text = async function() {
@@ -66,6 +69,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
       };
     });
     await page.setInputFiles('#scale-import', { name: 'example.scl', mimeType: 'text/plain', buffer: Buffer.from('Imported scale\n3\n400.0\n3/2\n2/1\n') });
+    await until(async () => await page.evaluate(() => typeof window.finishScaleRead === 'function'));
     await page.getByRole('button', { name: 'Remove Fifths', exact: true }).click();
     await page.evaluate(() => window.finishScaleRead());
     await until(async () => (await bank())?.some((s) => s.name === 'Imported scale'));
