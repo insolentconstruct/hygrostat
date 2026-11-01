@@ -8,15 +8,15 @@
 // check the release's app image against the manifest, encode the update .wav
 // in the browser, check the .wav, offer it for download.
 
-import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, cpuUsage, featureDelta, modes, normalise } from './profile.js?v=1df6d0c7c3a9704a';
-import { effectiveScales, validateScales } from './scales.js?v=1df6d0c7c3a9704a';
-import { scaleEditor } from './scale_editor.js?v=1df6d0c7c3a9704a';
-import { guide } from './guide.js?v=1df6d0c7c3a9704a';
-import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=1df6d0c7c3a9704a';
-import { featureHelp, actionHelp } from './help.js?v=1df6d0c7c3a9704a';
+import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, cpuUsage, featureDelta, modes, normalise } from './profile.js?v=6c90196be639c1d4';
+import { effectiveScales, validateScales } from './scales.js?v=6c90196be639c1d4';
+import { scaleEditor } from './scale_editor.js?v=6c90196be639c1d4';
+import { guide } from './guide.js?v=6c90196be639c1d4';
+import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=6c90196be639c1d4';
+import { featureHelp, actionHelp } from './help.js?v=6c90196be639c1d4';
 import { KNOBS, KINDS, GROUPS, ACTION_DOES, placeName, pageOf, entryOf, occupant, places, valueLabel, stateLabel,
-  summary, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, fits } from './layout.js?v=1df6d0c7c3a9704a';
-import { drawPanel, highlight } from './panel.js?v=1df6d0c7c3a9704a';
+  summary, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, fits } from './layout.js?v=6c90196be639c1d4';
+import { drawPanel, highlight } from './panel.js?v=6c90196be639c1d4';
 
 const $ = (id) => document.getElementById(id);
 const cap = (text) => text.replace(/^./, (c) => c.toUpperCase());
@@ -39,7 +39,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=1df6d0c7c3a9704a', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=6c90196be639c1d4', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.ready) return;
       if (data.progress !== undefined) {
@@ -88,8 +88,11 @@ async function build(release, app) {
   $('result').hidden = true;
   $('progress').value = 0;
   $('progress').hidden = false;
+  if (app.length !== release.app_size) {
+    throw new Error(`the app image must be ${release.app_size} bytes for ${release.tag}`);
+  }
   const appHash = await sha256(app);
-  if (app.length !== release.app_size || appHash !== release.app_sha256) {
+  if (appHash !== release.app_sha256) {
     throw new Error(`the app image does not match ${release.tag}: ${appHash}`);
   }
   const chosen = entries.map((e) => e.slice());
@@ -836,7 +839,7 @@ async function checkCapabilities() {
   }
   // A constructor alone does not establish support for module workers.
   await new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=1df6d0c7c3a9704a', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=6c90196be639c1d4', { type: 'module' });
     const done = (error) => {
       clearTimeout(timer); worker.terminate();
       error ? reject(error) : resolve();
@@ -855,7 +858,7 @@ async function init() {
   }
   $('compatibility').hidden = true;
   try {
-    const response = await fetch('manifest.json?v=1df6d0c7c3a9704a', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=6c90196be639c1d4', { cache: 'no-cache' });
     manifest = await response.json();
   } catch {
     status('Could not load the release list.', 'error');
@@ -904,7 +907,12 @@ async function init() {
   $('build').onclick = () => run(fetchApp);
   $('local').onchange = () => {
     const file = $('local').files[0];
-    if (file) run(async () => new Uint8Array(await file.arrayBuffer()));
+    if (file) run(async (release) => {
+      if (file.size !== release.app_size) {
+        throw new Error(`the app image must be ${release.app_size} bytes for ${release.tag}`);
+      }
+      return new Uint8Array(await file.arrayBuffer());
+    });
   };
 }
 

@@ -23,15 +23,16 @@
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
 // Knob cards port options_guide.py: 270-degree arcs and the same LED ladder.
-import { effectiveScales, PULSE_NAMES } from './scales.js?v=1df6d0c7c3a9704a';
-import { defaults, equal, encodeProfile } from './profile.js?v=1df6d0c7c3a9704a';
-import { RELEASE_GUIDES, RELEASE_GUIDE_ID } from './release_guides.js?v=1df6d0c7c3a9704a';
+import { effectiveScales, PULSE_NAMES } from './scales.js?v=6c90196be639c1d4';
+import { defaults, equal, encodeProfile } from './profile.js?v=6c90196be639c1d4';
+import { RELEASE_GUIDES, RELEASE_GUIDE_ID } from './release_guides.js?v=6c90196be639c1d4';
 
 const KNOBS = ['FEEDBACK', 'DRY/WET', 'REVERB'];
 export const ACTIONS = ['None', '[A]+SEED', '[A]+FREEZE', '[A] hold'];
 export const AMOUNTS = ['None', '[A]+DRY/WET', '[A]+REVERB'];
 export const pageName = (slot) => slot ? `[M] page ${Math.ceil(slot / 3)} · ${KNOBS[(slot - 1) % 3]}` : 'None';
-const escape = (s) => String(s).replace(/[&<>"']/g, (c) =>
+// Valid UTF-8 scale names can contain these XML 1.0 noncharacters.
+const escape = (s) => String(s).replace(/[\ufffe\uffff]/g, '\ufffd').replace(/[&<>"']/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;' })[c]);
 const COLOURS = ['#247443', '#a87900', '#bd3030'];
 export function indication(index) {

@@ -109,5 +109,15 @@ for (const mobile of [false, true]) {
   assert(svg.includes('#00ff00'));
   assert(svg.includes('repeat 1200 cents'));
   assert(!svg.includes('<Scale & test>'));
+  for (const character of ['\ufffe', '\uffff']) {
+    const bank = [{ ...full[0], name: `Scale${character} & <test>`, notes: [0, 7] }];
+    const block = encodeProfile(entries, profile, bank);
+    const decoded = unshare(share(release, block), [release]);
+    assert.equal(decoded.scales[0].name, bank[0].name);
+    const drawing = guide(entries, release, '12345678', mobile, decoded.scales);
+    assert(drawing.includes('Scale\ufffd &amp; &lt;test&gt;'));
+    assert(!drawing.includes(character));
+    assert.deepEqual(encodeProfile(decoded.entries, profile, decoded.scales), block);
+  }
 }
 console.log('PASS V2 scale banks, malformed wire records, Scala import, stable order/identity, CPU provenance and guides; V1 round-trip retained.');

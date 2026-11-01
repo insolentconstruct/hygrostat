@@ -11,6 +11,8 @@ const release = JSON.parse(readFileSync(`${site}/manifest.json`)).releases[0];
 const { encodeProfile, defaults, share, fingerprint, templates, profileKey } = await import(
   pathToFileURL(resolve(site, 'js/profile.js')).href);
 const layout = await import(pathToFileURL(resolve(site, 'js/layout.js')).href);
+const { guide } = await import(pathToFileURL(resolve(site, 'js/guide.js')).href);
+const { factoryScales } = await import(pathToFileURL(resolve(site, 'js/scales.js')).href);
 const hashOf = (entries) => '#' + share(release, encodeProfile(entries, release.profile));
 for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['webkit', webkit]]) {
   const browser = await engine.launch();
@@ -45,6 +47,20 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     const releaseBlock = encodeProfile(defaults(release.profile), release.profile);
     const releaseFP = await fingerprint(releaseBlock);
     await waitFingerprint(releaseFP);
+    if (release.profile.version === 2) {
+      for (const character of ['\ufffe', '\uffff']) {
+        const bank = factoryScales(); bank[0].name = `Scale${character} & <test>`;
+        for (const mobile of [false, true]) {
+          const drawing = guide(defaults(release.profile), release, releaseFP, mobile, bank);
+          const parsed = await page.evaluate((svg) => {
+            const document = new DOMParser().parseFromString(svg, 'image/svg+xml');
+            return { errors: document.querySelectorAll('parsererror').length, text: document.documentElement.textContent };
+          }, drawing);
+          assert.equal(parsed.errors, 0);
+          assert(parsed.text.includes('Scale\ufffd & <test>'));
+        }
+      }
+    }
     assert.deepEqual(await pressed(), ['Drizzlet']);
     assert.equal(await page.textContent('#positions'), '10 of 12 page positions used');
     assert.equal(await page.isVisible('#development'), Boolean(release.development));
@@ -315,6 +331,40 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     assert((await page.textContent('#cpu')).includes('87.2%'));
     assert.equal(await page.isDisabled('#build'), false);
     await context.unroute(manifestURL, unknownRoute);
+    // Reject wrong-sized local files before reading or hashing their contents.
+    await page.evaluate(() => {
+      window.localBoundary = { reads: 0, hashes: 0, digest: crypto.subtle.digest };
+      crypto.subtle.digest = function(...args) {
+        window.localBoundary.hashes++;
+        return window.localBoundary.digest.apply(this, args);
+      };
+    });
+    for (const [size, length, reads, hashes] of [
+      [8 * 1024 ** 3, 0, 0, 0],
+      [release.app_size, release.app_size + 1, 1, 0],
+      [release.app_size, release.app_size, 1, 1]
+    ]) {
+      await page.evaluate(({ size, length }) => {
+        window.localBoundary.reads = window.localBoundary.hashes = 0;
+        const input = document.querySelector('#local');
+        const source = new File([new Uint8Array(length)], 'wrong-image.bin');
+        const read = source.arrayBuffer.bind(source);
+        const file = size === source.size ? source : { size, arrayBuffer: read };
+        file.arrayBuffer = () => { window.localBoundary.reads++; return read(); };
+        Object.defineProperty(input, 'files', { configurable: true, value: [file] });
+        input.dispatchEvent(new Event('change'));
+      }, { size, length });
+      await until(async () => await page.getAttribute('#status', 'class') === 'error' && !await page.isDisabled('#local'));
+      const actual = await page.evaluate(() => ({ reads: window.localBoundary.reads, hashes: window.localBoundary.hashes }));
+      assert.deepEqual(actual, { reads, hashes });
+      assert((await page.textContent('#status')).includes(hashes ? 'does not match' : 'must be'));
+      assert.equal(await page.isVisible('#result'), false);
+    }
+    await page.evaluate(() => {
+      delete document.querySelector('#local').files;
+      crypto.subtle.digest = window.localBoundary.digest;
+      delete window.localBoundary;
+    });
     // Building the release default reproduces the release WAV, with its guides.
     if (name === 'chromium') {
       await page.click('#build');
