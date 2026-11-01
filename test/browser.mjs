@@ -48,6 +48,29 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     assert.deepEqual(await pressed(), ['Drizzlet']);
     assert.equal(await page.textContent('#positions'), '10 of 12 page positions used');
     assert.equal(await page.isVisible('#development'), Boolean(release.development));
+    // Preview every focused template without changing the profile or share link.
+    const unchangedShare = await page.getAttribute('#share', 'href');
+    await page.click('#more-templates');
+    assert.equal(await page.locator('.template-card').count(), 7);
+    for (const template of ['Cloud textures', 'Pitched grains', 'Drum grains', 'Delay & freeze', 'Spectral', 'Plaits voice', 'Live essentials']) {
+      const id = template.toLowerCase().replace(/\W+/g, '-');
+      await page.click(`#template-${id}`);
+      assert((await page.textContent('#template-preview-title')).startsWith(template));
+      assert.equal(await page.getAttribute('#share', 'href'), unchangedShare);
+      assert.equal(await page.textContent('#fingerprint'), releaseFP);
+      assert(await page.locator('.template-change').count() > 0);
+    }
+    await page.click('#cancel-template');
+    assert.equal(await page.locator('.template-change').count(), 0);
+    await waitFingerprint(releaseFP);
+    // Applying a preview uses that exact profile; the default chip restores it.
+    await page.click('#more-templates');
+    await page.click('#template-drum-grains');
+    await page.click('#use-template');
+    await waitFingerprint(await fingerprint(encodeProfile(templates(release.profile)['Drum grains'], release.profile)));
+    assert.equal(await page.isVisible('#template-gallery'), false);
+    await page.click('#preset-drizzlet');
+    await waitFingerprint(releaseFP);
     // Every feature: a description and a documentation link for the release.
     for (const f of release.profile.features) {
       await selectFeature(f);

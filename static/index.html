@@ -75,6 +75,18 @@
   .steps { margin-top: -.6rem; }
   .how b { color: var(--ink); }
 
+  /* Starting points */
+  #template-gallery { padding-bottom: 1.5rem; }
+  .template-group h3 { font-size: 1rem; margin: 1rem 0 .4rem; }
+  .template-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: .5rem; }
+  .template-card { display: grid; gap: .3rem; text-align: left; padding: .8rem; border: 1px solid var(--rule);
+    border-radius: 6px; background: var(--plate); }
+  .template-card[aria-pressed=true] { border-color: var(--link); background: var(--sunk); }
+  .template-card small { color: var(--muted); }
+  #template-preview { margin-top: 1rem; padding: 1rem; background: var(--sunk); border-radius: 6px; }
+  #template-changes li { margin-bottom: .35rem; }
+  .template-change { outline: 3px solid var(--link); outline-offset: -3px; }
+
   /* Workspace */
   #workspace { display: grid; gap: 1.5rem 2rem; grid-template-columns: minmax(0, 1fr) 24rem;
     grid-template-areas: "controls inspector" "slots inspector" "extras inspector"; align-items: start; padding-bottom: 1.5rem; }
@@ -274,6 +286,7 @@
     #download-counts { text-align: left; }
     .lead { margin-bottom: .6rem; }
     .chip { padding: .4rem .8rem; }
+    .template-cards { grid-template-columns: 1fr; }
     #workspace { grid-template-columns: minmax(0, 1fr); grid-template-areas: "controls" "inspector" "slots" "extras"; }
     .inspector { position: static; }
     .page-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: .5rem; }
@@ -294,6 +307,7 @@
   }
 
   @media print {
+    #template-gallery { display: none; }
     :root { --paper: #fff; --plate: #fff; --ink: #000; --muted: #333; --rule: #888; --link: #000; }
     .masthead, #workspace, .buildbar, #result, #advanced, dialog, noscript, .privacy { display: none !important; }
     .print-note { display: block !important; }
@@ -324,6 +338,24 @@
   <p id="compatibility" class="note">Loading… Needs JavaScript and a current browser over HTTPS (or localhost).</p>
 </header>
 <p class="print-note wrap" hidden>For your controls, print the downloaded SVG guide.</p>
+
+<section id="template-gallery" class="wrap" aria-labelledby="templates-title" hidden>
+  <div class="section-head">
+    <h2 id="templates-title">More starting points</h2>
+    <button id="templates-close" class="quiet" type="button">Close</button>
+  </div>
+  <p>Choose one to preview its changes. Your setup stays as it is until you use it.</p>
+  <div id="template-groups"></div>
+  <section id="template-preview" aria-labelledby="template-preview-title" hidden>
+    <h3 id="template-preview-title"></h3>
+    <p class="note">Outlined controls would change. The grid still shows your current setup.</p>
+    <div id="template-changes"></div>
+    <div class="inspector-actions">
+      <button id="use-template" class="primary" type="button">Use template</button>
+      <button id="cancel-template" class="quiet" type="button">Cancel</button>
+    </div>
+  </section>
+</section>
 
 <main id="workspace" class="wrap">
   <section class="controls" aria-labelledby="pages-title">
@@ -446,6 +478,6 @@
   </div>
   <div id="library-body"></div>
 </dialog>
-<script type="module" src="js/app.js?v=fe9366c69a1ed98a"></script>
+<script type="module" src="js/app.js?v=3abfd1e06a3bed3b"></script>
 </body>
 </html>

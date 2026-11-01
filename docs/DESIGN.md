@@ -36,6 +36,8 @@ The page checks the pinned base `app.bin` against its SHA-256 and patches only t
 
 Tests read firmware files with `git -C $FIRMWARE_REPO show <ref>:<file>`, where `<ref>` is the manifest's `source_commit` (development) or `refs/tags/<tag>`. So the page is always checked against the release it offers, not the firmware branch's current state. CI also runs `test/golden.js` on each manifest image against its WAV hash.
 
+Templates keep Drizzlet and Stock plus fixes as direct choices. Seven focused starting points start from all features Off. The grouped gallery shows provisional CPU estimates and previews changed controls and values; only Use applies a template. Previewing leaves the profile, share link, guides and firmware build unchanged.
+
 ## CPU estimates
 
 - Per-feature costs were measured on a development board calibrated to the module. Four event-only features have no per-block cost.

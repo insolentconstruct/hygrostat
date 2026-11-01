@@ -8,13 +8,13 @@
 // check the release's app image against the manifest, encode the update .wav
 // in the browser, check the .wav, offer it for download.
 
-import { defaults, decodeProfile, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, cpuUsage, featureDelta, modes, normalise } from './profile.js?v=fe9366c69a1ed98a';
-import { guide } from './guide.js?v=fe9366c69a1ed98a';
-import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=fe9366c69a1ed98a';
-import { featureHelp, actionHelp } from './help.js?v=fe9366c69a1ed98a';
+import { defaults, decodeProfile, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, cpuUsage, featureDelta, modes, normalise } from './profile.js?v=3abfd1e06a3bed3b';
+import { guide } from './guide.js?v=3abfd1e06a3bed3b';
+import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=3abfd1e06a3bed3b';
+import { featureHelp, actionHelp } from './help.js?v=3abfd1e06a3bed3b';
 import { KNOBS, KINDS, GROUPS, ACTION_DOES, placeName, pageOf, entryOf, occupant, places, valueLabel, stateLabel,
-  summary, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, fits } from './layout.js?v=fe9366c69a1ed98a';
-import { drawPanel, highlight } from './panel.js?v=fe9366c69a1ed98a';
+  summary, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, fits } from './layout.js?v=3abfd1e06a3bed3b';
+import { drawPanel, highlight } from './panel.js?v=3abfd1e06a3bed3b';
 
 const $ = (id) => document.getElementById(id);
 const cap = (text) => text.replace(/^./, (c) => c.toUpperCase());
@@ -37,7 +37,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=fe9366c69a1ed98a', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=3abfd1e06a3bed3b', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.ready) return;
       if (data.progress !== undefined) {
@@ -66,6 +66,19 @@ let preset = 'Drizzlet';
 let selection = { kind: 'page', slot: 1 };
 let pageTab = 1;
 let pending = null; // An inspector placement waiting for Swap or Replace.
+let templatePreview = null;
+const startingPoints = [
+  ['Process audio', [
+    ['Cloud textures', 'Slow, evolving frozen textures.'],
+    ['Pitched grains', 'Tonal grains with a minor-pentatonic scale.'],
+    ['Drum grains', 'Keep attacks and follow a clock.'],
+    ['Delay & freeze', 'Smooth-filter delay and fresh captures.'],
+    ['Spectral', 'Spectral processing, with a way back to granular.']
+  ]],
+  ['Play a voice', [['Plaits voice', 'A synth voice started by hand.']]],
+  ['Perform', [['Live essentials', 'Keep useful choices close on stage.']]]
+];
+const templateId = (name) => name.toLowerCase().replace(/\W+/g, '-');
 
 async function build(release, app) {
   if (download) URL.revokeObjectURL(download);
@@ -138,7 +151,7 @@ let busy = false;
 async function run(getApp) {
   if (busy) return;
   busy = true;
-  $('workspace').inert = $('presets').inert = true;
+  $('workspace').inert = $('presets').inert = $('template-gallery').inert = true;
   $('build').disabled = $('release').disabled = $('local').disabled = true;
   $('result').hidden = true;
   try {
@@ -152,7 +165,7 @@ async function run(getApp) {
     $('build').disabled = $('release').disabled = $('local').disabled = false;
     busy = false;
     if (pendingShare) { pendingShare = false; loadSharedProfile(); }
-    $('workspace').inert = $('presets').inert = false;
+    $('workspace').inert = $('presets').inert = $('template-gallery').inert = false;
     const blocked = cpuUsage(entries, selected()).blocked;
     $('build').disabled = $('local').disabled = blocked;
   }
@@ -177,6 +190,7 @@ async function updateGuides(release, chosen, fp, names) {
 
 // Apply an edit; errors leave the profile as it was.
 function commit(change, message = '') {
+  templatePreview = null;
   try {
     entries = change();
     status(message);
@@ -199,13 +213,88 @@ function setupEditor() {
   render();
 }
 
+function useTemplate(name) {
+  preset = name;
+  $('template-gallery').hidden = true;
+  commit(() => templates(profile())[name].map((e) => e.slice()), `Started from ${name}.`);
+}
+
 function renderPresets() {
   const current = matchingTemplate();
-  $('presets').replaceChildren(...Object.keys(templates(profile())).map((name) => el('button', {
-    type: 'button', class: 'chip', id: `preset-${name.toLowerCase().replace(/\W+/g, '-')}`,
+  $('presets').replaceChildren(...['Drizzlet', 'Stock plus fixes'].map((name) => el('button', {
+    type: 'button', class: 'chip', id: `preset-${templateId(name)}`,
     'aria-pressed': String(name === current), text: name,
-    onclick: () => { preset = name; commit(() => templates(profile())[name], `Started from ${name}.`); }
-  })));
+    onclick: () => useTemplate(name)
+  })), el('button', {
+    type: 'button', class: 'chip', id: 'more-templates', text: 'More starting points…',
+    'aria-expanded': String(!$('template-gallery').hidden), 'aria-controls': 'template-gallery',
+    onclick: () => {
+      if (!$('template-gallery').hidden) { closeTemplates(); return; }
+      $('template-gallery').hidden = false;
+      renderPresets();
+      $('template-gallery').querySelector('button').focus();
+    }
+  }));
+  if (!$('template-gallery').hidden) renderTemplates();
+}
+
+function closeTemplates() {
+  templatePreview = null;
+  $('template-gallery').hidden = true;
+  renderPresets();
+  markTemplateChanges();
+  $('more-templates').focus();
+}
+
+function renderTemplates() {
+  const candidates = templates(profile());
+  $('template-groups').replaceChildren(...startingPoints.map(([group, items]) =>
+    el('section', { class: 'template-group', 'aria-label': group }, el('h3', { text: group }),
+      el('div', { class: 'template-cards' }, ...items.map(([name, about]) => {
+        const cpu = cpuUsage(candidates[name], selected());
+        const cost = cpu.percent === null ? 'CPU not measured for some settings' : `CPU ${cpu.percent.toFixed(1)}%, provisional`;
+        return el('button', {
+          type: 'button', class: 'template-card', id: `template-${templateId(name)}`,
+          'aria-pressed': String(templatePreview === name),
+          onclick: () => {
+            templatePreview = name;
+            renderTemplates();
+            markTemplateChanges();
+            $(`template-${templateId(name)}`).focus({ preventScroll: true });
+          }
+        }, el('strong', { text: name }), el('span', { text: about }), el('small', { text: cost }));
+      })))));
+  const candidate = candidates[templatePreview];
+  $('template-preview').hidden = !candidate;
+  if (!candidate) return;
+  const different = changes(candidate, entries, profile());
+  const describe = (f, e) => [summary(f, e), ...places(e).map((p) => placeName(p.kind, p.slot))].join(' · ');
+  const items = different.map((f) => el('li', {}, el('strong', { text: `${f.name}: ` }),
+    `${describe(f, entryOf(entries, f))} → ${describe(f, entryOf(candidate, f))}`));
+  $('template-preview-title').textContent = `${templatePreview}: ${different.length} change${different.length === 1 ? '' : 's'}`;
+  $('template-changes').replaceChildren(...[items.length ? el('ul', {}, ...items.slice(0, 6)) :
+    el('p', { text: 'Your setup already matches this starting point.' }),
+    items.length > 6 ? el('details', {}, el('summary', { text: `${items.length - 6} more changes` }),
+      el('ul', {}, ...items.slice(6))) : null].filter(Boolean));
+  $('use-template').textContent = `Use ${templatePreview}`;
+  $('use-template').onclick = () => {
+    useTemplate(templatePreview);
+    $('more-templates').focus();
+  };
+}
+
+// Preview marks affected destinations without changing entries, the share link,
+// the downloaded guide, or the firmware that Build will make.
+function markTemplateChanges() {
+  const candidate = templatePreview && templates(profile())[templatePreview];
+  for (const [kind, { count }] of Object.entries(KINDS)) {
+    for (let slot = 1; slot <= count; ++slot) {
+      const before = occupant(entries, kind, slot);
+      const after = candidate && occupant(candidate, kind, slot);
+      const changed = Boolean(candidate && before?.join() !== after?.join());
+      $(kind === 'page' ? `cell-${slot}` : `${kind}-${slot}`)?.classList.toggle('template-change', changed);
+    }
+  }
 }
 
 const leds = (page) => el('span', { class: 'leds', 'aria-hidden': 'true' },
@@ -239,10 +328,11 @@ function renderGrid() {
       return el('td', {}, cell);
     })));
   $('grid').tBodies[0].replaceChildren(...rows);
+  markTemplateChanges();
   document.querySelector('.page-tabs').replaceChildren(...[1, 2, 3, 4].map((page) => el('button', {
     type: 'button', role: 'tab', id: `tab-${page}`, 'aria-selected': String(page === pageTab),
     'aria-controls': 'grid', tabindex: page === pageTab ? '0' : '-1',
-    onclick: () => { pageTab = page; renderGrid(); $(`tab-${page}`).focus(); }
+    onclick: () => { pageTab = page; renderGrid(); markTemplateChanges(); $(`tab-${page}`).focus(); }
   }, `Page ${page}`, leds(page))));
 }
 
@@ -652,7 +742,7 @@ function render() {
   if (key !== shown && selection.kind === 'page') pageTab = pageOf(selection.slot);
   shown = key;
   const focused = document.activeElement?.id;
-  renderPresets(); renderGrid(); renderSlots(); renderExtras(); renderInspector();
+  renderPresets(); renderGrid(); renderSlots(); renderExtras(); renderInspector(); markTemplateChanges();
   if (focused && document.activeElement === document.body) $(focused)?.focus({ preventScroll: true });
   refresh();
 }
@@ -714,7 +804,7 @@ async function checkCapabilities() {
   }
   // A constructor alone does not establish support for module workers.
   await new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=fe9366c69a1ed98a', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=3abfd1e06a3bed3b', { type: 'module' });
     const done = (error) => {
       clearTimeout(timer); worker.terminate();
       error ? reject(error) : resolve();
@@ -733,7 +823,7 @@ async function init() {
   }
   $('compatibility').hidden = true;
   try {
-    const response = await fetch('manifest.json?v=fe9366c69a1ed98a', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=3abfd1e06a3bed3b', { cache: 'no-cache' });
     manifest = await response.json();
   } catch (error) {
     status('Could not load the release list.', 'error');
@@ -756,6 +846,7 @@ async function init() {
   document.querySelector('.page-tabs').addEventListener('keydown', tabKeys);
   gridDrag();
   $('browse').onclick = () => openLibrary(null);
+  $('templates-close').onclick = $('cancel-template').onclick = closeTemplates;
   $('library-close').onclick = () => $('library').close();
   $('library-search').oninput = () => renderLibrary();
   $('library-search').onkeydown = (event) => {
@@ -776,7 +867,7 @@ async function init() {
     if (busy) pendingShare = true;
     else loadSharedProfile();
   });
-  $('release').onchange = () => { entries = defaults(selected().profile); preset = 'Drizzlet'; setupEditor(); };
+  $('release').onchange = () => { templatePreview = null; $('template-gallery').hidden = true; entries = defaults(selected().profile); preset = 'Drizzlet'; setupEditor(); };
   setupEditor();
   $('build').onclick = () => run(fetchApp);
   $('local').onchange = () => {
