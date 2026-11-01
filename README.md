@@ -28,7 +28,7 @@ git -C firmware submodule update --init stmlib
 for t in manifest profile downloads help layout readiness costs; do node test/$t.js; done
 ```
 
-`test/browser.mjs` runs the page in Chromium, Firefox and WebKit. It needs Playwright with its browsers and the page served locally: `SITE=static BASE=http://localhost:8000/ node test/browser.mjs`.
+`test/browser.mjs` runs the page in Chromium, Firefox and WebKit (CI runs it in the Playwright 1.48.2 image). It needs Playwright with its browsers and the page served locally: `SITE=static BASE=http://localhost:8000/ node test/browser.mjs`.
 
 After changing anything in `static/js/` or `static/manifest.json`, run `node tools/version-assets.js`.
 

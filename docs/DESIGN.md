@@ -23,7 +23,7 @@ The page checks the pinned base `app.bin` against its SHA-256 and patches only t
 - The page shows the module's destinations: options pages 1–4 (rows) by FEEDBACK, DRY/WET and REVERB (columns), two [A] amounts and three [A] gestures. Off, Fixed and Adjustable are shown as "Use stock behaviour", "Always use this value" and "Change on the module".
 - `static/js/layout.js` holds the editor rules. State, value and slot edits use the previous editor's rule unchanged; `test/layout.js` checks it against a verbatim copy and checks every placement, swap and removal.
 - Placing a feature on a taken destination offers Swap (the occupant takes the feature's old place) or Replace (the occupant leaves). A feature taken off its last control keeps its value as Fixed, or goes Off at value 0; a Fixed gesture-only setting goes Off without its gesture.
-- `static/js/panel.js` draws the upper panel from the guide's geometry and highlights the selected destination's controls.
+- `static/js/panel.js` draws the whole front panel to scale from the guide's geometry (`panel_geometry.tsv` in the firmware) and highlights the selected destination's controls.
 
 ## Manifest (`static/manifest.json`, format 2)
 

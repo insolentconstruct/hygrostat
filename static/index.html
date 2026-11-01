@@ -122,17 +122,45 @@
   #unplaced button { min-height: 44px; padding: 0 .2rem; border: 0; background: none; color: var(--link); text-decoration: underline; }
 
   /* Inspector */
-  #panel { display: block; width: 100%; height: auto; max-height: 15rem; }
-  #panel .plate { fill: var(--sunk); stroke: var(--rule); stroke-width: 1.5; }
-  #panel .outline { fill: none; stroke: var(--rule); stroke-width: 1.5; }
-  #panel .part { fill: var(--plate); stroke: var(--muted); stroke-width: 2; transition: fill .15s; }
+  /* The module's panel: aluminium face, black knobs, the gesture's controls ringed in the link colour. */
+  #panel { display: block; width: 100%; max-width: 23rem; height: auto; margin: 0 auto .5rem;
+    --face: #e9ecee; --face-edge: #aeb7bd; --print: #2c353b; --knob: #1f2529; --cap: #fbfcfc; --cap-edge: #c4ccd1;
+    --nut: #c9d0d4; --nut-edge: #8c979e; --socket: #171c1f; --lamp: #f4f6ef; --led-off: #c3cacf;
+    --well: #2c353b; --well-ink: #e9ecee; }
+  #panel .face { fill: var(--face); stroke: var(--face-edge); stroke-width: .35; }
+  #panel .hole { fill: var(--plate); stroke: var(--face-edge); stroke-width: .25; }
+  #panel .band { stroke: var(--face-edge); stroke-width: 1.1; stroke-dasharray: .35 .45; }
+  #panel .rule { stroke: var(--face-edge); stroke-width: .3; }
+  #panel .well { fill: var(--well); }
+  #panel .scale { fill: none; stroke: var(--face-edge); stroke-width: .7; stroke-dasharray: .25 .55; }
+  #panel .skirt { fill: var(--knob); stroke: var(--knob); stroke-width: .3; }
+  #panel .cap { fill: var(--cap); stroke: var(--cap-edge); stroke-width: .3; }
+  #panel .mark { stroke: var(--knob); stroke-width: .7; stroke-linecap: round; }
+  #panel .pointer { stroke: #fff; stroke-width: .6; stroke-linecap: round; }
+  #panel .bezel { fill: var(--nut); stroke: var(--nut-edge); stroke-width: .3; }
+  #panel .lamp { fill: var(--lamp); stroke: var(--nut-edge); stroke-width: .25; }
+  #panel .tact { fill: var(--knob); }
+  #panel .led { fill: var(--led-off); stroke: var(--nut-edge); stroke-width: .25; }
+  #panel .nut { fill: var(--nut); stroke: var(--nut-edge); stroke-width: .3; }
+  #panel .sleeve { fill: var(--cap-edge); }
+  #panel .socket { fill: var(--socket); }
+  #panel .print { fill: var(--print); font: 600 2.8px var(--heading); letter-spacing: .03em; }
+  #panel .print.inverse { fill: var(--well-ink); }
+  #panel .halo { fill: none; stroke: var(--link); stroke-width: .9; opacity: 0; transition: opacity .15s; }
+  #panel .halo.on { opacity: 1; }
   #panel .part.on { fill: var(--link); stroke: var(--link); }
-  #panel circle.part[data-part^=led], #panel .part[data-part=a-led] { fill: var(--sunk); stroke: var(--muted); stroke-width: 1.5; }
-  #panel .part.part.lit { fill: var(--led-green); stroke: var(--led-green); animation: pulse 1.2s ease-in-out infinite; }
-  #panel .legend { fill: var(--muted); font-size: 15px; }
-  #panel .legend.on { fill: var(--ink); font-weight: 700; }
+  #panel .led.lit { fill: var(--led-green); stroke: var(--led-green); filter: drop-shadow(0 0 1px var(--led-green)); animation: pulse 1.2s ease-in-out infinite; }
+  #panel .name { fill: var(--muted); font: 600 4.3px var(--heading); letter-spacing: .02em; }
+  #panel .name.on { fill: var(--link); font-weight: 700; }
+  #panel .leader { stroke: var(--rule); stroke-width: .3; }
+  #panel .leader.on { stroke: var(--link); stroke-width: .45; }
   @keyframes pulse { 50% { opacity: .35; } }
-  @media (prefers-reduced-motion: reduce) { #panel .part.lit { animation: none; } #panel .part { transition: none; } }
+  @media (prefers-reduced-motion: reduce) { #panel .led.lit { animation: none; } #panel .halo { transition: none; } }
+  @media (prefers-color-scheme: dark) {
+    #panel { --face: #3a4349; --face-edge: #5d6a72; --print: #dfe5e8; --knob: #0e1214; --cap: #c9d1d6; --cap-edge: #8a969d;
+      --nut: #8d989f; --nut-edge: #5d6a72; --socket: #07090a; --lamp: #b9c1b4; --led-off: #59656c;
+      --well: #1c2226; --well-ink: #dfe5e8; }
+  }
   #panel-caption { font-size: .9rem; min-height: 2.7em; padding-bottom: .75rem; border-bottom: 1px solid var(--rule); }
   .where { font-family: var(--heading); font-size: .85rem; letter-spacing: .03em; font-weight: 600; color: var(--muted); margin: 0 0 .15rem; }
   #inspector h3 { font-size: 1.3rem; margin-bottom: .35rem; }
@@ -248,7 +276,6 @@
     .chip { padding: .4rem .8rem; }
     #workspace { grid-template-columns: minmax(0, 1fr); grid-template-areas: "controls" "inspector" "slots" "extras"; }
     .inspector { position: static; }
-    #panel { max-height: 11rem; }
     .page-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: .5rem; }
     .page-tabs button { min-height: 44px; border: 1px solid var(--rule); border-radius: 6px; background: var(--plate); font-weight: 600; }
     .page-tabs button[aria-selected=true] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
@@ -419,6 +446,6 @@
   </div>
   <div id="library-body"></div>
 </dialog>
-<script type="module" src="js/app.js?v=8abf8482d8b410ba"></script>
+<script type="module" src="js/app.js?v=fe9366c69a1ed98a"></script>
 </body>
 </html>
