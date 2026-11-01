@@ -34,8 +34,8 @@ export function featureHelp(feature, release) {
 }
 
 export function actionHelp(feature) {
-  if (feature.id === 13) return 'Adjustable: action to toggle; no page knob. Fixed: on/off without a toggle.';
-  if (feature.id === 14) return 'Fixed On or Adjustable enables the trim gesture.';
-  if (feature.id === 9) return 'Manual needs an action; Fixed Manual keeps it available.';
+  if (feature.id === 13) return 'Change on the module: an [A] gesture switches it; there is no page knob. Always: on or off, no gesture.';
+  if (feature.id === 14) return 'Always On or Change on the module turns on the trim gesture.';
+  if (feature.id === 9) return 'Manual needs an [A] gesture to start the synth, also when always Manual.';
   return '';
 }

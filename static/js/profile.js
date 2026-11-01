@@ -138,14 +138,28 @@ export function unshare(text, releases) {
     throw new Error('Damaged or outdated share link. Copy the full address or start again.');
   }
 }
+// Focused templates start from every feature Off and add only their own
+// settings: { id: [state, value, page, amount, action] }.
 export function templates(profile) {
   const stock = defaults(profile).map((e) => [e[0], 0, 0, 0, 0, 0]);
-  const themed = (changes) => defaults(profile).map((e) =>
-    changes[e[0]] ? [e[0], ...changes[e[0]]] : e);
+  const focused = (changes) => [...stock.map((e) => changes[e[0]] ? [e[0], ...changes[e[0]]] : e),
+    ...Object.keys(changes).map(Number).filter((id) => !stock.some((e) => e[0] === id))
+      .map((id) => [id, ...changes[id]])];
   return { Drizzlet: defaults(profile), 'Stock plus fixes': stock,
-    'Cloud textures': themed({ 2: [2, 1, 5, 0, 0], 12: [2, 96, 0, 2, 0] }),
-    'Pitched grains': themed({ 1: [2, 3, 1, 0, 0], 10: [2, 1, 2, 0, 0] }),
-    'Manual synth': themed({ 9: [2, 1, 9, 0, 3] }) };
+    'Cloud textures': focused({ 2: [2, 1, 3, 0, 0], 3: [1, 1, 0, 0, 0], 6: [2, 1, 1, 0, 0],
+      11: [2, 128, 0, 1, 0], 12: [2, 96, 0, 2, 0], 14: [1, 1, 0, 0, 2], 23: [2, 1, 2, 0, 0] }),
+    'Pitched grains': focused({ 1: [2, 6, 1, 0, 0], 3: [1, 1, 0, 0, 0], 8: [2, 0, 3, 0, 0], 10: [2, 1, 2, 0, 0],
+      11: [2, 64, 0, 1, 0], 13: [2, 0, 0, 0, 1], 14: [1, 1, 0, 0, 2], 22: [1, 1, 0, 0, 0] }),
+    'Drum grains': focused({ 3: [1, 1, 0, 0, 0], 5: [2, 1, 1, 0, 0], 8: [2, 1, 3, 0, 0],
+      13: [2, 0, 0, 0, 1], 14: [1, 1, 0, 0, 2], 21: [2, 2, 2, 0, 0] }),
+    'Delay & freeze': focused({ 2: [2, 0, 3, 0, 0], 3: [2, 2, 1, 0, 0], 14: [1, 1, 0, 0, 2],
+      17: [1, 1, 0, 0, 0], 20: [1, 1, 0, 0, 0], 21: [2, 1, 2, 0, 0] }),
+    Spectral: focused({ 1: [2, 0, 1, 0, 0], 2: [2, 0, 3, 0, 0], 4: [2, 1, 2, 0, 0] }),
+    'Plaits voice': focused({ 1: [2, 1, 1, 0, 0], 7: [1, 1, 0, 0, 0], 9: [1, 1, 0, 0, 3], 10: [2, 1, 2, 0, 0],
+      11: [2, 64, 0, 1, 0], 21: [1, 2, 0, 0, 0], 22: [1, 1, 0, 0, 0] }),
+    'Live essentials': focused({ 1: [2, 0, 1, 0, 0], 3: [1, 1, 0, 0, 0], 9: [1, 1, 0, 0, 3],
+      11: [2, 128, 0, 1, 0], 13: [2, 0, 0, 0, 1], 14: [1, 1, 0, 0, 2], 16: [1, 1, 0, 0, 0],
+      18: [2, 1, 3, 0, 0], 19: [1, 1, 0, 0, 0], 20: [1, 1, 0, 0, 0], 21: [2, 0, 2, 0, 0] }) };
 }
 export const profileKey = (entries, profile) => Array.from(encodeProfile(entries, profile),
     (v) => v.toString(16).padStart(2, '0')).join('');

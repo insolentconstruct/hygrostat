@@ -22,17 +22,17 @@ for (const release of manifest.releases) {
     assert(!featureHelp(feature, tagged).url.includes(release.source_commit));
   }
 }
-assert.match(actionHelp({ id: 13 }), /action to toggle.*no page knob/);
-assert.match(actionHelp({ id: 13 }), /Fixed.*without a toggle/);
-assert.match(actionHelp({ id: 14 }), /Fixed On or Adjustable.*gesture/);
-assert.match(actionHelp({ id: 9 }), /Manual.*action/);
+assert.match(actionHelp({ id: 13 }), /gesture switches it.*no page knob/);
+assert.match(actionHelp({ id: 13 }), /Always.*no gesture/);
+assert.match(actionHelp({ id: 14 }), /Always On or Change on the module.*gesture/);
+assert.match(actionHelp({ id: 9 }), /Manual.*gesture/);
 assert.equal(actionHelp({ id: 18 }), '');
 assert.match(featureHelp({ id: 16 }, manifest.releases[0]).description, /automatic gain unchanged/);
 assert.match(featureHelp({ id: 22 }, manifest.releases[0]).description, /ignoring CV/);
 assert.match(featureHelp({ id: 23 }, manifest.releases[0]).description, /granular.*TIME CV is unplugged/);
 const app = read('../static/js/app.js');
-assert(app.includes('featureHelp(f, selected())') && app.includes('link.href = help.url'));
-assert(app.includes('action.textContent = actionHelp(f)'));
-const html = read('../static/index.html');
-for (const text of ['Off uses stock behaviour', 'Fixed keeps', 'Adjustable lets', 'Diffusion Off removes grain diffusion']) assert(html.includes(text));
+assert(app.includes('featureHelp(f, selected())') && app.includes('href: help.url'));
+assert(app.includes("text: actionHelp(f)"));
+const layout = read('../static/js/layout.js');
+for (const text of ["'Use stock behaviour'", "'Always use this value'", "'Change on the module'", "'No diffusion'", "'No limiter'"]) assert(layout.includes(text), text);
 console.log('PASS feature descriptions, real documentation anchors, release-tag resolution and action-only help');
