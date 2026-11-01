@@ -18,6 +18,18 @@ env:
   HUGO_SHA256: fada83ad56bb27ed4cb7dd81590303bdac16140f944ac4e66fc248117e2d5594
 
 jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run lint
+      - run: npm run lint:controls
+
   build:
     runs-on: ubuntu-24.04
     steps:
@@ -28,6 +40,9 @@ jobs:
           ref: drizzlet
           path: firmware
           fetch-depth: 0
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22'
       - name: The pinned images still encode to their release files
         env:
           FIRMWARE_REPO: ./firmware
@@ -84,8 +99,11 @@ jobs:
       HOME: /root
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22'
       - name: Install the Playwright matching the image
-        run: npm install --no-save --no-audit --no-fund playwright@1.48.2
+        run: npm install --omit=dev --no-save --no-package-lock --no-audit --no-fund playwright@1.48.2
       - name: The page works in three browsers
         run: |
           python3 -m http.server 8080 --bind 127.0.0.1 -d static >/dev/null 2>&1 &
@@ -95,7 +113,7 @@ jobs:
 
   deploy:
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-    needs: [build, browser]
+    needs: [lint, build, browser]
     runs-on: ubuntu-24.04
     permissions:
       pages: write

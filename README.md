@@ -20,9 +20,24 @@ python3 -m http.server -d static
 
 Then open http://localhost:8000.
 
+## Development
+
+Read [STYLE.md](docs/STYLE.md) before editing, including agent-assisted work.
+Use Node 22.13+ on the 22 LTS line, or Node 24+, and the pinned lockfile:
+
+```sh
+npm ci
+npm run lint
+npm run lint:controls
+```
+
+Lint checks maintained JavaScript, static HTML and inline CSS. It runs as a
+required deployment gate. Keep the relevant functional tests below as well;
+format and lint checks do not establish firmware or browser correctness.
+
 ## Tests
 
-The tests check the page against the firmware it offers. They need Node 18+, g++, and a copy of the firmware repository in `./firmware`:
+The tests check the page against the firmware it offers. They need a supported Node version, g++, and a copy of the firmware repository in `./firmware`:
 
 ```sh
 git clone --branch drizzlet https://github.com/insolentconstruct/eurorack.git firmware

@@ -51,7 +51,7 @@ try {
   assert.equal(answers.length, samples.length * stride);
   samples.forEach((b, i) => {
     let decoded;
-    try { decoded = decodeSettings(b, profile); } catch {}
+    try { decoded = decodeSettings(b, profile); } catch { /* Compare rejected candidates with the firmware below. */ }
     assert.equal(Boolean(decoded), answers[i * stride] === 1, `firmware acceptance case ${i}`);
     if (decoded) {
       assert.equal(answers[i * stride + 1], Number(decoded.scales !== null));

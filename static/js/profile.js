@@ -22,7 +22,7 @@
 //
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
-import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=e85cec9c19a728c0';
+import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=1df6d0c7c3a9704a';
 
 // Six-byte entries are kept in wire order: id, state, value, page, amount, action.
 export function crc32(bytes) {
@@ -172,7 +172,7 @@ export function unshare(text, releases) {
   try {
     return { release, ...decodeSettings(block, release.profile) };
   } catch (error) {
-    throw new Error('Damaged or outdated share link. Copy the full address or start again.');
+    throw new Error('Damaged or outdated share link. Copy the full address or start again.', { cause: error });
   }
 }
 // Focused templates start from every feature Off and add only their own

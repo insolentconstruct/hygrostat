@@ -32,7 +32,7 @@ assert.match(featureHelp({ id: 22 }, manifest.releases[0]).description, /ignorin
 assert.match(featureHelp({ id: 23 }, manifest.releases[0]).description, /granular.*TIME CV is unplugged/);
 const app = read('../static/js/app.js');
 assert(app.includes('featureHelp(f, selected())') && app.includes('href: help.url'));
-assert(app.includes("text: actionHelp(f)"));
+assert(app.includes('text: actionHelp(f)'));
 const layout = read('../static/js/layout.js');
 for (const text of ["'Use stock behaviour'", "'Always use this value'", "'Change on the module'", "'No diffusion'", "'No limiter'"]) assert(layout.includes(text), text);
 console.log('PASS feature descriptions, real documentation anchors, release-tag resolution and action-only help');

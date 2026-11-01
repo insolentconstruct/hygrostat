@@ -51,6 +51,7 @@ export function validateScales(scales) {
     if (!scale || typeof scale !== 'object' || !Number.isInteger(scale.id) ||
         scale.id < 2 || scale.id > 15 || seen.has(scale.id)) throw new Error('Invalid or repeated scale identity.');
     seen.add(scale.id);
+    // eslint-disable-next-line no-control-regex -- Reject C0/C1 controls in scale names.
     if (typeof scale.name !== 'string' || !scale.name.length || /[\u0000-\u001f\u007f-\u009f]/u.test(scale.name) ||
         encoder.encode(scale.name).length > 31 || decoder.decode(encoder.encode(scale.name)) !== scale.name) {
       throw new Error('Scale names need 1–31 UTF-8 bytes and no control characters.');

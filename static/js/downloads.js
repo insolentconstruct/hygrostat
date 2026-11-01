@@ -14,7 +14,7 @@ function recordEvent(path, fetcher, dnt, event = true) {
     Promise.resolve(fetcher(`https://insolentconstruct.goatcounter.com/count?${query}`, {
       mode: 'no-cors', credentials: 'omit', referrerPolicy: 'no-referrer', cache: 'no-store'
     })).catch(() => {});
-  } catch {} // A blocked or unavailable counter must not interrupt a download.
+  } catch { /* Counts are optional; keep the builder usable. */ } // A blocked or unavailable counter must not interrupt a download.
 }
 
 export function recordDownload(release, fetcher = globalThis.fetch, dnt = globalThis.navigator?.doNotTrack) {
@@ -55,7 +55,7 @@ export function countLine(release, total) {
 }
 
 export function downloadCounts(fetcher = globalThis.fetch, cache = new Map(), storage) {
-  try { if (storage === undefined) storage = globalThis.sessionStorage; } catch {}
+  try { if (storage === undefined) storage = globalThis.sessionStorage; } catch { /* Counts are optional; keep the builder usable. */ }
 
   return (release) => {
     const key = `${release.tag}/${eventName(release)}`;
@@ -67,7 +67,7 @@ export function downloadCounts(fetcher = globalThis.fetch, cache = new Map(), st
           const value = JSON.parse(saved);
           if (value === null || (Number.isSafeInteger(value) && value >= 0)) cache.set(key, Promise.resolve(value));
         }
-      } catch {}
+      } catch { /* Counts are optional; keep the builder usable. */ }
     }
     if (!cache.has(key)) cache.set(key, (async () => {
       const get = async (url, read) => {
@@ -85,7 +85,7 @@ export function downloadCounts(fetcher = globalThis.fetch, cache = new Map(), st
         })
       ]);
       const total = counts.every((n) => n === null) ? null : counts.reduce((sum, n) => sum + (n || 0), 0);
-      try { storage?.setItem(storageKey, JSON.stringify(total)); } catch {}
+      try { storage?.setItem(storageKey, JSON.stringify(total)); } catch { /* Counts are optional; keep the builder usable. */ }
       return total;
     })());
     return cache.get(key);
@@ -94,7 +94,7 @@ export function downloadCounts(fetcher = globalThis.fetch, cache = new Map(), st
 
 // TOTAL is GoatCounter's public site-wide visitor count, not a render event.
 export function visitorCounts(fetcher = globalThis.fetch, storage) {
-  try { if (storage === undefined) storage = globalThis.sessionStorage; } catch {}
+  try { if (storage === undefined) storage = globalThis.sessionStorage; } catch { /* Counts are optional; keep the builder usable. */ }
   let pending;
   return () => {
     if (!pending) pending = (async () => {
@@ -105,15 +105,15 @@ export function visitorCounts(fetcher = globalThis.fetch, storage) {
           const value = JSON.parse(saved);
           if (value === null || (Number.isSafeInteger(value) && value >= 0)) return value;
         }
-      } catch {}
+      } catch { /* Counts are optional; keep the builder usable. */ }
       let total = null;
       try {
         const response = await fetcher('https://insolentconstruct.goatcounter.com/counter/TOTAL.json', {
           credentials: 'omit', referrerPolicy: 'no-referrer', signal: AbortSignal.timeout(5000)
         });
         if (response.ok) total = number((await response.json()).count);
-      } catch {}
-      try { storage?.setItem(key, JSON.stringify(total)); } catch {}
+      } catch { /* Counts are optional; keep the builder usable. */ }
+      try { storage?.setItem(key, JSON.stringify(total)); } catch { /* Counts are optional; keep the builder usable. */ }
       return total;
     })();
     return pending;
