@@ -2,16 +2,16 @@
   "format": 2,
   "releases": [
     {
-      "tag": "drizzlet-dev-d02a5b2",
+      "tag": "drizzlet-dev-eedbc74",
       "name": "Drizzlet Beta 2 — development (unreleased)",
       "development": true,
-      "source_commit": "d02a5b21a8bfe31d77a518fd42cbe285410c8b42",
-      "app": "images/drizzlet-dev-d02a5b2/app.bin?v=8db75e3147a4595bc1563704c40fcaa32edb4a0555189e2a63ebb7311b321ca6",
+      "source_commit": "eedbc7481d172f8f9bffacb315428aeac241a1e5",
+      "app": "images/drizzlet-dev-eedbc74/app.bin?v=09b43688e9632ac3a875224a5bbfa30479ccc64ca220d58389e2319512aa1f6f",
       "profile": {
         "offset": 1024,
-        "size": 512,
-        "version": 1,
-        "release_id": 2770241376,
+        "size": 4096,
+        "version": 2,
+        "release_id": 539365633,
         "features": [
           {
             "id": 1,
@@ -19,14 +19,20 @@
             "values": [
               "Off",
               "Chromatic",
-              "Fifths and octaves",
+              "Fifths",
               "Major",
               "Minor",
-              "Major pentatonic",
-              "Minor pentatonic",
+              "Pentatonic major",
+              "Pentatonic minor",
               "Pelog",
               "Raag Bhairav",
-              "Raag Shri"
+              "Raag Shri",
+              "User scale 10",
+              "User scale 11",
+              "User scale 12",
+              "User scale 13",
+              "User scale 14",
+              "User scale 15"
             ],
             "page": true,
             "amount": false,
@@ -1476,6 +1482,65 @@
               "note": "granular value=1: worst-case +0 cycles; largest scenario median +280 (q3 dense: TIME amount 0.3, Scan), peak up to +1346, 8 scenarios; synth: 0 by construction (TIME scan is in Processor::Process only)"
             },
             "field": 12
+          },
+          {
+            "id": 24,
+            "default_in_block": false,
+            "default": [
+              24,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "name": "Synth reverb tail",
+            "values": [
+              "Keep (stock)",
+              "Clear"
+            ],
+            "states": [
+              "Off",
+              "Fixed"
+            ],
+            "field": null,
+            "page": false,
+            "amount": false,
+            "action": false,
+            "stateless": false,
+            "synth_path": true,
+            "cpu": {
+              "kind": "zero",
+              "source": "no per-block work (code inspection)",
+              "engines": {
+                "synth": {
+                  "off": 0,
+                  "fixed": [
+                    0,
+                    0
+                  ],
+                  "adjustable": [
+                    0,
+                    0
+                  ]
+                },
+                "granular": {
+                  "off": 0,
+                  "fixed": [
+                    0,
+                    0
+                  ],
+                  "adjustable": [
+                    0,
+                    0
+                  ]
+                }
+              },
+              "uncertainty": {
+                "points": 0
+              },
+              "note": "clearing the synth reverb happens only when leaving synth playback; no per-block or per-tick work"
+            }
           }
         ]
       },
@@ -1486,7 +1551,7 @@
         "warning": 91,
         "margin": 0,
         "combinations": [],
-        "release_note": "Historical default-profile measurements include Clouds-style reverb. Per-feature costs were measured on a module-calibrated development board; estimates sum each engine’s costs. Measured module combinations take precedence. The final image still needs measurement. The default profile is always allowed.",
+        "release_note": "Historical default-profile measurements include Clouds-style reverb. Per-feature costs were measured on a module-calibrated development board; estimates sum each engine’s costs. Measured module combinations take precedence. The final image still needs measurement. The default profile is always allowed. Event-only additions are classified separately by code inspection; they have no per-block cost.",
         "baselines": {
           "synth": {
             "percent": 87.2,
@@ -1505,15 +1570,22 @@
           "source": "measured on a module-calibrated development board",
           "firmware": "hygrostat-profiles 35718f2",
           "table": "costs/cost-table.json",
-          "table_sha256": "dc5f7fef75cb5c0435aa52f5513549a17b48f4daf37d2728ba5debbd281063a3"
+          "table_sha256": "dc5f7fef75cb5c0435aa52f5513549a17b48f4daf37d2728ba5debbd281063a3",
+          "inspected_features": [
+            {
+              "id": 24,
+              "name": "Synth reverb tail",
+              "source": "code inspection"
+            }
+          ]
         }
       },
-      "app_sha256": "8db75e3147a4595bc1563704c40fcaa32edb4a0555189e2a63ebb7311b321ca6",
-      "app_size": 641408,
-      "wav_sha256": "0a17523eba494aeab51b373300e0159832ffaaef2d6dccd60fda0c0d946395fe",
+      "app_sha256": "09b43688e9632ac3a875224a5bbfa30479ccc64ca220d58389e2319512aa1f6f",
+      "app_size": 649024,
+      "wav_sha256": "a84d6060767593ba371411d303f8f7d5ee1a847e158fc775202e11555f7a2530",
       "slug": "beta-2-fog",
-      "date": "2026-10-29"
+      "date": "2026-11-01"
     }
   ],
-  "asset_version": "00c1428815e3d575"
+  "asset_version": "e85cec9c19a728c0"
 }

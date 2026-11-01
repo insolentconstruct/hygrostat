@@ -22,7 +22,7 @@
 //
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
-import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=00c1428815e3d575';
+import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=e85cec9c19a728c0';
 
 // Six-byte entries are kept in wire order: id, state, value, page, amount, action.
 export function crc32(bytes) {
@@ -100,16 +100,21 @@ export function decodeSettings(b, profile) {
     throw new Error('Invalid profile size or version.');
   }
   const v = new DataView(b.buffer, b.byteOffset, b.byteLength);
+  const version = b[4];
+  // V2 firmware also reads V1 records, bounded to their original 512 bytes.
+  // Share links still require the release's own version before reaching here.
+  const compatible = version === profile.version || (profile.version === 2 && version === 1);
+  const limit = version === 1 ? 512 : b.length;
   const count = b[5];
-  const custom = profile.version === 2 ? b[12] : 0;
-  const scaleCount = profile.version === 2 ? b[13] : 0;
+  const custom = version === 2 ? b[12] : 0;
+  const scaleCount = version === 2 ? b[13] : 0;
   const payload = count * 6 + scaleCount * SCALE_RECORD_SIZE;
   const end = 16 + payload;
   if (count > 82 || scaleCount > 14 || custom > 1 || (!custom && scaleCount) ||
-      end + 4 > b.length || v.getUint16(6, true) !== payload ||
-      v.getUint32(0, true) !== 0x46505a44 || b[4] !== profile.version ||
+      end + 4 > limit || v.getUint16(6, true) !== payload ||
+      v.getUint32(0, true) !== 0x46505a44 || !compatible ||
       v.getUint32(8, true) !== profile.release_id || b[14] || b[15] ||
-      (profile.version === 1 && v.getUint32(12, true) !== 0) ||
+      (version === 1 && v.getUint32(12, true) !== 0) ||
       v.getUint32(end, true) !== crc32(b.subarray(0, end))) {
     throw new Error('Invalid profile header or checksum.');
   }

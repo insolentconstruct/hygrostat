@@ -117,7 +117,7 @@ assert.match(fp, /^[0-9a-f]{8}$/);
 assert.deepEqual(unshare(share(release, block), manifest.releases).entries, entries);
 assert.throws(() => unshare('release=missing&profile=00', manifest.releases));
 assert.throws(() => unshare(share({ ...release, tag: 'another-release' }, block), manifest.releases), /another release/);
-for (const edit of [(b) => { b[4] = 2; }, (b) => { b[8] ^= 1; }]) {
+for (const edit of [(b) => { b[4] = profile.version === 2 ? 1 : 2; }, (b) => { b[8] ^= 1; }]) {
   const incompatible = block.slice(); edit(incompatible); reseal(incompatible);
   assert.throws(() => unshare(share(release, incompatible), manifest.releases), /version mismatch/);
 }
@@ -334,8 +334,10 @@ try {
   assert.equal(answers.length, cases.length * stride);
   const compare = (candidateProfile) => cases.forEach((b, i) => {
     let decoded;
-    try { decoded = decodeProfile(b, candidateProfile); } catch {}
-    assert.equal(!!decoded, answers[i * stride] === 1, `firmware differential case ${i}`);
+    let reason;
+    try { decoded = decodeProfile(b, candidateProfile); } catch (error) { reason = error.message; }
+    assert.equal(!!decoded, answers[i * stride] === 1,
+      `firmware differential case ${i}: ${reason}; header ${Array.from(b.subarray(0, 24))}`);
     if (decoded) assert.deepEqual(decoded.flat(), Array.from(answers.subarray(i * stride + 1, i * stride + 1 + decoded.length * 6)), `decoded entries case ${i}`);
   });
   compare(profile);

@@ -88,10 +88,21 @@ const customCPU = cpuUsage(enabled, release, full);
 assert.equal(customCPU.percent, null); assert(customCPU.warning); assert.deepEqual(customCPU.unknown, ['Custom pitch scales']);
 const unknownFeature = { ...profile.features[0], cpu: { kind: 'measured', engines: { synth: { off: 0, fixed: [0], adjustable: [0] } } } };
 assert.equal(featureDelta([1, 1, 15], unknownFeature, 'synth'), null);
-assert.throws(() => encodeProfile(defaults(original.profile), original.profile, scales));
-const legacy = encodeProfile(defaults(original.profile), original.profile);
-assert.equal(legacy.length, 512); assert.deepEqual(decodeProfile(legacy, original.profile), defaults(original.profile));
+const legacyProfile = { ...original.profile, version: 1, size: 512,
+  features: original.profile.features.filter((f) => f.id <= 23).map((f) =>
+    f.id === 1 ? { ...f, values: f.values.slice(0, 10) } : f) };
+assert.throws(() => encodeProfile(defaults(legacyProfile), legacyProfile, scales));
+const legacy = encodeProfile(defaults(legacyProfile), legacyProfile);
+assert.equal(legacy.length, 512); assert.deepEqual(decodeProfile(legacy, legacyProfile), defaults(legacyProfile));
 assert.throws(() => unshare(share(release, legacy), [release]), /size/);
+const embeddedLegacy = new Uint8Array(profile.size).fill(255);
+embeddedLegacy.set(legacy);
+assert.deepEqual(decodeSettings(embeddedLegacy, profile), { entries: defaults(legacyProfile), scales: null });
+assert.throws(() => unshare(share(release, embeddedLegacy), [release]), /version mismatch/);
+const wrongLegacyId = embeddedLegacy.slice(); wrongLegacyId[8] ^= 1; reseal(wrongLegacyId);
+assert.throws(() => decodeSettings(wrongLegacyId, profile));
+const wrongLegacyFlags = embeddedLegacy.slice(); wrongLegacyFlags[12] = 1; reseal(wrongLegacyFlags);
+assert.throws(() => decodeSettings(wrongLegacyFlags, profile));
 for (const mobile of [false, true]) {
   const svg = guide(enabled, release, '12345678', mobile, [{ ...full[0], name: '<Scale & test>', notes: [0, 7] }]);
   assert(svg.includes('&lt;Scale &amp; test&gt;'));
