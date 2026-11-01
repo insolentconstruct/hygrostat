@@ -32,8 +32,8 @@ for (const release of manifest.releases) {
   check(app.length === release.app_size && app.length <= MAX_APP_SIZE,
       `${release.tag}: app size ${app.length}`);
   check(hash(app) === release.app_sha256, `${release.tag}: app SHA-256`);
-  check(release.profile && release.profile.offset === 1024 && release.profile.size === 512, `${release.tag}: profile metadata`);
-  check(equal(encodeProfile(defaults(release.profile), release.profile), app.subarray(1024, 1536)), `${release.tag}: default profile equals firmware`);
+  check(release.profile && release.profile.offset === 1024 && release.profile.size === (release.profile.version === 2 ? 4096 : 512) && [1, 2].includes(release.profile.version), `${release.tag}: profile metadata`);
+  check(equal(encodeProfile(defaults(release.profile), release.profile), app.subarray(1024, 1024 + release.profile.size)), `${release.tag}: default profile equals firmware`);
   const wav = encode(app);
   check(equal(decode(wav, app.length), app), `${release.tag}: WAV decodes byte for byte`);
   check(hash(wav) === release.wav_sha256, `${release.tag}: .wav byte-identical`);

@@ -8,13 +8,15 @@
 // check the release's app image against the manifest, encode the update .wav
 // in the browser, check the .wav, offer it for download.
 
-import { defaults, decodeProfile, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, cpuUsage, featureDelta, modes, normalise } from './profile.js?v=3abfd1e06a3bed3b';
-import { guide } from './guide.js?v=3abfd1e06a3bed3b';
-import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=3abfd1e06a3bed3b';
-import { featureHelp, actionHelp } from './help.js?v=3abfd1e06a3bed3b';
+import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, cpuUsage, featureDelta, modes, normalise } from './profile.js?v=00c1428815e3d575';
+import { effectiveScales, validateScales } from './scales.js?v=00c1428815e3d575';
+import { scaleEditor } from './scale_editor.js?v=00c1428815e3d575';
+import { guide } from './guide.js?v=00c1428815e3d575';
+import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=00c1428815e3d575';
+import { featureHelp, actionHelp } from './help.js?v=00c1428815e3d575';
 import { KNOBS, KINDS, GROUPS, ACTION_DOES, placeName, pageOf, entryOf, occupant, places, valueLabel, stateLabel,
-  summary, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, fits } from './layout.js?v=3abfd1e06a3bed3b';
-import { drawPanel, highlight } from './panel.js?v=3abfd1e06a3bed3b';
+  summary, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, fits } from './layout.js?v=00c1428815e3d575';
+import { drawPanel, highlight } from './panel.js?v=00c1428815e3d575';
 
 const $ = (id) => document.getElementById(id);
 const cap = (text) => text.replace(/^./, (c) => c.toUpperCase());
@@ -37,7 +39,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=3abfd1e06a3bed3b', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=00c1428815e3d575', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.ready) return;
       if (data.progress !== undefined) {
@@ -58,6 +60,7 @@ function encodeInWorker(app) {
 let manifest;
 let download;
 let entries;
+let scales = null;
 let revision = 0;
 const guideURLs = [];
 // The preset the change count is measured from, the selected destination
@@ -90,10 +93,11 @@ async function build(release, app) {
     throw new Error(`the app image does not match ${release.tag}: ${appHash}`);
   }
   const chosen = entries.map((e) => e.slice());
+  const chosenScales = validateScales(scales);
   validate(chosen, release.profile);
-  if (cpuUsage(chosen, release).blocked) throw new Error('CPU limit exceeded.');
-  const block = encodeProfile(chosen, release.profile);
-  const original = app.slice(release.profile.offset, release.profile.offset + 512);
+  if (cpuUsage(chosen, release, chosenScales).blocked) throw new Error('CPU limit exceeded.');
+  const block = encodeProfile(chosen, release.profile, chosenScales);
+  const original = app.slice(release.profile.offset, release.profile.offset + release.profile.size);
   if (!equal(original, encodeProfile(defaults(release.profile), release.profile))) {
     throw new Error('Release settings do not match the release list.');
   }
@@ -102,8 +106,8 @@ async function build(release, app) {
   app.set(block, release.profile.offset);
   const offset = release.profile.offset;
   if (!equal(app.subarray(0, offset), base.subarray(0, offset)) ||
-      !equal(app.subarray(offset + 512), base.subarray(offset + 512)) ||
-      JSON.stringify(decodeProfile(app.subarray(offset, offset + 512), release.profile)) !== JSON.stringify(chosen)) {
+      !equal(app.subarray(offset + release.profile.size), base.subarray(offset + release.profile.size)) ||
+      JSON.stringify(decodeSettings(app.subarray(offset, offset + release.profile.size), release.profile)) !== JSON.stringify({ entries: chosen, scales: chosenScales })) {
     throw new Error('Updated firmware check failed.');
   }
   const fp = await fingerprint(block);
@@ -125,7 +129,7 @@ async function build(release, app) {
   $('test-status').replaceChildren(...testStatus(release));
   $('result').hidden = false;
   status(isDefault ? 'Ready. Matches the release; audio checked.' : `Ready. Profile ${fp}; audio checked.`, 'ok');
-  await updateGuides(release, chosen, fp, names);
+  await updateGuides(release, chosen, fp, names, chosenScales);
   $('download').onclick = () => recordDownload(release);
   recordBuild(release);
   $('result-title').focus({ preventScroll: true });
@@ -143,7 +147,28 @@ function testStatus(release) {
 function selected() {
   return manifest.releases[$('release').selectedIndex];
 }
-const profile = () => selected().profile;
+const profile = () => {
+  const original = selected().profile;
+  if (original.version !== 2) return original;
+  const bank = effectiveScales(scales);
+  return { ...original, features: original.features.map((f) => f.id !== 1 ? f :
+    { ...f, values: Array.from({ length: 16 }, (_, id) => id < 2 ? f.values[id] :
+      bank.find((s) => s.id === id)?.name || 'Unavailable scale') }) };
+};
+const renderScales = scaleEditor($('scale-editor'), {
+  get: () => scales,
+  releaseKey: () => selected().tag,
+  error: (message) => status(message, 'error'),
+  set: (bank, message) => {
+    if (busy || selected().profile.version !== 2) throw new Error('Scale editing is unavailable right now.');
+    const available = effectiveScales(bank);
+    const next = entries.map((e) => e[0] === 1 && e[2] >= 2 && !available.some((s) => s.id === e[2]) ?
+      [e[0], e[1], 0, ...e.slice(3)] : e.slice());
+    validate(next, selected().profile);
+    scales = bank;
+    commit(() => next, message);
+  }
+});
 const featureById = (id) => profile().features.find((f) => f.id === id);
 
 let busy = false;
@@ -151,7 +176,7 @@ let busy = false;
 async function run(getApp) {
   if (busy) return;
   busy = true;
-  $('workspace').inert = $('presets').inert = $('template-gallery').inert = true;
+  $('scale-editor').inert = $('workspace').inert = $('presets').inert = $('template-gallery').inert = true;
   $('build').disabled = $('release').disabled = $('local').disabled = true;
   $('result').hidden = true;
   try {
@@ -165,8 +190,8 @@ async function run(getApp) {
     $('build').disabled = $('release').disabled = $('local').disabled = false;
     busy = false;
     if (pendingShare) { pendingShare = false; loadSharedProfile(); }
-    $('workspace').inert = $('presets').inert = $('template-gallery').inert = false;
-    const blocked = cpuUsage(entries, selected()).blocked;
+    $('scale-editor').inert = $('workspace').inert = $('presets').inert = $('template-gallery').inert = false;
+    const blocked = cpuUsage(entries, selected(), scales).blocked;
     $('build').disabled = $('local').disabled = blocked;
   }
 }
@@ -178,10 +203,10 @@ async function fetchApp(release) {
   return new Uint8Array(await response.arrayBuffer());
 }
 
-async function updateGuides(release, chosen, fp, names) {
+async function updateGuides(release, chosen, fp, names, chosenScales = scales) {
   guideURLs.splice(0).forEach((url) => URL.revokeObjectURL(url));
   for (const mobile of [false, true]) {
-    const url = URL.createObjectURL(new Blob([guide(chosen, release, fp, mobile)], { type: 'image/svg+xml' }));
+    const url = URL.createObjectURL(new Blob([guide(chosen, release, fp, mobile, chosenScales)], { type: 'image/svg+xml' }));
     guideURLs.push(url);
     const a = $(mobile ? 'guide-mobile' : 'guide');
     a.href = url; a.download = names[mobile ? 'mobile' : 'desktop'];
@@ -202,7 +227,7 @@ function commit(change, message = '') {
 }
 
 function matchingTemplate() {
-  const key = encodeProfile(entries, profile()).join();
+  const key = encodeProfile(entries, profile(), scales).join();
   return Object.entries(templates(profile())).find(([, value]) => encodeProfile(value, profile()).join() === key)?.[0];
 }
 
@@ -214,16 +239,20 @@ function setupEditor() {
 }
 
 function useTemplate(name) {
+  const candidate = templates(selected().profile)[name].map((e) => e.slice());
+  scales = null;
   preset = name;
   $('template-gallery').hidden = true;
-  commit(() => templates(profile())[name].map((e) => e.slice()), `Started from ${name}.`);
+  commit(() => candidate, `Started from ${name}${selected().profile.version === 2 ? '; factory scales restored' : ''}.`);
 }
 
 function renderPresets() {
+  $('starting-point-note').hidden = selected().profile.version !== 2;
   const current = matchingTemplate();
   $('presets').replaceChildren(...['Drizzlet', 'Stock plus fixes'].map((name) => el('button', {
     type: 'button', class: 'chip', id: `preset-${templateId(name)}`,
     'aria-pressed': String(name === current), text: name,
+    title: selected().profile.version === 2 ? 'Replace this setup and restore factory scales' : 'Replace this setup',
     onclick: () => useTemplate(name)
   })), el('button', {
     type: 'button', class: 'chip', id: 'more-templates', text: 'More starting points…',
@@ -271,7 +300,8 @@ function renderTemplates() {
   const describe = (f, e) => [summary(f, e), ...places(e).map((p) => placeName(p.kind, p.slot))].join(' · ');
   const items = different.map((f) => el('li', {}, el('strong', { text: `${f.name}: ` }),
     `${describe(f, entryOf(entries, f))} → ${describe(f, entryOf(candidate, f))}`));
-  $('template-preview-title').textContent = `${templatePreview}: ${different.length} change${different.length === 1 ? '' : 's'}`;
+  if (scales !== null) items.push(el('li', { text: 'Restore the factory scale bank, including its definitions, order and LED indications.' }));
+  $('template-preview-title').textContent = `${templatePreview}: ${items.length} change${items.length === 1 ? '' : 's'}`;
   $('template-changes').replaceChildren(...[items.length ? el('ul', {}, ...items.slice(0, 6)) :
     el('p', { text: 'Your setup already matches this starting point.' }),
     items.length > 6 ? el('details', {}, el('summary', { text: `${items.length - 6} more changes` }),
@@ -576,7 +606,7 @@ function renderInspector() {
     const label = e[1] === 1 ? 'Value' : 'Starting value';
     if (f.values) {
       const select = el('select', { id: 'value', 'aria-label': `${f.name}: ${label}` });
-      f.values.forEach((v, i) => { if (!(e[1] === 1 && i === 0 && f.values[0] === 'Off')) select.add(new Option(valueLabel(f, i), i)); });
+      f.values.forEach((v, i) => { if (!(f.id === 1 && profile().version === 2 && i >= 2 && !effectiveScales(scales).some((s) => s.id === i)) && !(e[1] === 1 && i === 0 && f.values[0] === 'Off' && !(f.id === 1 && profile().version === 2))) select.add(new Option(valueLabel(f, i), i)); });
       select.value = e[2];
       select.onchange = () => change(2, Number(select.value));
       body.push(el('label', { class: 'field', for: 'value' }, label, select));
@@ -743,6 +773,7 @@ function render() {
   shown = key;
   const focused = document.activeElement?.id;
   renderPresets(); renderGrid(); renderSlots(); renderExtras(); renderInspector(); markTemplateChanges();
+  renderScales(selected().profile.version === 2);
   if (focused && document.activeElement === document.body) $(focused)?.focus({ preventScroll: true });
   refresh();
 }
@@ -751,7 +782,7 @@ async function refresh() {
   const token = ++revision;
   $('result').hidden = true;
   const release = selected();
-  const cpu = cpuUsage(entries, release);
+  const cpu = cpuUsage(entries, release, scales);
   document.body.classList.toggle('cpu-warning', cpu.warning);
   document.body.classList.toggle('cpu-blocked', cpu.blocked);
   $('cpu').textContent = cpu.withinMeasuredDefault ? 'Within measured default; savings unmeasured.' : cpu.percent === null ? `CPU not measured for: ${cpu.unknown.join(', ')}.` :
@@ -770,11 +801,11 @@ async function refresh() {
       Object.entries(release.cpu.baselines).map(([engine, baseline]) => ({ engine, baseline })).map((e) => `${e.engine} baseline ${e.baseline.percent}% (${e.baseline.kind}, provisional): ${e.baseline.provenance.replace(/[.]+$/, '')}.`).join(' ') +
       ' Estimates sum per-engine costs measured on a module-calibrated development board. Final-image measurements are pending.';
   $('build').disabled = $('local').disabled = busy || cpu.blocked;
-  const changed = changes(entries, templates(release.profile)[preset] || defaults(release.profile), release.profile).length;
+  const changed = changes(entries, templates(release.profile)[preset] || defaults(release.profile), release.profile).length + Number(scales !== null);
   $('changes').textContent = changed ? `${changed} change${changed === 1 ? '' : 's'} from ${preset}` : `${preset}, unchanged`;
   const used = Array.from({ length: 12 }, (_, i) => occupant(entries, 'page', i + 1)).filter(Boolean).length;
   $('positions').textContent = `${used} of 12 page positions used`;
-  const block = encodeProfile(entries, release.profile);
+  const block = encodeProfile(entries, release.profile, scales);
   const fp = await fingerprint(block);
   if (token !== revision) return;
   $('fingerprint').textContent = fp;
@@ -793,6 +824,7 @@ function loadSharedProfile() {
     const chosen = normalise(shared.entries, shared.release.profile);
     $('release').value = shared.release.tag;
     entries = chosen;
+    scales = shared.scales ?? null;
     status('');
     setupEditor();
   } catch (error) { status(error.message, 'error'); }
@@ -804,7 +836,7 @@ async function checkCapabilities() {
   }
   // A constructor alone does not establish support for module workers.
   await new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=3abfd1e06a3bed3b', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=00c1428815e3d575', { type: 'module' });
     const done = (error) => {
       clearTimeout(timer); worker.terminate();
       error ? reject(error) : resolve();
@@ -823,14 +855,14 @@ async function init() {
   }
   $('compatibility').hidden = true;
   try {
-    const response = await fetch('manifest.json?v=3abfd1e06a3bed3b', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=00c1428815e3d575', { cache: 'no-cache' });
     manifest = await response.json();
   } catch (error) {
     status('Could not load the release list.', 'error');
     return;
   }
   if (manifest.format !== 2 || !manifest.releases.length ||
-      manifest.releases.some((r) => !r.profile || r.profile.version !== 1 || r.profile.offset !== 1024 || r.profile.size !== 512)) {
+      manifest.releases.some((r) => !r.profile || ![1, 2].includes(r.profile.version) || r.profile.offset !== 1024 || r.profile.size !== (r.profile.version === 2 ? 4096 : 512))) {
     status('Unsupported release list.', 'error'); return;
   }
   for (const release of manifest.releases) $('release').add(new Option(release.name, release.tag));
@@ -867,7 +899,7 @@ async function init() {
     if (busy) pendingShare = true;
     else loadSharedProfile();
   });
-  $('release').onchange = () => { templatePreview = null; $('template-gallery').hidden = true; entries = defaults(selected().profile); preset = 'Drizzlet'; setupEditor(); };
+  $('release').onchange = () => { templatePreview = null; $('template-gallery').hidden = true; entries = defaults(selected().profile); scales = null; preset = 'Drizzlet'; setupEditor(); };
   setupEditor();
   $('build').onclick = () => run(fetchApp);
   $('local').onchange = () => {

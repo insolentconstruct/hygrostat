@@ -27,7 +27,8 @@ function tableDelta(entry, f, engine) {
 const sum = (entries, engine) => profile.features.reduce((total, f) =>
   total + tableDelta(entries.find((e) => e[0] === f.id), f, engine), 0);
 function choices(f, extremes = false) {
-  const values = f.values ? f.values.map((_, i) => i) :
+  // Factory-bank profiles cannot select absent user IDs; those costs are tested as unknown below.
+  const values = f.values ? f.values.map((_, i) => i).filter((i) => f.id !== 1 || i < 10) :
     extremes ? [0, 255] : Array.from({ length: 256 }, (_, i) => i);
   return modes(f).flatMap(([state]) => (state === 0 ? [0] : values).map((value) =>
     [f.id, state, value, 0, 0, f.id === 9 && state === 1 && value ? 1 : 0]));
@@ -49,6 +50,10 @@ for (const f of profile.features) {
   }
   assert.equal(f.cpu.source, cpu.kind === 'measured' ? costSource : 'no per-block work (code inspection)');
   assert(!JSON.stringify(f.cpu).includes('measured on the module'));
+}
+for (const engine of engines) for (let id = 10; id < profile.features[0].values.length; ++id) {
+  assert.equal(featureDelta([1, 1, id], profile.features[0], engine), null, 'unmeasured user-scale cost stays unknown');
+  assert.equal(featureDelta([1, 2, id], profile.features[0], engine), null, 'unmeasured adjustable user-scale cost stays unknown');
 }
 assert.equal(featureDelta([2, 1, 1], profile.features[1], 'synth'), 0);
 assert.equal(featureDelta([2, 1, 1], profile.features[1], 'granular'), 0);

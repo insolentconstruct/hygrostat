@@ -22,6 +22,8 @@
 //
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
+import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=00c1428815e3d575';
+
 // Six-byte entries are kept in wire order: id, state, value, page, amount, action.
 export function crc32(bytes) {
   let crc = 0xffffffff;
@@ -61,36 +63,65 @@ export function validate(entries, profile) {
   return entries;
 }
 
-export function encodeProfile(entries, profile) {
+function validatePitchDefault(entries, scales) {
+  const pitch = entries.find((e) => e[0] === 1);
+  if (pitch && pitch[2] >= 2 && !effectiveScales(scales).some((scale) => scale.id === pitch[2])) {
+    throw new Error('The pitch starting value must be present in the scale bank.');
+  }
+}
+
+export function encodeProfile(entries, profile, scales = null) {
   validate(entries, profile);
-  const b = new Uint8Array(512).fill(255);
+  const version = profile.version || 1;
+  if (![1, 2].includes(version) || profile.size !== (version === 2 ? 4096 : 512)) throw new Error('Unsupported profile format.');
+  if (version === 1 && scales !== null) throw new Error('This release cannot customize scales.');
+  const bank = validateScales(scales);
+  validatePitchDefault(entries, bank);
+  const payload = entries.length * 6 + (bank?.length || 0) * SCALE_RECORD_SIZE;
+  const b = new Uint8Array(profile.size).fill(255);
   const v = new DataView(b.buffer);
   v.setUint32(0, 0x46505a44, true);
-  b[4] = 1;
+  b[4] = version;
   b[5] = entries.length;
-  v.setUint16(6, entries.length * 6, true);
+  v.setUint16(6, payload, true);
   v.setUint32(8, profile.release_id, true);
   v.setUint32(12, 0, true);
+  if (version === 2) { b[12] = bank === null ? 0 : 1; b[13] = bank?.length || 0; }
   entries.forEach((e, i) => b.set(e, 16 + i * 6));
-  const end = 16 + entries.length * 6;
+  if (bank) writeScales(b, 16 + entries.length * 6, bank);
+  const end = 16 + payload;
   v.setUint32(end, crc32(b.subarray(0, end)), true);
   return b;
 }
 
-export function decodeProfile(b, profile) {
-  if (!(b instanceof Uint8Array) || b.length !== 512) throw new Error('Invalid profile size.');
+export function decodeSettings(b, profile) {
+  if (!(b instanceof Uint8Array) || b.length !== profile.size ||
+      ![1, 2].includes(profile.version) || b.length !== (profile.version === 2 ? 4096 : 512)) {
+    throw new Error('Invalid profile size or version.');
+  }
   const v = new DataView(b.buffer, b.byteOffset, b.byteLength);
   const count = b[5];
-  const end = 16 + count * 6;
-  if (count > 82 || v.getUint16(6, true) !== count * 6 ||
-      v.getUint32(0, true) !== 0x46505a44 || b[4] !== 1 ||
-      v.getUint32(8, true) !== profile.release_id || v.getUint32(12, true) !== 0 ||
+  const custom = profile.version === 2 ? b[12] : 0;
+  const scaleCount = profile.version === 2 ? b[13] : 0;
+  const payload = count * 6 + scaleCount * SCALE_RECORD_SIZE;
+  const end = 16 + payload;
+  if (count > 82 || scaleCount > 14 || custom > 1 || (!custom && scaleCount) ||
+      end + 4 > b.length || v.getUint16(6, true) !== payload ||
+      v.getUint32(0, true) !== 0x46505a44 || b[4] !== profile.version ||
+      v.getUint32(8, true) !== profile.release_id || b[14] || b[15] ||
+      (profile.version === 1 && v.getUint32(12, true) !== 0) ||
       v.getUint32(end, true) !== crc32(b.subarray(0, end))) {
     throw new Error('Invalid profile header or checksum.');
   }
-  return validate(Array.from({ length: count }, (_, i) =>
+  const entries = validate(Array.from({ length: count }, (_, i) =>
     Array.from(b.subarray(16 + i * 6, 22 + i * 6))), profile);
+  const scales = custom ? readScales(b, 16 + count * 6, scaleCount) : null;
+  validatePitchDefault(entries, scales);
+  return { entries, scales };
 }
+
+export const decodeProfile = (b, profile) => decodeSettings(b, profile).entries;
+export const decodeScaleBank = (b, profile) => decodeSettings(b, profile).scales;
 
 export const defaults = (profile) => profile.features.filter((f) => f.default_in_block !== false).map((f) => f.default.slice());
 // Canonical editor entries: omitted catalogue defaults stay absent when Off.
@@ -122,10 +153,11 @@ export function unshare(text, releases) {
   const params = new URLSearchParams(text.replace(/^#/, ''));
   const release = releases.find((r) => r.tag === params.get('release'));
   const hex = params.get('profile');
-  if (!params.get('release') || !hex || !/^[0-9a-f]{1024}$/i.test(hex)) {
+  if (!params.get('release') || !hex || !/^[0-9a-f]+$/i.test(hex) || hex.length % 2) {
     throw new Error('Invalid share link. Copy the full address.');
   }
   if (!release) throw new Error('This link is for another release, no longer offered here. Choose a release and start again.');
+  if (hex.length !== release.profile.size * 2) throw new Error('Invalid share link size.');
   const block = Uint8Array.from(hex.match(/../g), (v) => parseInt(v, 16));
   const header = new DataView(block.buffer);
   if (header.getUint32(0, true) === 0x46505a44 &&
@@ -133,7 +165,7 @@ export function unshare(text, releases) {
     throw new Error('Share link version mismatch. Use its original page or start again.');
   }
   try {
-    return { release, entries: decodeProfile(block, release.profile) };
+    return { release, ...decodeSettings(block, release.profile) };
   } catch (error) {
     throw new Error('Damaged or outdated share link. Copy the full address or start again.');
   }
@@ -176,9 +208,16 @@ export function featureDelta(entry, feature, engine) {
   };
   // The measured engine baseline already includes every default setting.
   // Subtract its cost even for omitted entries (Off); placement has no cost.
-  return cost(entry) - cost(feature.default);
+  const delta = cost(entry) - cost(feature.default);
+  return Number.isFinite(delta) ? delta : null;
 }
-export function cpuUsage(entries, release) {
+export function cpuUsage(entries, release, scales = null) {
+  const pitch = entries.find((e) => e[0] === 1);
+  if (scales !== null && scales.length && pitch?.[1] &&
+      (pitch[1] === 2 || pitch[2] >= 2)) {
+    return { engines: [], percent: null, blocked: false, warning: true,
+      kind: 'not yet measured', unknown: ['Custom pitch scales'], names: 'Custom pitch scales' };
+  }
   const key = profileKey(entries, release.profile);
   const isDefault = key === profileKey(defaults(release.profile), release.profile);
   const combination = release.cpu.combinations.find((c) => c.profile === key);

@@ -226,6 +226,15 @@
   .result-actions a:not(.button) { display: inline-flex; align-items: center; min-height: 44px; }
   #guides { display: contents; }
   details > summary { cursor: pointer; padding: .65rem 0; font-family: var(--heading); font-weight: 600; font-size: 1.1rem; }
+  .scale-list { padding-left: 1.5rem; }
+  .scale-list li { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; margin: .5rem 0; }
+  .scale-list li > button:first-child { min-width: 12rem; text-align: left; }
+  .scale-list [aria-pressed=true] { outline: 2px solid var(--link); }
+  .scale-swatch { display: inline-block; width: .8rem; height: .8rem; border: 1px solid #777; border-radius: 50%; margin-right: .5rem; }
+  .scale-form { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); padding: 1rem 0; }
+  .scale-form label { display: grid; gap: .3rem; }
+  .scale-form textarea { min-height: 5rem; }
+  #scale-editor { padding-top: 1.5rem; padding-bottom: 1.5rem; border-top: 1px solid var(--rule); }
   #advanced .inner { display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); gap: 1rem 2rem; }
   dl { margin: 0; font-size: .85rem; }
   dt { color: var(--muted); margin-top: .5rem; }
@@ -330,6 +339,7 @@
   </div>
   <p class="lead">Choose Beads features and where you control them.</p>
   <p class="steps">Select a position, choose a feature and its starting value, then build the update.</p>
+  <p id="starting-point-note" class="note" hidden>Starting points replace your setup and restore factory scales.</p>
   <div class="presets" role="group" aria-labelledby="presets-label">
     <span id="presets-label">Start from</span>
     <div id="presets"></div>
@@ -396,6 +406,8 @@
     <div id="extras"></div>
   </section>
 </main>
+
+<section id="scale-editor" class="wrap" aria-label="Pitch scales" hidden></section>
 
 <div class="after wrap">
   <section id="result" hidden aria-labelledby="result-title">
@@ -478,6 +490,6 @@
   </div>
   <div id="library-body"></div>
 </dialog>
-<script type="module" src="js/app.js?v=3abfd1e06a3bed3b"></script>
+<script type="module" src="js/app.js?v=00c1428815e3d575"></script>
 </body>
 </html>

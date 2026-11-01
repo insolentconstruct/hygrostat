@@ -9,7 +9,7 @@ const base = process.env.BASE || 'http://127.0.0.1:8080/';
 const site = process.env.SITE || '/site';
 const release = JSON.parse(readFileSync(`${site}/manifest.json`)).releases[0];
 const { encodeProfile, defaults, share, fingerprint, templates, profileKey } = await import(
-  'data:text/javascript;base64,' + readFileSync(`${site}/js/profile.js`).toString('base64'));
+  pathToFileURL(resolve(site, 'js/profile.js')).href);
 const layout = await import(pathToFileURL(resolve(site, 'js/layout.js')).href);
 const hashOf = (entries) => '#' + share(release, encodeProfile(entries, release.profile));
 for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['webkit', webkit]]) {

@@ -78,7 +78,7 @@ assert(release.cpu.baselines.synth.provenance.includes('86.1–87.2%'));
 const entries = defaults(profile);
 assert.equal(entries.length, 14);
 const app = readFileSync(new URL(release.app, root));
-assert(equal(encodeProfile(entries, profile), app.subarray(1024, 1536)));
+assert(equal(encodeProfile(entries, profile), app.subarray(1024, 1024 + profile.size)));
 // Threshold regression fixtures retain the former numerical expectations without
 // publishing synthetic deltas as real measurements.
 const measuredCosts = (r) => {

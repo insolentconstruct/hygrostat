@@ -52,12 +52,12 @@ const reject = (b) => { cases.push(b); assert.throws(() => decodeProfile(b, prof
 assert.equal(crc32(new TextEncoder().encode('123456789')), 0xcbf43926);
 assert.deepEqual(decodeProfile(block, profile), entries);
 const app = readFileSync(new URL('../static/' + release.app, import.meta.url));
-assert(equal(block, app.subarray(1024, 1536)), 'default equals firmware build block');
+assert(equal(block, app.subarray(1024, 1024 + profile.size)), 'default equals firmware build block');
 for (let i = 0; i < 104; ++i) {
   const b = block.slice(); b[i] ^= 0x80; reject(b);
 }
 for (const offset of [0, 4, 5, 6, 7, 8, 12, 13, 14, 15]) {
-  const b = block.slice(); b[offset] ^= 1;
+  const b = block.slice(); b[offset] ^= offset === 12 && profile.version === 2 ? 2 : 1;
   reject([5, 6, 7].includes(offset) ? b : reseal(b));
 }
 // The refusal table from beads/test/profile_test.cc, parsed so it cannot drift.
@@ -68,7 +68,7 @@ assert.ifError(ancestor.error);
 assert([0, 1].includes(ancestor.status), ancestor.stderr);
 // Check the working firmware parser once its HEAD contains the pinned release.
 if (ancestor.status === 0) {
-  for (const file of ['beads/profile.cc', 'beads/profile.h']) {
+  for (const file of ['beads/profile.cc', 'beads/profile.h', ...(profile.version === 2 ? ['beads/dsp/pitch_quantizer.h'] : [])]) {
     assert.deepEqual(readFileSync(join(firmwareRepo, file)), firmwareShow(firmwareRef, file),
       `${file}: working parser must match the pinned oracle`);
   }
@@ -95,7 +95,7 @@ for (const f of profile.features) {
         const e = [f.id, state, value, 0, 0, action];
         const raw = block.slice(); raw[5] = 1; raw[6] = 6; raw[7] = 0;
         raw.set(e, 16); cases.push(reseal(raw));
-        const allowed = state <= 2 && (state !== 2 || f.states.includes('Adjustable')) && (!f.values || value < f.values.length) && action <= 3 &&
+        const allowed = !(f.id === 1 && value >= 10) && state <= 2 && (state !== 2 || f.states.includes('Adjustable')) && (!f.values || value < f.values.length) && action <= 3 &&
           (!action || (f.action && state !== 0 && (state !== 1 || (value && f.stateless)))) &&
           !(f.id === 9 && state === 1 && value && !action);
         if (allowed) assert.deepEqual(decodeProfile(encodeProfile([e], profile), profile), [e]);
@@ -291,7 +291,7 @@ for (const mobile of [false, true]) {
     const e = entries.find((e) => e[0] === f.id);
     const title = `${['FEEDBACK', 'DRY/WET', 'REVERB'][(e[3] - 1) % 3]}: ${f.name}`;
     assert(actual.includes(title) && expected.includes(title), title);
-    for (const value of f.values) assert(actual.includes(value) && expected.includes(value), value);
+    for (const [id, value] of f.values.entries()) if (!(f.id === 1 && id >= 10)) assert(actual.includes(value) && expected.includes(value), value);
   }
   assert(svg.includes(fp));
   const moved = entries.map((e) => e.slice()); moved[0][3] = 10;
@@ -325,8 +325,8 @@ for (const f of profile.features) {
 const scratch = mkdtempSync(join(tmpdir(), 'hygrostat-oracle-'));
 try {
   const oracle = join(scratch, 'profile-oracle');
-  mkdirSync(join(scratch, 'beads'));
-  for (const file of ['profile.h', 'profile.cc']) writeFileSync(join(scratch, 'beads', file), firmwareFile('beads/' + file));
+  mkdirSync(join(scratch, 'beads/dsp'), { recursive: true });
+  for (const file of ['profile.h', 'profile.cc', ...(profile.version === 2 ? ['dsp/pitch_quantizer.h'] : [])]) writeFileSync(join(scratch, 'beads', file), firmwareFile('beads/' + file));
   execFileSync('g++', ['-std=c++98', '-Wall', '-Werror', '-I' + scratch, '-I' + firmwareRepo,
     fileURLToPath(new URL('profile_oracle.cc', import.meta.url)), join(scratch, 'beads/profile.cc'), '-o', oracle]);
   const answers = execFileSync(oracle, [], { input: Buffer.concat(cases.map((b) => Buffer.from(b))), maxBuffer: 40000000 });
@@ -362,5 +362,5 @@ assert(!equal(customBlock, block));
 assert.notEqual(await fingerprint(customBlock), fp);
 assert(!equal(customApp, app));
 assert(equal(customApp.subarray(0, 1024), app.subarray(0, 1024)));
-assert(equal(customApp.subarray(1536), app.subarray(1536)));
+assert(equal(customApp.subarray(1024 + profile.size), app.subarray(1024 + profile.size)));
 console.log('PASS profile defaults, firmware refusals, placements, share, names, CPU, guide normalisation and WAV decode');
