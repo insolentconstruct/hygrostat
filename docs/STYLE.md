@@ -17,6 +17,9 @@ presentation; app coordinates UI state; the worker has no DOM access. Pass
 state explicitly, use descriptive names and extract repeated logic into small
 helpers instead of adding hidden globals or parallel copies of a format.
 
+Keep implementation comments to one line, or two when needed. Put longer
+explanations in documentation and preserve licence headers.
+
 Use const unless the binding changes. Validate before producing a download;
 reject unsupported or malformed input with a useful message. Preserve error
 causes when translating failures. Catch optional counter/cache failures only
