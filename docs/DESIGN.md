@@ -4,7 +4,7 @@ For maintainers. Users only need the [README](../README.md).
 
 ## How a WAV is made
 
-The page checks the pinned base `app.bin` against its SHA-256 and patches only the profile, bytes 1024–1535. It then encodes the WAV and decodes it back to check it. The untouched default must match the release WAV's hash too. Custom WAVs and guides carry the first eight hex digits of the profile's SHA-256; share links carry all 512 bytes and the release tag.
+The page checks the pinned base `app.bin` against its SHA-256 and patches only the release-declared profile region: the current V2 block occupies bytes 1024–5119 (4096 bytes); legacy V1 blocks occupy 512 bytes. It then encodes the WAV and decodes it back to check it. The untouched default must match the release WAV's hash too. Custom WAVs and guides carry the first eight hex digits of the profile's SHA-256; share links carry the complete release-sized profile block and the release tag.
 
 - `static/js/encoder.js`: Mutable Instruments' QPSK encoder (`stm_audio_bootloader/qpsk/encoder.py`), as Beads' release build runs it. One unminified module, used by the page and the tests.
 - `static/js/glibc_sincos.js`: sine and cosine ported from glibc 2.36. The release WAV is encoded by numpy on glibc, and one last bit of a sine decides between samples 32766 and 32767; the browser's `Math.sin` differs in about 636,000 samples of the Beta 2 file.
@@ -28,8 +28,8 @@ The page checks the pinned base `app.bin` against its SHA-256 and patches only t
 ## Manifest (`static/manifest.json`, format 2)
 
 - Each release pins its app image and WAV by SHA-256 and carries its profile offset, size, version, release ID and feature table.
-- `release_id` is the tag date as hex YYYYMMDD (2026-11-05 is `0x20261105`) and must equal the tag's `kProfileReleaseId`. Development entries keep the development constant.
-- The feature catalogue (23 features) must match the firmware's `beads/build/profile-features.json` at the release, byte for byte. `FIRMWARE_CATALOGUE_REF` adds a check against a second firmware revision.
+- `release_id` is the tag date as hex YYYYMMDD (2026-11-05 is `0x20261105`) and must equal the tag's `kProfileReleaseId`. Development entries instead pin `source_commit` and its declared `kProfileReleaseId`; they establish no release tag or module qualification.
+- The current feature catalogue (24 features) must match the firmware's `beads/build/profile-features.json` at the release, byte for byte. `FIRMWARE_CATALOGUE_REF` adds a check against a second firmware revision.
 - `default_in_block: false` leaves a feature out of the default profile while its default stays available in the editor. `values: null` means a full byte. `page`, `amount`, `action` and `stateless` mirror the firmware table.
 
 ## Firmware checks
