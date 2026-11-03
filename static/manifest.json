@@ -5,7 +5,7 @@
       "tag": "drizzlet-dev-4782d53",
       "name": "Drizzlet Beta 2 — candidate (unreleased)",
       "development": true,
-      "source_commit": "8cafe17ae2574fa0a6fab13ee2b977ffcff686ea",
+      "source_commit": "9b4546e156bc6917427ce74682169961f365e2f5",
       "app": "images/drizzlet-dev-4782d53/app.bin?v=b11fe81c37349d3d258a1bd6512f13af2c5cd7caa6767a169aea92bb292c74e7",
       "profile": {
         "offset": 1024,
@@ -1709,8 +1709,8 @@
       "wav_sha256": "d40a5dc20f8b1bb6f8f6f39acd534023098df92c59adebef528bd17d535ade4b",
       "slug": "beta-2-fog",
       "date": "2026-11-01",
-      "binary_source_commit": "4782d533be7299bebf232350ce3af0d1c10bc6d0"
+      "binary_source_commit": "9b4546e156bc6917427ce74682169961f365e2f5"
     }
   ],
-  "asset_version": "d500489eec0267f5"
+  "asset_version": "42277d908172b4bb"
 }

@@ -52,7 +52,7 @@ for (const release of manifest.releases) {
         `${release.tag}: profile release id pinned at source commit`);
     if (release.binary_source_commit) {
       const changed = execFileSync('git', ['-C', firmwareRepo, 'diff', '--name-only',
-        release.binary_source_commit, release.source_commit], { encoding: 'utf8' }).trim().split('\n');
+        release.binary_source_commit, release.source_commit], { encoding: 'utf8' }).trim().split('\n').filter(Boolean);
       check(changed.every((file) => /^beads\/(test\/|build\/docs\/|build\/tools\/options_(guide|tables_test)\.py$)/.test(file)),
           `${release.tag}: later source revision changes only guides and tests`);
     }

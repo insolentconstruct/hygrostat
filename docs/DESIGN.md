@@ -38,8 +38,8 @@ Tests read firmware files with `git -C $FIRMWARE_REPO show <ref>:<file>`, where 
 
 Templates keep Drizzlet and Stock plus fixes as direct choices. Seven focused starting points start from all features Off. The grouped gallery shows provisional CPU estimates and previews changed controls and values; only Use applies a template. Previewing leaves the profile, share link, guides and firmware build unchanged.
 
-The Drizzlet template copies the selected firmware's embedded defaults. The next
-candidate places page 2 Frozen feedback on FEEDBACK, Delay mode on DRY/WET and
+The Drizzlet template copies the selected firmware's embedded defaults. Beta 2
+places page 2 Frozen feedback on FEEDBACK, Delay mode on DRY/WET and
 Reverb character on REVERB. Publish that layout only with its matching app,
 catalogue and guides: changing default slots changes the profile block and CRC.
 Do not rewrite an existing custom profile's explicit slots when defaults change.
@@ -71,10 +71,10 @@ Browser modules, the worker and the manifest URL carry `?v=` tokens bound to the
 
 Hugo copies `static/` unchanged (no templates yet); CI checks `public/` equals `static/` byte for byte. Only `main` deploys, to GitHub Pages at https://hygrostat.insolentconstruct.net/.
 
-## Prepared layout candidate
+## Beta 2 factory layout
 
-The private prepared candidate keeps Pitch scale, Random pitch steps and Attacks on page 1; page 2 is Frozen feedback, Delay mode and Reverb character; page 3 remains Processor, Synth and Synth start. Page 4 adds LED brightness and SEED latch beside Limiter, initially 100%, Off (Stock) and Stock. Explicit custom layouts are unchanged.
+The accepted Beta 2 factory layout keeps Pitch scale, Random pitch steps and Attacks on page 1; page 2 is Frozen feedback, Delay mode and Reverb character; page 3 remains Processor, Synth and Synth start. Page 4 adds LED brightness and SEED latch beside Limiter, initially 100%, Off (Stock) and Stock. Users can change placements and defaults in Hygrostat. Beta 2 feedback may inform Beta 3's factory layout; existing custom profiles retain their explicit placements.
 
-The development manifest separates the actual binary build revision (`binary_source_commit`) from the reviewed source/guide revision (`source_commit`). The later revision only changes documentation and tests; the app and independently decoded WAV remain pinned to the original candidate build. Historical CPU measurements are unchanged and do not qualify this candidate on a module. This is preparation for owner review, with no tag or deployment.
+The development manifest separates the actual binary build revision (`binary_source_commit`) from the reviewed source/guide revision (`source_commit`). Any later revision must change only documentation and tests; the app and independently decoded WAV remain pinned to the recorded build. Historical CPU measurements are unchanged and do not qualify this candidate on a module. The layout is accepted; module qualification, the release tag and deployment remain separate gates.
 
 The prepared candidate keeps the historical baseline percentages and cost table unchanged. `cpu.estimate_reference` pins the former estimator defaults and their firmware source/profile hash; `default_measured: false` prevents new-default measurement claims. The table-derived Off-to-Adjustable allowances are 0.492 synth and 0.737 granular points, yielding provisional default estimates of 87.7% and 83.7%. These are estimates, not new module measurements; legacy explicit profiles cancel those allowances. Runtime estimation checks the declared allowances against the same reference costs, and incomplete or contradictory reference flags refuse.
