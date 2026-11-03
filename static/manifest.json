@@ -2,11 +2,11 @@
   "format": 2,
   "releases": [
     {
-      "tag": "drizzlet-dev-eedbc74",
-      "name": "Drizzlet Beta 2 — development (unreleased)",
+      "tag": "drizzlet-dev-4782d53",
+      "name": "Drizzlet Beta 2 — candidate (unreleased)",
       "development": true,
-      "source_commit": "c832389bec9ebeff54a196430ecdc2dadaca3123",
-      "app": "images/drizzlet-dev-eedbc74/app.bin?v=09b43688e9632ac3a875224a5bbfa30479ccc64ca220d58389e2319512aa1f6f",
+      "source_commit": "8cafe17ae2574fa0a6fab13ee2b977ffcff686ea",
+      "app": "images/drizzlet-dev-4782d53/app.bin?v=b11fe81c37349d3d258a1bd6512f13af2c5cd7caa6767a169aea92bb292c74e7",
       "profile": {
         "offset": 1024,
         "size": 4096,
@@ -187,7 +187,7 @@
               2,
               2,
               0,
-              5,
+              6,
               0,
               0
             ],
@@ -244,7 +244,7 @@
               3,
               2,
               0,
-              4,
+              5,
               0,
               0
             ],
@@ -425,7 +425,7 @@
               6,
               2,
               0,
-              6,
+              4,
               0,
               0
             ],
@@ -1124,12 +1124,12 @@
               "Fixed",
               "Adjustable"
             ],
-            "default_in_block": false,
+            "default_in_block": true,
             "default": [
               18,
+              2,
               0,
-              0,
-              0,
+              10,
               0,
               0
             ],
@@ -1308,12 +1308,12 @@
               "Fixed",
               "Adjustable"
             ],
-            "default_in_block": false,
+            "default_in_block": true,
             "default": [
               21,
+              2,
               0,
-              0,
-              0,
+              11,
               0,
               0
             ],
@@ -1578,14 +1578,139 @@
               "source": "code inspection"
             }
           ]
+        },
+        "default_measured": false,
+        "estimate_reference": {
+          "source_commit": "a780c66d33c4948a42dd9ab2b446f4e60b6f860f",
+          "profile_sha256": "1e27242337c856da25f5aa1412c65f7ab8fd889d5c7ad71f1315130e8267227e",
+          "profile": [
+            [
+              1,
+              2,
+              0,
+              1,
+              0,
+              0
+            ],
+            [
+              2,
+              2,
+              0,
+              5,
+              0,
+              0
+            ],
+            [
+              3,
+              2,
+              0,
+              4,
+              0,
+              0
+            ],
+            [
+              4,
+              2,
+              0,
+              7,
+              0,
+              0
+            ],
+            [
+              5,
+              2,
+              0,
+              12,
+              0,
+              0
+            ],
+            [
+              6,
+              2,
+              0,
+              6,
+              0,
+              0
+            ],
+            [
+              7,
+              2,
+              0,
+              8,
+              0,
+              0
+            ],
+            [
+              8,
+              2,
+              0,
+              3,
+              0,
+              0
+            ],
+            [
+              9,
+              2,
+              0,
+              9,
+              0,
+              3
+            ],
+            [
+              10,
+              2,
+              0,
+              2,
+              0,
+              0
+            ],
+            [
+              11,
+              2,
+              0,
+              0,
+              1,
+              0
+            ],
+            [
+              12,
+              2,
+              0,
+              0,
+              2,
+              0
+            ],
+            [
+              13,
+              2,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              14,
+              1,
+              1,
+              0,
+              0,
+              2
+            ]
+          ],
+          "note": "Historical estimator default reference. The retained module baselines predate profiles; their original measurement scope remains in each baseline provenance."
+        },
+        "estimated_default_delta": {
+          "synth": 0.492,
+          "granular": 0.737
         }
       },
-      "app_sha256": "09b43688e9632ac3a875224a5bbfa30479ccc64ca220d58389e2319512aa1f6f",
-      "app_size": 649024,
-      "wav_sha256": "a84d6060767593ba371411d303f8f7d5ee1a847e158fc775202e11555f7a2530",
+      "app_sha256": "b11fe81c37349d3d258a1bd6512f13af2c5cd7caa6767a169aea92bb292c74e7",
+      "app_size": 649084,
+      "wav_sha256": "d40a5dc20f8b1bb6f8f6f39acd534023098df92c59adebef528bd17d535ade4b",
       "slug": "beta-2-fog",
-      "date": "2026-11-01"
+      "date": "2026-11-01",
+      "binary_source_commit": "4782d533be7299bebf232350ce3af0d1c10bc6d0"
     }
   ],
-  "asset_version": "8947d6653e6c3dcc"
+  "asset_version": "d500489eec0267f5"
 }

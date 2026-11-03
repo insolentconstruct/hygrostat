@@ -13,7 +13,7 @@ const profile = manifest.releases[0].profile;
 const features = profile.features;
 const bytes = (entries) => encodeProfile(entries, profile).join();
 
-// Pending factory layout; never attach these synthetic defaults to the shipped app.
+// Factory layouts stay profile-bound; explicit saved layouts keep their bytes.
 const nextRelease = structuredClone(manifest.releases[0]);
 const nextProfile = nextRelease.profile;
 const page2 = new Map([[6, 4], [3, 5], [2, 6]]);
@@ -30,9 +30,11 @@ for (const f of profile.features) {
   assert.equal(next.field, f.field);
   assert.deepEqual(next.values, f.values);
 }
+const oldDefault = defaults(profile).filter((e) => ![18, 21].includes(e[0]));
+for (const [id, slot] of [[2, 5], [3, 4], [6, 6]]) oldDefault.find((e) => e[0] === id)[3] = slot;
 const retained = defaults(profile);
 for (const [id, slot] of [[2, 4], [3, 6], [6, 5]]) retained.find((e) => e[0] === id)[3] = slot;
-for (const entries of [defaults(profile), retained]) {
+for (const entries of [defaults(profile), retained, oldDefault]) {
   const block = encodeProfile(entries, profile);
   const restored = unshare(share(manifest.releases[0], block), [nextRelease]).entries;
   assert.deepEqual(restored, entries, 'new defaults do not migrate an explicit old or custom layout');
@@ -146,10 +148,10 @@ assert.deepEqual(entryOf(place(drizzlet, profile, 14, 'action', 1, 'swap'), feat
 assert.equal(entryOf(place(drizzlet, profile, 14, 'action', 1, 'swap'), features[12])[5], 2);
 assert.throws(() => place(drizzlet, profile, 15, 'page', 1));
 assert.throws(() => place(drizzlet, profile, 1, 'page', 13));
-assert.equal(freeSlot(drizzlet, 'page'), 10);
+assert.equal(freeSlot(drizzlet, 'page'), 0);
 assert.equal(freeSlot(drizzlet, 'amount'), 0);
 assert.equal(changes(drizzlet, drizzlet, profile).length, 0);
-assert.deepEqual(changes(stock, drizzlet, profile).length, 14);
+assert.deepEqual(changes(stock, drizzlet, profile).length, 16);
 
 assert.equal(valueLabel(features[4], 2), 'No limiter');
 assert.equal(valueLabel(features[0], 0), 'Off');

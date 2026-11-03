@@ -22,7 +22,7 @@
 //
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
-import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=8947d6653e6c3dcc';
+import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=d500489eec0267f5';
 
 // Six-byte entries are kept in wire order: id, state, value, page, amount, action.
 export function crc32(bytes) {
@@ -225,18 +225,35 @@ export function cpuUsage(entries, release, scales = null) {
   }
   const key = profileKey(entries, release.profile);
   const isDefault = key === profileKey(defaults(release.profile), release.profile);
+  const reference = release.cpu.estimate_reference;
+  if ((reference && release.cpu.default_measured !== false) ||
+      (!reference && release.cpu.default_measured === false)) throw new Error('CPU baseline reference is incomplete.');
+  if (reference) validate(reference.profile, release.profile);
+  const baselineDefault = (f) => reference ? reference.profile.find((e) => e[0] === f.id) ||
+      [f.id, 0, 0, 0, 0, 0] : f.default;
+  const costFeature = (f) => reference ? { ...f, default: baselineDefault(f) } : f;
+  if (reference) {
+    for (const engine of Object.keys(release.cpu.baselines)) {
+      const differences = release.profile.features.map((f) => featureDelta(f.default, costFeature(f), engine));
+      const declared = release.cpu.estimated_default_delta?.[engine];
+      if (!Number.isFinite(declared) || (differences.every(Number.isFinite) &&
+          Math.abs(differences.reduce((sum, delta) => sum + delta, 0) - declared) > 1e-8)) {
+        throw new Error('CPU default estimate differs from its historical reference.');
+      }
+    }
+  }
   const combination = release.cpu.combinations.find((c) => c.profile === key);
-  const measured = combination || (isDefault ?
+  const measured = combination || (isDefault && !reference ?
     Object.fromEntries(Object.entries(release.cpu.baselines).map(([e, b]) => [e, b.percent])) :
     null);
   const deltas = release.profile.features.map((f) => ({ feature: f,
     deltas: Object.fromEntries(Object.keys(release.cpu.baselines).map((engine) =>
-      [engine, featureDelta(entries.find((e) => e[0] === f.id), f, engine)])) }));
+      [engine, featureDelta(entries.find((e) => e[0] === f.id), costFeature(f), engine)])) }));
   // Placement does not add DSP work. Off, Fixed Off, and the same value in
   // a lighter mode stay within the default; other enabled values need a cost.
   const withinDefault = (f) => {
     const e = entries.find((e) => e[0] === f.id);
-    const d = f.default;
+    const d = baselineDefault(f);
     return !e || e[1] === 0 || (e[1] === 1 && f.values?.[e[2]] === 'Off') ||
       (d[1] !== 0 && e[1] <= d[1] &&
         (f.amount ? e[2] <= d[2] : e[2] === d[2]));
@@ -255,11 +272,11 @@ export function cpuUsage(entries, release, scales = null) {
       blocked: (!isDefault || Boolean(combination)) && percent > release.cpu.ceiling - (hasMeasurement ? 0 : release.cpu.margin),
       warning: percent >= release.cpu.warning };
   });
-  const withinMeasuredDefault = !measured && deltas.some((f) => Object.values(f.deltas).some((d) => d === null)) &&
+  const withinMeasuredDefault = !reference && !measured && deltas.some((f) => Object.values(f.deltas).some((d) => d === null)) &&
     deltas.every((f) => Object.values(f.deltas).every((d) => d === null || d <= 0));
   return { engines, withinMeasuredDefault, percent: Math.max(...engines.map((e) => e.percent)),
     blocked: engines.some((e) => e.blocked), warning: engines.some((e) => e.warning),
-    kind: withinMeasuredDefault ? 'within measured default' : isDefault && !combination ? 'partly measured' : engines.every((e) => e.measured) ? 'measured' : engines.some((e) => e.measured) ? 'partly measured' : 'estimated',
+    kind: withinMeasuredDefault ? 'within measured default' : isDefault && !combination && !reference ? 'partly measured' : engines.every((e) => e.measured) ? 'measured' : engines.some((e) => e.measured) ? 'partly measured' : 'estimated',
     names: deltas.filter((f) => Object.values(f.deltas).some((d) => d)).map((f) => f.feature.name).join(', ') || 'Release default settings' };
 }
 

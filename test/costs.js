@@ -25,8 +25,11 @@ function tableCost(entry, f, engine) {
 function tableDelta(entry, f, engine) {
   return tableCost(entry, f, engine) - tableCost(f.default, f, engine);
 }
+const referenceEntry = (f) => release.cpu.estimate_reference ?
+  release.cpu.estimate_reference.profile.find((e) => e[0] === f.id) : f.default;
 const sum = (entries, engine) => profile.features.reduce((total, f) =>
-  total + tableDelta(entries.find((e) => e[0] === f.id), f, engine), 0);
+  total + tableCost(entries.find((e) => e[0] === f.id), f, engine) -
+  tableCost(referenceEntry(f), f, engine), 0);
 function choices(f, extremes = false) {
   // Factory-bank profiles cannot select absent user IDs; those costs are tested as unknown below.
   const values = f.values ? f.values.map((_, i) => i).filter((i) => f.id !== 1 || i < 10) :
@@ -65,11 +68,13 @@ assert.equal(featureDelta([5, 1, 1], profile.features[4], 'granular'), 0);
 // Both the exact default and a valid placement-only edit use the same baseline.
 const moved = defaults(profile);
 moved.find((e) => e[0] === 1)[3] = 10;
+moved.find((e) => e[0] === 18)[3] = 1;
 assert.notEqual(profileKey(moved, profile), profileKey(defaults(profile), profile));
 assert.deepEqual(decodeProfile(encodeProfile(moved, profile), profile), moved);
 for (const entries of [defaults(profile), moved]) {
   for (const result of cpuUsage(entries, release).engines) {
-    assert.equal(result.percent, release.cpu.baselines[result.engine].percent);
+    assert.equal(result.percent, round(release.cpu.baselines[result.engine].percent +
+      (release.cpu.estimated_default_delta?.[result.engine] || 0)));
   }
 }
 for (const f of profile.features) for (const engine of engines) {
@@ -77,17 +82,18 @@ for (const f of profile.features) for (const engine of engines) {
 }
 // A real setting change adds only the measured difference from its default.
 const changed = structuredClone(moved);
-changed.push([18, 1, 2, 0, 0, 0]);
+changed[changed.findIndex((e) => e[0] === 18)] = [18, 1, 2, 0, 0, 0];
 assert.deepEqual(decodeProfile(encodeProfile(changed, profile), profile), changed);
 for (const result of cpuUsage(changed, release).engines) {
   const delta = tableDelta(changed.find((e) => e[0] === 18), profile.features[17], result.engine);
-  assert.equal(delta, 0.147);
-  assert.equal(result.percent, round(result.baseline.percent + delta));
+  assert.equal(delta, 0);
+  assert.equal(result.percent, round(result.baseline.percent +
+    (release.cpu.estimated_default_delta?.[result.engine] || 0) + delta));
 }
 const fixedPitch = structuredClone(moved);
 fixedPitch[0] = [1, 1, 0, 0, 0, 0];
 assert.equal(featureDelta(fixedPitch[0], profile.features[0], 'granular'), -0.16);
-assert.equal(cpuUsage(fixedPitch, release).engines.find((e) => e.engine === 'granular').percent, 82.8);
+assert.equal(cpuUsage(fixedPitch, release).engines.find((e) => e.engine === 'granular').percent, 83.6);
 for (const [name, entries] of Object.entries({ Default: defaults(profile), ...templates(profile) })) {
   assert.deepEqual(decodeProfile(encodeProfile(entries, profile), profile), entries, `${name} builds`);
   const usage = cpuUsage(entries, release);
@@ -95,7 +101,7 @@ for (const [name, entries] of Object.entries({ Default: defaults(profile), ...te
   for (const result of usage.engines) {
     // The exact default uses the measured baseline, ahead of estimated costs.
     const isDefault = profileKey(entries, profile) === profileKey(defaults(profile), profile);
-    assert.equal(result.percent, round(result.baseline.percent + (isDefault ? 0 : sum(entries, result.engine))), name);
+    assert.equal(result.percent, round(result.baseline.percent + (isDefault && !release.cpu.estimate_reference ? 0 : sum(entries, result.engine))), name);
     if (!isDefault) assert.equal(result.measured, false);
   }
 }
@@ -135,7 +141,7 @@ for (let i = 0; i < 100; ++i) {
     const delta = sum(entries, result.engine);
     const individual = profile.features.reduce((total, f) =>
       total + featureDelta(entries.find((e) => e[0] === f.id), f, result.engine), 0);
-    assert(Math.abs(individual - delta) < 1e-10);
+    assert(Math.abs(individual + (release.cpu.estimated_default_delta?.[result.engine] || 0) - delta) < 1e-10);
     assert.equal(result.percent, round(result.baseline.percent + delta));
   }
 }

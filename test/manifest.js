@@ -11,7 +11,8 @@
 // node test/manifest.js
 
 import { createHash } from 'node:crypto';
-import { firmwareShow } from './firmware.js';
+import { firmwareShow, firmwareRepo } from './firmware.js';
+import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { defaults, encodeProfile, equal, validateReleaseId } from '../static/js/profile.js';
 import { decode } from '../static/js/decoder.js';
@@ -49,6 +50,21 @@ for (const release of manifest.releases) {
     const source = firmwareShow(release.source_commit, 'beads/profile.h', { encoding: 'utf8' });
     check(source.includes(`kProfileReleaseId = 0x${release.profile.release_id.toString(16)}`),
         `${release.tag}: profile release id pinned at source commit`);
+    if (release.binary_source_commit) {
+      const changed = execFileSync('git', ['-C', firmwareRepo, 'diff', '--name-only',
+        release.binary_source_commit, release.source_commit], { encoding: 'utf8' }).trim().split('\n');
+      check(changed.every((file) => /^beads\/(test\/|build\/docs\/|build\/tools\/options_(guide|tables_test)\.py$)/.test(file)),
+          `${release.tag}: later source revision changes only guides and tests`);
+    }
+    if (release.cpu.estimate_reference) {
+      const reference = release.cpu.estimate_reference;
+      const source = firmwareShow(reference.source_commit, 'beads/profile.cc', { encoding: 'utf8' });
+      const block = source.split('const volatile uint8_t kProfileBlock[kProfileSize]')[1].split('};')[0];
+      const bytes = Uint8Array.from([...block.matchAll(/0x([0-9a-f]{2})/g)], (m) => parseInt(m[1], 16));
+      check(hash(bytes) === reference.profile_sha256 &&
+          equal(encodeProfile(reference.profile, release.profile), bytes),
+          `${release.tag}: historical estimator defaults match their original firmware source`);
+    }
   } else {
     const pinned = (file) => firmwareShow(`refs/tags/${release.tag}`, `beads/build/${file}`,
         { encoding: 'utf8' }).split('\n');

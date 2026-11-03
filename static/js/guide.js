@@ -23,9 +23,9 @@
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
 // Knob cards port options_guide.py: 270-degree arcs and the same LED ladder.
-import { effectiveScales, PULSE_NAMES } from './scales.js?v=8947d6653e6c3dcc';
-import { defaults, equal, encodeProfile } from './profile.js?v=8947d6653e6c3dcc';
-import { RELEASE_GUIDES, RELEASE_GUIDE_ID } from './release_guides.js?v=8947d6653e6c3dcc';
+import { effectiveScales, PULSE_NAMES } from './scales.js?v=d500489eec0267f5';
+import { defaults, equal, encodeProfile } from './profile.js?v=d500489eec0267f5';
+import { RELEASE_GUIDES, RELEASE_GUIDE_ID } from './release_guides.js?v=d500489eec0267f5';
 
 const KNOBS = ['FEEDBACK', 'DRY/WET', 'REVERB'];
 export const ACTIONS = ['None', '[A]+SEED', '[A]+FREEZE', '[A] hold'];
@@ -124,8 +124,10 @@ export function guide(entries, release, fp, mobile = false, scales = null) {
       encodeProfile(defaults(release.profile), release.profile))) {
     // Normalisation removes this added fingerprint text; the remaining SVG
     // is byte-identical to options_guide.py's release drawing.
-    return RELEASE_GUIDES[Number(mobile)].replace('</g>\n</svg>',
-        `<text data-profile-fingerprint="true" x="${mobile ? 22 : 35}" y="52" font-size="12">Profile ${escape(fp)}</text>\n</g>\n</svg>`);
+    const reference = RELEASE_GUIDES[Number(mobile)];
+    const height = Number(reference.match(/viewBox="0 0 \d+ ([\d.]+)"/)[1]);
+    return reference.replace('</g>\n</svg>',
+        `<text data-profile-fingerprint="true" x="${mobile ? 22 : 35}" y="${height - 8}" font-size="12">Profile ${escape(fp)}</text>\n</g>\n</svg>`);
   }
   const d = new Drawing();
   const width = mobile ? 390 : 1100;
@@ -146,10 +148,10 @@ export function guide(entries, release, fp, mobile = false, scales = null) {
   ] : ['This profile has no options pages. Hold [M] does nothing.'])) y = d.lines(margin, y, line, mobile ? 43 : 140) + 3;
   // Share the release's to-scale control sketch and LED legend.
   const reference = RELEASE_GUIDES[0];
-  const panelStart = reference.indexOf('<text x="405" y="70"');
+  const panelStart = reference.indexOf('<text x="405" y="20"');
   const panelEnd = reference.indexOf('<text x="780" y="70"');
   if (panelStart >= 0 && panelEnd > panelStart) {
-    d.items.push(`<g transform="translate(${margin} ${y}) scale(${mobile ? 0.85 : 1}) translate(-405 -70)">${reference.slice(panelStart, panelEnd)}</g>`);
+    d.items.push(`<g transform="translate(${margin} ${y}) scale(${mobile ? 0.85 : 1}) translate(-405 -20)">${reference.slice(panelStart, panelEnd)}</g>`);
     y += 285;
   }
   for (let page = 1; page <= 4; ++page) {

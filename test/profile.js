@@ -42,6 +42,13 @@ const release = manifest.releases[0];
 const profile = release.profile;
 const entries = defaults(profile);
 const block = encodeProfile(entries, profile);
+function movedFirst(chosen, slot) {
+  const moved = chosen.map((entry) => entry.slice());
+  const occupant = moved.find((entry) => entry !== moved[0] && entry[3] === slot);
+  if (occupant) occupant[3] = moved[0][3];
+  moved[0][3] = slot;
+  return moved;
+}
 const reseal = (b) => {
   const end = 16 + b[5] * 6;
   new DataView(b.buffer).setUint32(end, crc32(b.subarray(0, end)), true);
@@ -131,9 +138,17 @@ assert.equal(filenames(release, fp, true).desktop, 'options-guide-dev.svg');
 assert.equal(filenames(release, fp, false).wav, `${release.tag}-${fp}.wav`);
 assert.equal(filenames({ ...release, tag: 'drizzlet-dev-a70e669' }, fp, false).mobile, `options-guide-dev-a70e669-${fp}-mobile.svg`);
 assert.equal(filenames(release, fp, false).mobile, `options-guide-${release.tag.replace(/^drizzlet-/, '')}-${fp}-mobile.svg`);
+// Legacy no-reference regression fixtures retain their original CPU semantics.
+const legacyCpuFixture = (r) => {
+  const fixture = structuredClone(r);
+  delete fixture.cpu.estimate_reference;
+  delete fixture.cpu.default_measured;
+  delete fixture.cpu.estimated_default_delta;
+  return fixture;
+};
 // Synthetic measured costs exercise thresholds; these are never shipped costs.
 const withMeasuredCosts = (r) => {
-  const fixture = structuredClone(r);
+  const fixture = legacyCpuFixture(r);
   const costs = JSON.parse(readFileSync(new URL('fixtures/synthetic-costs.json', import.meta.url)));
   for (const f of fixture.profile.features) f.cpu = costs[f.id];
   return fixture;
@@ -160,11 +175,11 @@ const withMeasuredCosts = (r) => {
     assert(usage.engines.find((e) => e.engine === engine).blocked);
   }
   const measuredRelease = structuredClone(release);
-  const measuredEntries = entries.map((e) => e.slice()); measuredEntries[0][3] = 10;
+  const measuredEntries = movedFirst(entries, 10);
   measuredRelease.cpu.combinations = [{ profile: profileKey(measuredEntries, profile), synth: 90, granular: 89 }];
   assert.equal(cpuUsage(measuredEntries, measuredRelease).kind, 'measured');
   assert(!cpuUsage(measuredEntries, measuredRelease).blocked);
-  const changedPlacement = measuredEntries.map((e) => e.slice()); changedPlacement[0][3] = 11;
+  const changedPlacement = movedFirst(measuredEntries, 11);
   assert.equal(cpuUsage(changedPlacement, measuredRelease).kind, 'estimated');
   for (const shipped of manifest.releases) {
     const r = withMeasuredCosts(shipped);
@@ -198,7 +213,7 @@ const withMeasuredCosts = (r) => {
 }
 // Exact module measurements override unknown per-feature costs and lighter labels.
 {
-  const release = structuredClone(manifest.releases[0]);
+  const release = legacyCpuFixture(manifest.releases[0]);
   for (const f of release.profile.features) f.cpu = null;
   const chosen = defaults(profile);
   chosen.find((e) => e[0] === 2)[2] = 1;
@@ -210,7 +225,7 @@ const withMeasuredCosts = (r) => {
     assert.equal(result.percent, percent);
     assert.equal(result.blocked, blocked);
     assert.equal(result.engines.find((e) => e.engine === 'synth').percent, percent);
-    const moved = chosen.map((e) => e.slice()); moved[0][3] = 10;
+    const moved = movedFirst(chosen, 10);
     assert.equal(cpuUsage(moved, r).kind, 'not yet measured', 'only an exact block matches');
   }
   assert.deepEqual(cpuUsage(chosen, release).unknown, ['Reverb character']);
@@ -259,7 +274,7 @@ for (const f of profile.features) {
   const fixed = [f.id, 1, f.id === 9 || f.values?.[0] === 'Off' ? 1 : 0, 0, 0,
     f.id === 9 ? 1 : 0];
   // Isolate enabled unknown costs against an Off-default fixture.
-  const offDefault = structuredClone(release);
+  const offDefault = legacyCpuFixture(release);
   offDefault.profile.features.find((feature) => feature.id === f.id).cpu = null;
   for (const feature of offDefault.profile.features) feature.default = [feature.id, 0, 0, 0, 0, 0];
   assert.equal(cpuUsage([fixed], offDefault).percent, null);
@@ -294,12 +309,14 @@ for (const mobile of [false, true]) {
     for (const [id, value] of f.values.entries()) if (!(f.id === 1 && id >= 10)) assert(actual.includes(value) && expected.includes(value), value);
   }
   assert(svg.includes(fp));
-  const moved = entries.map((e) => e.slice()); moved[0][3] = 10;
+  const moved = movedFirst(entries, 10);
   const custom = guide(moved, release, fp, mobile);
   assert(custom.includes('FEEDBACK: Pitch scale'));
   assert(custom.includes('CC BY-SA 3.0'));
   assert(!custom.includes('MIT licence'));
-  assert(svg.includes('y="52" font-size="12"'));
+  const height = Number(svg.match(/viewBox="0 0 \d+ ([\d.]+)"/)[1]);
+  const fingerprintY = Number(svg.match(/data-profile-fingerprint="true"[^>]*y="([\d.]+)"/)[1]);
+  assert(fingerprintY > height - 30 && fingerprintY < height, 'fingerprint stays in the clear footer');
   assert(text(guide([[1, 2, 3, 0, 0, 0]], release, fp, mobile)).join(' ').includes('set on the page: not placed'));
   if (mobile) assert(custom.includes('scale(0.85)'));
   assert(!guide([], release, fp, mobile).includes('PAGE 1'));

@@ -47,6 +47,9 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     const releaseBlock = encodeProfile(defaults(release.profile), release.profile);
     const releaseFP = await fingerprint(releaseBlock);
     await waitFingerprint(releaseFP);
+    assert((await page.textContent('#cpu')).startsWith('87.7% estimated.'));
+    assert((await page.textContent('#cpu')).includes('granular 83.7% estimated'));
+    assert((await page.textContent('#cpu-provenance')).includes('This candidate default is estimated, not measured.'));
     if (release.profile.version === 2) {
       for (const character of ['\ufffe', '\uffff']) {
         const bank = factoryScales(); bank[0].name = `Scale${character} & <test>`;
@@ -62,7 +65,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
       }
     }
     assert.deepEqual(await pressed(), ['Drizzlet']);
-    assert.equal(await page.textContent('#positions'), '10 of 12 page positions used');
+    assert.equal(await page.textContent('#positions'), '12 of 12 page positions used');
     assert.equal(await page.isVisible('#development'), Boolean(release.development));
     // Preview every focused template without changing the profile or share link.
     const unchangedShare = await page.getAttribute('#share', 'href');
@@ -99,7 +102,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     }
     // The grid matches the module: page rows, knob columns.
     assert.equal(await page.getAttribute('#cell-1', 'aria-label'), 'Page 1, FEEDBACK: Pitch scale, starts off');
-    assert.equal(await page.getAttribute('#cell-10', 'aria-label'), 'Page 4, FEEDBACK: empty');
+    assert.equal(await page.getAttribute('#cell-10', 'aria-label'), 'Page 4, FEEDBACK: LED brightness, starts 100%');
     assert.equal(await page.getAttribute('#amount-2', 'aria-label'), '[A] + REVERB: Diffusion, starts 0');
     // Keyboard: arrows move within the grid, Enter selects, Delete empties.
     await page.focus('#cell-1');
@@ -141,6 +144,10 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     // Place, swap and replace by pointer from the Drizzlet preset.
     await page.click('#preset-drizzlet');
     await waitFingerprint(releaseFP);
+    await page.focus('#cell-10');
+    await page.keyboard.press('Delete');
+    const withoutBrightness = layout.unplace(defaults(release.profile), release.profile, 18, 'page');
+    await waitFingerprint(await fingerprint(encodeProfile(withoutBrightness, release.profile)));
     await page.click('#cell-10');
     await until(() => page.locator('#library').isVisible());
     assert.equal(await page.locator('#lib-11').count(), 0, 'only features that fit a page');
@@ -148,7 +155,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     let expected = layout.place(defaults(release.profile), release.profile, 18, 'page', 10);
     await waitFingerprint(await fingerprint(encodeProfile(expected, release.profile)));
     assert((await page.textContent('#cell-10')).includes('LED brightness'));
-    assert.equal(await page.textContent('#positions'), '11 of 12 page positions used');
+    assert.equal(await page.textContent('#positions'), '12 of 12 page positions used');
     await page.click('#cell-1');
     await page.click('#choose-feature');
     await page.click('#lib-7');
@@ -225,8 +232,11 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     assert.equal(await page.textContent('#positions'), '0 of 12 page positions used');
     const stockShare = await page.getAttribute('#share', 'href');
     const manifestURL = /\/manifest\.json(?:\?|$)/;
-    // Missing costs still report the measured-default bound, without a percentage.
+    // The legacy no-reference path retains its measured-default bound.
     const boundedManifest = JSON.parse(readFileSync(`${site}/manifest.json`));
+    delete boundedManifest.releases[0].cpu.estimate_reference;
+    delete boundedManifest.releases[0].cpu.default_measured;
+    delete boundedManifest.releases[0].cpu.estimated_default_delta;
     for (const f of boundedManifest.releases[0].profile.features) f.cpu = null;
     let boundedRequests = 0;
     const boundedRoute = (route) => {
@@ -247,6 +257,9 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     await context.unroute(manifestURL, boundedRoute);
     // Preserve the enabled/unknown regression using an explicit Off-default fixture.
     const offManifest = JSON.parse(readFileSync(`${site}/manifest.json`));
+    delete offManifest.releases[0].cpu.estimate_reference;
+    delete offManifest.releases[0].cpu.default_measured;
+    delete offManifest.releases[0].cpu.estimated_default_delta;
     for (const f of offManifest.releases[0].profile.features) {
       f.default = [f.id, 0, 0, 0, 0, 0];
       f.cpu = null;
@@ -295,8 +308,15 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
       }
       await waitFingerprint(releaseFP);
     }
-    await page.click('#extra-18-place');
-    await waitFingerprint(await fingerprint(encodeProfile(layout.place(defaults(release.profile), release.profile, 18, 'page', 10), release.profile)));
+    await page.click('#extra-23-place');
+    assert((await page.textContent('#status')).includes('All page positions are in use'));
+    await waitFingerprint(releaseFP);
+    await page.focus('#cell-10');
+    await page.keyboard.press('Delete');
+    const roomForExtra = layout.unplace(defaults(release.profile), release.profile, 18, 'page');
+    await waitFingerprint(await fingerprint(encodeProfile(roomForExtra, release.profile)));
+    await page.click('#extra-23-place');
+    await waitFingerprint(await fingerprint(encodeProfile(layout.place(roomForExtra, release.profile, 23, 'page', 10), release.profile)));
     await page.click('#preset-drizzlet');
     await waitFingerprint(releaseFP);
     // Keep the unknown-cost share-link regression independent of shipped costs.
@@ -330,7 +350,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     await page.evaluate((hash) => { location.hash = hash; }, share(release, releaseBlock));
     await waitFingerprint(releaseFP);
     assert.deepEqual(await pressed(), ['Drizzlet']);
-    assert((await page.textContent('#cpu')).includes('87.2%'));
+    assert((await page.textContent('#cpu')).includes('87.7% estimated'));
     assert.equal(await page.isDisabled('#build'), false);
     await context.unroute(manifestURL, unknownRoute);
     // Reject wrong-sized local files before reading or hashing their contents.

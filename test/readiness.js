@@ -66,7 +66,11 @@ for (const [i, definition] of definitions.entries()) {
   }
   assert.equal(f.stateless, definition[6] === 'true');
   assert.deepEqual(modes(f).map(([, label]) => label), c.states);
-  if (f.id >= 15) {
+  if ([18, 21].includes(f.id)) {
+    assert.equal(f.default_in_block, true);
+    assert.deepEqual(f.default, [f.id, 2, 0, f.id === 18 ? 10 : 11, 0, 0]);
+    assert.deepEqual(initialEntry(f), [f.id, 0, 0, 0, 0, 0]);
+  } else if (f.id >= 15) {
     assert.equal(f.default_in_block, false);
     assert.deepEqual(initialEntry(f), [f.id, 0, c.default, 0, 0, 0]);
   }
@@ -76,13 +80,48 @@ assert.deepEqual(profile.features.find((f) => f.id === 18).values, ['100%', '66%
 assert.equal(release.cpu.baselines.synth.percent, 87.2);
 assert(release.cpu.baselines.synth.provenance.includes('86.1–87.2%'));
 const entries = defaults(profile);
-assert.equal(entries.length, 14);
+assert.equal(entries.length, 16);
 const app = readFileSync(new URL(release.app, root));
 assert(equal(encodeProfile(entries, profile), app.subarray(1024, 1024 + profile.size)));
+// A new default uses historical estimates, never an invented module measurement.
+const candidateUsage = cpuUsage(entries, release);
+assert.deepEqual(release.cpu.combinations, [], 'no new module measurements are published for this candidate');
+assert.equal(candidateUsage.kind, 'estimated');
+assert(candidateUsage.engines.every((e) => !e.measured));
+assert.deepEqual(candidateUsage.engines.map((e) => e.percent), [87.7, 83.7]);
+const historicalUsage = cpuUsage(release.cpu.estimate_reference.profile, release);
+assert.equal(historicalUsage.kind, 'estimated');
+assert.deepEqual(historicalUsage.engines.map((e) => e.percent), [87.2, 83]);
+assert(historicalUsage.engines.every((e) => !e.measured));
+const forgedEntries = entries.map((e) => e.slice());
+forgedEntries.default_measured = true;
+assert.equal(cpuUsage(forgedEntries, release).kind, 'estimated');
+for (const mutate of [
+  (r) => { r.cpu.default_measured = true; },
+  (r) => { delete r.cpu.default_measured; },
+  (r) => { delete r.cpu.estimate_reference; },
+  (r) => { r.cpu.estimated_default_delta.synth = 0; }
+]) {
+  const forged = structuredClone(release); mutate(forged);
+  assert.throws(() => cpuUsage(entries, forged));
+}
+const missingCost = structuredClone(release);
+missingCost.profile.features.find((f) => f.id === 18).cpu = null;
+assert.equal(cpuUsage(entries, missingCost).kind, 'not yet measured');
+assert(cpuUsage(entries, missingCost).unknown.includes('LED brightness'));
+const measuredCandidate = structuredClone(release);
+measuredCandidate.cpu.combinations = [{ profile: profileKey(entries, profile), synth: 89, granular: 85 }];
+assert.equal(cpuUsage(entries, measuredCandidate).kind, 'measured');
+const changedCandidate = entries.map((e) => e.slice());
+changedCandidate.find((e) => e[0] === 2)[2] = 1;
+assert.equal(cpuUsage(changedCandidate, measuredCandidate).kind, 'estimated');
 // Threshold regression fixtures retain the former numerical expectations without
 // publishing synthetic deltas as real measurements.
 const measuredCosts = (r) => {
   const fixture = structuredClone(r);
+  delete fixture.cpu.estimate_reference;
+  delete fixture.cpu.default_measured;
+  delete fixture.cpu.estimated_default_delta;
   const costs = JSON.parse(readFileSync(new URL('fixtures/synthetic-costs.json', import.meta.url)));
   for (const f of fixture.profile.features) f.cpu = costs[f.id];
   return fixture;
