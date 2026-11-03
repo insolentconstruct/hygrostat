@@ -22,7 +22,7 @@
 //
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
-import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=275de1d99ed7d505';
+import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=eec2dd70c5a9cfff';
 
 // Six-byte entries are kept in wire order: id, state, value, page, amount, action.
 export function crc32(bytes) {

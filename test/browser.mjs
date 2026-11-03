@@ -110,7 +110,9 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('Enter');
     assert.equal(await page.getAttribute('#cell-2', 'aria-pressed'), 'true');
-    assert.equal(await page.textContent('#inspector-title'), 'Random intervals');
+    assert.equal(await page.textContent('#inspector-title'), 'Random pitch steps');
+    assert.match(await page.textContent('#inspector .description'), /CCW.*relative.*CW.*before Pitch scale/);
+    assert.match(await page.textContent('#feature-details'), /G below C \(a fourth down\).*afterwards.*not the continuous oscillator, Plaits or Spectral/);
     assert((await page.textContent('#panel-caption')).includes('page 1'));
     assert.equal(await page.evaluate(() => document.activeElement.id), 'cell-2');
     await page.keyboard.press('Delete');
@@ -125,7 +127,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     await page.keyboard.press('Enter');
     await until(() => page.locator('#library').isVisible());
     assert.equal(await page.evaluate(() => document.activeElement.id), 'library-search');
-    await page.keyboard.type('scale');
+    await page.keyboard.type('final pitch');
     assert.deepEqual(await page.locator('#library-body .library-item .name').allTextContents(), ['Pitch scale']);
     await page.keyboard.press('ArrowDown');
     assert.equal(await page.evaluate(() => document.activeElement.id), 'lib-1');
@@ -166,7 +168,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     assert.equal(await page.getAttribute('#share', 'href'), hashOf(expected));
     assert((await page.textContent('#cell-2')).includes('Limiter'));
     assert.equal(await page.getAttribute('#cell-12', 'aria-label'), 'Page 4, REVERB: empty');
-    assert((await page.textContent('#status')).includes('Random intervals goes back to stock behaviour'));
+    assert((await page.textContent('#status')).includes('Random pitch steps goes back to stock behaviour'));
     // The inspector offers the same choice for its position menu.
     await page.selectOption('#where-page', '3');
     await page.click('#confirm-swap');

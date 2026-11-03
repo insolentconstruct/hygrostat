@@ -22,6 +22,10 @@ assert.equal(costTable.features.filter((f) => f.cpu.kind === 'measured').length,
 assert.equal(costTable.features.filter((f) => f.cpu.kind === 'inspection').length, 4);
 assert.equal(createHash('sha256').update(tableBytes).digest('hex'), tableSha256);
 const historical = JSON.stringify(costTable);
+const intervals = manifest.releases[0].profile.features.find((f) => f.id === 10);
+assert.deepEqual(importedCost(intervals), importedCost({ ...intervals, name: 'Random intervals' }));
+assert.throws(() => importedCost({ ...intervals, name: 'Unknown pitch mode' }));
+assert.throws(() => importedCost({ ...intervals, id: 1 }));
 const extended = structuredClone(manifest);
 const release = extended.releases.find((r) => r.development);
 release.profile.version = 2; release.profile.size = 4096;

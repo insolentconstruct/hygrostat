@@ -3,7 +3,7 @@
 // Links follow the selected release, including its source revision during development.
 const docs = 'https://github.com/insolentconstruct/eurorack/blob/{TAG}/beads/build/docs/FEATURES.md';
 const descriptions = {
-  1: ['Snap grain pitch to a scale.', 'drizzlet-options'],
+  1: ['Snap final pitch, including PITCH, CV and randomness, to a scale.', 'drizzlet-options'],
   2: ['Stock or Clouds-style reverb.', 'decisions'],
   3: ['Set automatic delay and its neutral zone.', 'exact-option-values'],
   4: ['Granular or Clouds spectral playback.', 'drizzlet-options'],
@@ -12,7 +12,7 @@ const descriptions = {
   7: ['Beads or Plaits synth.', 'drizzlet-options'],
   8: ['Align grains to recorded hits.', 'drizzlet-options'],
   9: ['Auto or manual synth start.', 'buttons-and-startup'],
-  10: ['Random pitch or fifths and octaves.', 'drizzlet-options'],
+  10: ['Step CCW PITCH randomness relative to the current pitch; CW stays continuous before Pitch scale.', 'drizzlet-options'],
   11: ['Spread grains in stereo.', 'stereo-width'],
   12: ['Soften grains before reverb.', 'decisions'],
   13: ['One grain at a time; try square or decay envelopes.', 'buttons-and-startup'],
@@ -31,7 +31,8 @@ const descriptions = {
 
 export function featureHelp(feature, release) {
   const [description, section] = descriptions[feature.id];
-  return { description, url: docs.replace('{TAG}', encodeURIComponent(release.development ? release.source_commit : release.tag)) + '#' + section };
+  const details = feature.id === 10 ? 'Around C, the steps are C and G across octaves, including G below C (a fourth down). Pitch scale applies afterwards and can change these intervals. Works on granular and Beads wavetable grains, not the continuous oscillator, Plaits or Spectral.' : '';
+  return { description, details, url: docs.replace('{TAG}', encodeURIComponent(release.development ? release.source_commit : release.tag)) + '#' + section };
 }
 
 export function actionHelp(feature) {

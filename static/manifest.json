@@ -5,7 +5,7 @@
       "tag": "drizzlet-dev-eedbc74",
       "name": "Drizzlet Beta 2 — development (unreleased)",
       "development": true,
-      "source_commit": "5c93ae2be3894322d3b4668ac59021182c518d34",
+      "source_commit": "c832389bec9ebeff54a196430ecdc2dadaca3123",
       "app": "images/drizzlet-dev-eedbc74/app.bin?v=09b43688e9632ac3a875224a5bbfa30479ccc64ca220d58389e2319512aa1f6f",
       "profile": {
         "offset": 1024,
@@ -609,7 +609,7 @@
           },
           {
             "id": 10,
-            "name": "Random intervals",
+            "name": "Random pitch steps",
             "values": [
               "Free (Stock)",
               "Fifths and octaves"
@@ -1587,5 +1587,5 @@
       "date": "2026-11-01"
     }
   ],
-  "asset_version": "275de1d99ed7d505"
+  "asset_version": "eec2dd70c5a9cfff"
 }

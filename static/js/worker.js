@@ -6,9 +6,9 @@
 //
 // Runs the encoder off the page's main thread.
 
-import { encode } from './encoder.js?v=275de1d99ed7d505';
-import { decode } from './decoder.js?v=275de1d99ed7d505';
-import { equal } from './profile.js?v=275de1d99ed7d505';
+import { encode } from './encoder.js?v=eec2dd70c5a9cfff';
+import { decode } from './decoder.js?v=eec2dd70c5a9cfff';
+import { equal } from './profile.js?v=eec2dd70c5a9cfff';
 
 self.onmessage = (event) => {
   try {

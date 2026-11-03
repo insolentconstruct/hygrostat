@@ -39,7 +39,8 @@ export function importedCost(feature, table = costTable) {
     return inspectedCost(feature);
   }
   if (!costTable.features.some((f) => f.id === feature.id)) throw new Error('Unknown cost feature.');
-  if (matches.length !== 1 || matches[0].name !== feature.name) {
+  const measuredName = feature.id === 10 && feature.name === 'Random pitch steps' ? 'Random intervals' : feature.name;
+  if (matches.length !== 1 || matches[0].name !== measuredName) {
     throw new Error(`Cost table feature mismatch: ${feature.id} ${feature.name}`);
   }
   const cpu = matches[0].cpu;
