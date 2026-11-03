@@ -38,6 +38,12 @@ Tests read firmware files with `git -C $FIRMWARE_REPO show <ref>:<file>`, where 
 
 Templates keep Drizzlet and Stock plus fixes as direct choices. Seven focused starting points start from all features Off. The grouped gallery shows provisional CPU estimates and previews changed controls and values; only Use applies a template. Previewing leaves the profile, share link, guides and firmware build unchanged.
 
+The Drizzlet template copies the selected firmware's embedded defaults. The next
+candidate places page 2 Frozen feedback on FEEDBACK, Delay mode on DRY/WET and
+Reverb character on REVERB. Publish that layout only with its matching app,
+catalogue and guides: changing default slots changes the profile block and CRC.
+Do not rewrite an existing custom profile's explicit slots when defaults change.
+
 ## CPU estimates
 
 - Per-feature costs were measured on a development board calibrated to the module. Four event-only features have no per-block cost.

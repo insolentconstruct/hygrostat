@@ -4,13 +4,42 @@
 // editor's exact bytes.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { defaults, encodeProfile, validate, templates, normalise, initialEntry, modes } from '../static/js/profile.js';
+import { defaults, encodeProfile, decodeProfile, validate, templates, normalise, initialEntry, modes,
+  share, unshare } from '../static/js/profile.js';
 import { KINDS, GROUPS, ACTION_DOES, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, occupant,
   entryOf, places, valueLabel, stateLabel, summary, placeName } from '../static/js/layout.js';
 const manifest = JSON.parse(readFileSync(new URL('../static/manifest.json', import.meta.url)));
 const profile = manifest.releases[0].profile;
 const features = profile.features;
 const bytes = (entries) => encodeProfile(entries, profile).join();
+
+// Pending factory layout; never attach these synthetic defaults to the shipped app.
+const nextRelease = structuredClone(manifest.releases[0]);
+const nextProfile = nextRelease.profile;
+const page2 = new Map([[6, 4], [3, 5], [2, 6]]);
+for (const f of nextProfile.features) if (page2.has(f.id)) f.default[3] = page2.get(f.id);
+const nextDefaults = templates(nextProfile).Drizzlet;
+assert.deepEqual(nextDefaults.filter((e) => page2.has(e[0])).map((e) => [e[0], e[3]]), [[2, 6], [3, 5], [6, 4]]);
+validate(nextDefaults, nextProfile);
+for (const entry of defaults(profile)) {
+  const next = nextDefaults.find((e) => e[0] === entry[0]);
+  assert.deepEqual(next, entry.map((value, i) => i === 3 && page2.has(entry[0]) ? page2.get(entry[0]) : value));
+}
+for (const f of profile.features) {
+  const next = nextProfile.features.find((candidate) => candidate.id === f.id);
+  assert.equal(next.field, f.field);
+  assert.deepEqual(next.values, f.values);
+}
+const retained = defaults(profile);
+for (const [id, slot] of [[2, 4], [3, 6], [6, 5]]) retained.find((e) => e[0] === id)[3] = slot;
+for (const entries of [defaults(profile), retained]) {
+  const block = encodeProfile(entries, profile);
+  const restored = unshare(share(manifest.releases[0], block), [nextRelease]).entries;
+  assert.deepEqual(restored, entries, 'new defaults do not migrate an explicit old or custom layout');
+  assert.deepEqual(normalise(restored, nextProfile), entries);
+  assert.deepEqual(encodeProfile(restored, nextProfile), block);
+  assert.deepEqual(decodeProfile(block, nextProfile), entries);
+}
 
 // The previous editor's change handler, copied verbatim as the oracle.
 function oldChange(entries, f, k, value) {

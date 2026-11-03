@@ -4,11 +4,11 @@
 const docs = 'https://github.com/insolentconstruct/eurorack/blob/{TAG}/beads/build/docs/FEATURES.md';
 const descriptions = {
   1: ['Snap final pitch, including PITCH, CV and randomness, to a scale.', 'drizzlet-options'],
-  2: ['Stock or Clouds-style reverb.', 'decisions'],
-  3: ['Set automatic delay and its neutral zone.', 'exact-option-values'],
+  2: ['Choose Stock or Clouds-style reverb character; REVERB still sets its amount during play.', 'decisions'],
+  3: ['Choose automatic delay, disable it, or widen the delay filter neutral zone.', 'exact-option-values'],
   4: ['Granular or Clouds spectral playback.', 'drizzlet-options'],
   5: ['Stock, fast or no limiter.', 'drizzlet-options'],
-  6: ['Let feedback change frozen audio.', 'drizzlet-options'],
+  6: ['While frozen, FEEDBACK controls an evolving wet feedback loop; the recording stays unchanged.', 'drizzlet-options'],
   7: ['Beads or Plaits synth.', 'drizzlet-options'],
   8: ['Align grains to recorded hits.', 'drizzlet-options'],
   9: ['Auto or manual synth start.', 'buttons-and-startup'],

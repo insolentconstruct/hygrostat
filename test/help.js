@@ -32,6 +32,9 @@ assert.match(featureHelp({ id: 22 }, manifest.releases[0]).description, /ignorin
 assert.match(featureHelp({ id: 23 }, manifest.releases[0]).description, /granular.*TIME CV is unplugged/);
 assert.match(featureHelp({ id: 1 }, manifest.releases[0]).description, /final pitch.*PITCH, CV and randomness/);
 const pitchSteps = featureHelp({ id: 10 }, manifest.releases[0]);
+assert.match(featureHelp({ id: 2 }, manifest.releases[0]).description, /reverb character; REVERB.*amount during play/);
+assert.match(featureHelp({ id: 3 }, manifest.releases[0]).description, /automatic delay, disable it, or widen/);
+assert.match(featureHelp({ id: 6 }, manifest.releases[0]).description, /FEEDBACK.*wet feedback loop.*recording stays unchanged/);
 assert.match(pitchSteps.description, /CCW.*relative.*CW.*before Pitch scale/);
 assert.match(pitchSteps.details, /C and G.*G below C \(a fourth down\).*afterwards/);
 assert.match(pitchSteps.details, /granular and Beads wavetable grains, not the continuous oscillator, Plaits or Spectral/);
