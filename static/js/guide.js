@@ -23,9 +23,9 @@
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
 // Knob cards port options_guide.py: 270-degree arcs and the same LED ladder.
-import { effectiveScales, PULSE_NAMES } from './scales.js?v=42277d908172b4bb';
-import { defaults, equal, encodeProfile } from './profile.js?v=42277d908172b4bb';
-import { RELEASE_GUIDES, RELEASE_GUIDE_ID } from './release_guides.js?v=42277d908172b4bb';
+import { effectiveScales, PULSE_NAMES } from './scales.js?v=4d006f061f02db54';
+import { defaults, equal, encodeProfile } from './profile.js?v=4d006f061f02db54';
+import { RELEASE_GUIDES, RELEASE_GUIDE_ID } from './release_guides.js?v=4d006f061f02db54';
 
 const KNOBS = ['FEEDBACK', 'DRY/WET', 'REVERB'];
 export const ACTIONS = ['None', '[A]+SEED', '[A]+FREEZE', '[A] hold'];
@@ -140,11 +140,11 @@ export function guide(entries, release, fp, mobile = false, scales = null) {
   d.text(margin, 61, `Profile ${fp} · ${release.tag}`, 15);
   let y = 90;
   for (const line of (entries.some((e) => e[3]) ? [
-    'Open: hold [M] 3 seconds, then release.',
+    'Open: hold [M] 3 seconds; all three mix LEDs pulse. Release.',
     'Change page: tap [M]; empty pages skip. LEDs: FEEDBACK, DRY/WET, REVERB, then all three.',
     '[A] shows stored values. Turn knobs to change; changes save automatically.',
-    'Close: hold [M] 3 seconds or press another button. With Scale on, tap SEED to step.',
-    'Move knobs slightly to engage. Wait before powering off.'
+    'Close: hold [M] 3 seconds or press another button; release before normal use. On the Pitch scale page with Scale selected, tap SEED to step.',
+    'Move knobs more than a tenth of their travel to engage. Wait before powering off.'
   ] : ['This profile has no options pages. Hold [M] does nothing.'])) y = d.lines(margin, y, line, mobile ? 43 : 140) + 3;
   // Share the release's to-scale control sketch and LED legend.
   const reference = RELEASE_GUIDES[0];

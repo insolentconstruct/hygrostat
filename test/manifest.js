@@ -51,10 +51,15 @@ for (const release of manifest.releases) {
     check(source.includes(`kProfileReleaseId = 0x${release.profile.release_id.toString(16)}`),
         `${release.tag}: profile release id pinned at source commit`);
     if (release.binary_source_commit) {
-      const changed = execFileSync('git', ['-C', firmwareRepo, 'diff', '--name-only',
+      const changed = execFileSync('git', ['-C', firmwareRepo, 'diff', '--no-renames', '--name-only',
         release.binary_source_commit, release.source_commit], { encoding: 'utf8' }).trim().split('\n').filter(Boolean);
-      check(changed.every((file) => /^beads\/(test\/|build\/docs\/|build\/tools\/options_(guide|tables_test)\.py$)/.test(file)),
-          `${release.tag}: later source revision changes only guides and tests`);
+      check(changed.every((file) => /^beads\/(test\/|build\/(docs\/|release-notes\/|README\.(md|txt)$|expected-(hashes|wav)\.sha256$|tools\/options_(guide|tables_test)\.py$))/.test(file)),
+          `${release.tag}: later source revision changes only documentation, pins and tests`);
+      for (const [file, line] of [['expected-hashes.sha256', `${release.app_sha256}  app.bin`],
+        ['expected-wav.sha256', `${release.wav_sha256}  app.wav`]]) {
+        const pins = firmwareShow(release.source_commit, `beads/build/${file}`, { encoding: 'utf8' });
+        check(pins.split('\n').includes(line), `${release.tag}: ${file} preserves the offered image`);
+      }
     }
     if (release.cpu.estimate_reference) {
       const reference = release.cpu.estimate_reference;
