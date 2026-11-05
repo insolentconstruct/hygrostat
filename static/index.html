@@ -8,9 +8,11 @@
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="light dark">
 <title>Drizzlet Hygrostat</title>
+<script src="js/theme.js?v=a624ef0144a27b33"></script>
 <style>
   /* Brushed panel greys, with the module's own LED colours as the only accents. */
   :root {
+    color-scheme: light;
     --paper: #e6eaec; --plate: #f7f8f9; --sunk: #dde2e5; --ink: #172026; --muted: #52606a;
     --rule: #bfc8ce; --link: #1c5784; --go: #1f6e40; --go-ink: #ffffff;
     --led-green: #2c9a58; --led-yellow: #b98500; --led-red: #c2382f; --glow: rgba(44, 154, 88, .35);
@@ -18,13 +20,12 @@
     --heading: "Avenir Next", Avenir, "Futura", "Century Gothic", "URW Gothic", "Segoe UI Variable Display", ui-sans-serif, system-ui, sans-serif;
     --body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --paper: #12171a; --plate: #1b2227; --sunk: #232c32; --ink: #e4eaed; --muted: #9cabb4;
-      --rule: #34414a; --link: #8ec3ee; --go: #5cc489; --go-ink: #0d1a12;
-      --led-green: #5cc489; --led-yellow: #e2b33c; --led-red: #f07d74; --glow: rgba(92, 196, 137, .3);
-      --warn-bg: #3a2c0b; --warn-ink: #f6d58a; --error: #f08a80;
-    }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --paper: #12171a; --plate: #1b2227; --sunk: #232c32; --ink: #e4eaed; --muted: #9cabb4;
+    --rule: #34414a; --link: #8ec3ee; --go: #5cc489; --go-ink: #0d1a12;
+    --led-green: #5cc489; --led-yellow: #e2b33c; --led-red: #f07d74; --glow: rgba(92, 196, 137, .3);
+    --warn-bg: #3a2c0b; --warn-ink: #f6d58a; --error: #f08a80;
   }
   * { box-sizing: border-box; }
   html { scroll-padding-bottom: 7rem; }
@@ -60,6 +61,8 @@
   .release { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: .4rem .6rem; max-width: 100%; }
   .release label { font-weight: 600; }
   .release select { width: auto; max-width: 100%; }
+  .appearance { display: flex; align-items: center; gap: .4rem; color: var(--muted); font-size: .85rem; }
+  .appearance label { font-weight: 400; }
   .badge { display: inline-flex; align-items: center; gap: .35rem; padding: .2rem .6rem; border-radius: 999px;
     background: var(--warn-bg); color: var(--warn-ink); font-size: .85rem; font-weight: 600; }
   .badge::before { content: ""; width: .55rem; height: .55rem; border-radius: 50%; background: var(--led-yellow); }
@@ -169,11 +172,9 @@
   #panel .leader.on { stroke: var(--link); stroke-width: .45; }
   @keyframes pulse { 50% { opacity: .35; } }
   @media (prefers-reduced-motion: reduce) { #panel .led.lit { animation: none; } #panel .halo { transition: none; } }
-  @media (prefers-color-scheme: dark) {
-    #panel { --face: #3a4349; --face-edge: #5d6a72; --print: #dfe5e8; --knob: #0e1214; --cap: #c9d1d6; --cap-edge: #8a969d;
-      --nut: #8d989f; --nut-edge: #5d6a72; --socket: #07090a; --lamp: #b9c1b4; --led-off: #59656c;
-      --well: #1c2226; --well-ink: #dfe5e8; }
-  }
+  :root[data-theme="dark"] #panel { --face: #3a4349; --face-edge: #5d6a72; --print: #dfe5e8; --knob: #0e1214; --cap: #c9d1d6; --cap-edge: #8a969d;
+    --nut: #8d989f; --nut-edge: #5d6a72; --socket: #07090a; --lamp: #b9c1b4; --led-off: #59656c;
+    --well: #1c2226; --well-ink: #dfe5e8; }
   #panel-caption { font-size: .9rem; min-height: 2.7em; padding-bottom: .75rem; border-bottom: 1px solid var(--rule); }
   .where { font-family: var(--heading); font-size: .85rem; letter-spacing: .03em; font-weight: 600; color: var(--muted); margin: 0 0 .15rem; }
   #inspector h3 { font-size: 1.3rem; margin-bottom: .35rem; }
@@ -334,6 +335,14 @@
     <div class="release">
       <label for="release">Firmware</label>
       <select id="release"></select>
+      <div class="appearance">
+        <label for="theme">Theme</label>
+        <select id="theme">
+          <option value="system">System</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+      </div>
       <span id="development" class="badge" hidden>Development build</span>
       <div id="download-counts" aria-live="polite"></div>
     </div>
@@ -491,6 +500,6 @@
   </div>
   <div id="library-body"></div>
 </dialog>
-<script type="module" src="js/app.js?v=4d006f061f02db54"></script>
+<script type="module" src="js/app.js?v=a624ef0144a27b33"></script>
 </body>
 </html>

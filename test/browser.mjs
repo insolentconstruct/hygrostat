@@ -14,9 +14,122 @@ const layout = await import(pathToFileURL(resolve(site, 'js/layout.js')).href);
 const { guide } = await import(pathToFileURL(resolve(site, 'js/guide.js')).href);
 const { factoryScales } = await import(pathToFileURL(resolve(site, 'js/scales.js')).href);
 const hashOf = (entries) => '#' + share(release, encodeProfile(entries, release.profile));
+async function checkThemes(browser) {
+  const context = await browser.newContext({ colorScheme: 'dark', viewport: { width: 1280, height: 900 } });
+  await context.route('**/*', (route) => new URL(route.request().url()).origin === new URL(base).origin ?
+    route.continue() : route.abort('internetdisconnected'));
+  await context.addInitScript(() => {
+    window.themeWrites = 0;
+    const set = Storage.prototype.setItem;
+    Storage.prototype.setItem = function(key, value) {
+      if (key === 'hygrostat-theme') window.themeWrites++;
+      return set.call(this, key, value);
+    };
+  });
+  const page = await context.newPage();
+  await page.goto(base);
+  const theme = page.getByRole('combobox', { name: 'Theme', exact: true });
+  const appearance = () => page.evaluate(() => ({
+    theme: document.documentElement.dataset.theme,
+    scheme: getComputedStyle(document.getElementById('theme')).colorScheme,
+    panel: getComputedStyle(document.getElementById('panel')).getPropertyValue('--face').trim()
+  }));
+  const expectTheme = async (value) => {
+    for (let attempt = 0; attempt < 100; attempt++) {
+      if ((await appearance()).theme === value) return;
+      await page.waitForTimeout(20);
+    }
+    assert.fail('theme did not follow the system preference');
+  };
+  assert.equal(await theme.inputValue(), 'system');
+  assert.equal((await appearance()).theme, 'dark');
+  assert.equal(await page.evaluate(() => window.themeWrites), 0);
+  await page.emulateMedia({ colorScheme: 'light' });
+  await expectTheme('light');
+  const lightPanel = (await appearance()).panel;
+  await theme.selectOption('dark');
+  assert.equal((await appearance()).scheme, 'dark');
+  assert.notEqual((await appearance()).panel, lightPanel);
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await theme.selectOption('light');
+  assert.equal((await appearance()).theme, 'light');
+  assert.equal((await appearance()).scheme, 'light');
+  assert.equal((await appearance()).panel, lightPanel);
+  await page.emulateMedia({ colorScheme: 'light' });
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  assert.equal((await appearance()).theme, 'light');
+  await page.reload();
+  assert.equal(await theme.inputValue(), 'light');
+  assert.equal((await appearance()).theme, 'light');
+  assert.equal(await page.evaluate(() => window.themeWrites), 0);
+  await theme.selectOption('system');
+  assert.equal((await appearance()).theme, 'dark');
+  await page.reload();
+  assert.equal(await theme.inputValue(), 'system');
+  await expectTheme('dark');
+  await page.emulateMedia({ colorScheme: 'light' });
+  await expectTheme('light');
+  await page.setViewportSize({ width: 390, height: 844 });
+  const box = await theme.boundingBox();
+  assert(box.width >= 44 && box.height >= 44);
+  assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  await page.locator('#release').focus();
+  await page.keyboard.press('Tab');
+  assert.equal(await page.evaluate(() => document.activeElement.id), 'theme');
+  assert.notEqual(await theme.evaluate((element) => getComputedStyle(element).outlineStyle), 'none');
+  await context.close();
+  for (const blocked of ['invalid', 'read', 'write']) {
+    const isolated = await browser.newContext({ colorScheme: 'dark' });
+    await isolated.route('**/*', (route) => new URL(route.request().url()).origin === new URL(base).origin ?
+      route.continue() : route.abort('internetdisconnected'));
+    await isolated.addInitScript((blocked) => {
+      if (blocked === 'read') Object.defineProperty(window, 'localStorage', { get() { throw new Error('storage blocked'); } });
+      else if (blocked === 'write') Storage.prototype.setItem = () => { throw new Error('storage writes blocked'); };
+      else localStorage.setItem('hygrostat-theme', 'invalid');
+    }, blocked);
+    const check = await isolated.newPage();
+    const errors = [];
+    check.on('pageerror', (error) => errors.push(String(error)));
+    await check.goto(base);
+    assert.equal(await check.evaluate(() => {
+      try { return localStorage === undefined; } catch { return true; }
+    }), blocked === 'read');
+    if (blocked === 'write') assert(await check.evaluate(() => {
+      try { localStorage.setItem('probe', 'test'); return false; } catch { return true; }
+    }));
+    assert.equal(await check.locator('#theme').inputValue(), 'system');
+    assert.equal(await check.evaluate(() => document.documentElement.dataset.theme), 'dark');
+    await check.locator('#theme').selectOption('light');
+    assert.equal(await check.evaluate(() => document.documentElement.dataset.theme), 'light');
+    assert.deepEqual(errors, []);
+    await isolated.close();
+  }
+  for (const saved of ['light', 'dark']) {
+    const initial = await browser.newContext({ colorScheme: saved === 'light' ? 'dark' : 'light' });
+    await initial.route('**/*', (route) => new URL(route.request().url()).origin === new URL(base).origin ?
+      route.continue() : route.abort('internetdisconnected'));
+    await initial.addInitScript((saved) => {
+      localStorage.setItem('hygrostat-theme', saved);
+      window.firstBodyTheme = null;
+      const observer = new MutationObserver(() => {
+        if (!document.body) return;
+        window.firstBodyTheme = document.documentElement.dataset.theme;
+        observer.disconnect();
+      });
+      observer.observe(document, { childList: true, subtree: true });
+    }, saved);
+    const first = await initial.newPage();
+    await first.goto(base);
+    assert.equal(await first.evaluate(() => window.firstBodyTheme), saved);
+    await initial.close();
+  }
+}
 for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['webkit', webkit]]) {
   const browser = await engine.launch();
   try {
+    await checkThemes(browser);
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     await context.route('**/*', (route) => new URL(route.request().url()).origin === new URL(base).origin ?
       route.continue() : route.abort('internetdisconnected'));

@@ -21,5 +21,6 @@ for (const file of files) {
       (_, q, path) => `${q}${path}?v=${version}${q}`);
   writeFileSync(new URL('js/' + file, root), source);
 }
-writeFileSync(new URL('index.html', root), clean(read('index.html')).replace('src="js/app.js"', `src="js/app.js?v=${version}"`));
+writeFileSync(new URL('index.html', root), clean(read('index.html')).replace(/src="js\/(app|theme)\.js"/g,
+  (_, name) => `src="js/${name}.js?v=${version}"`));
 console.log(`Versioned browser assets: ${version}`);
