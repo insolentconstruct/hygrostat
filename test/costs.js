@@ -12,6 +12,7 @@ const round = (v) => Math.round(v * 10) / 10;
 const tableFeature = (f) => costTable.features.find((row) => row.id === f.id);
 // Independent oracle: use only each engine's table fields, never its top-level maxima.
 function tableCost(entry, f, engine) {
+  if (f.id === 24) return 0; // Independently inspected event-only option, outside the historical table.
   const cpu = tableFeature(f).cpu;
   if (cpu.kind === 'inspection') return 0;
   const c = cpu.engines[engine];
@@ -24,16 +25,22 @@ function tableCost(entry, f, engine) {
 function tableDelta(entry, f, engine) {
   return tableCost(entry, f, engine) - tableCost(f.default, f, engine);
 }
+const referenceEntry = (f) => release.cpu.estimate_reference ?
+  release.cpu.estimate_reference.profile.find((e) => e[0] === f.id) : f.default;
 const sum = (entries, engine) => profile.features.reduce((total, f) =>
-  total + tableDelta(entries.find((e) => e[0] === f.id), f, engine), 0);
+  total + tableCost(entries.find((e) => e[0] === f.id), f, engine) -
+  tableCost(referenceEntry(f), f, engine), 0);
 function choices(f, extremes = false) {
-  const values = f.values ? f.values.map((_, i) => i) :
+  // Factory-bank profiles cannot select absent user IDs; those costs are tested as unknown below.
+  const values = f.values ? f.values.map((_, i) => i).filter((i) => f.id !== 1 || i < 10) :
     extremes ? [0, 255] : Array.from({ length: 256 }, (_, i) => i);
   return modes(f).flatMap(([state]) => (state === 0 ? [0] : values).map((value) =>
     [f.id, state, value, 0, 0, f.id === 9 && state === 1 && value ? 1 : 0]));
 }
 for (const f of profile.features) {
-  const cpu = tableFeature(f).cpu;
+  const row = tableFeature(f);
+  assert(row || f.id === 24, 'unknown feature has no cost oracle');
+  const cpu = row?.cpu || { kind: 'inspection' };
   assert(!('off' in f.cpu) && !('fixed' in f.cpu) && !('adjustable' in f.cpu));
   for (const engine of engines) {
     if (cpu.kind === 'measured' && !cpu.engines[engine]) {
@@ -50,6 +57,10 @@ for (const f of profile.features) {
   assert.equal(f.cpu.source, cpu.kind === 'measured' ? costSource : 'no per-block work (code inspection)');
   assert(!JSON.stringify(f.cpu).includes('measured on the module'));
 }
+for (const engine of engines) for (let id = 10; id < profile.features[0].values.length; ++id) {
+  assert.equal(featureDelta([1, 1, id], profile.features[0], engine), null, 'unmeasured user-scale cost stays unknown');
+  assert.equal(featureDelta([1, 2, id], profile.features[0], engine), null, 'unmeasured adjustable user-scale cost stays unknown');
+}
 assert.equal(featureDelta([2, 1, 1], profile.features[1], 'synth'), 0);
 assert.equal(featureDelta([2, 1, 1], profile.features[1], 'granular'), 0);
 assert.equal(featureDelta([5, 1, 1], profile.features[4], 'synth'), -0.062);
@@ -57,11 +68,13 @@ assert.equal(featureDelta([5, 1, 1], profile.features[4], 'granular'), 0);
 // Both the exact default and a valid placement-only edit use the same baseline.
 const moved = defaults(profile);
 moved.find((e) => e[0] === 1)[3] = 10;
+moved.find((e) => e[0] === 18)[3] = 1;
 assert.notEqual(profileKey(moved, profile), profileKey(defaults(profile), profile));
 assert.deepEqual(decodeProfile(encodeProfile(moved, profile), profile), moved);
 for (const entries of [defaults(profile), moved]) {
   for (const result of cpuUsage(entries, release).engines) {
-    assert.equal(result.percent, release.cpu.baselines[result.engine].percent);
+    assert.equal(result.percent, round(release.cpu.baselines[result.engine].percent +
+      (release.cpu.estimated_default_delta?.[result.engine] || 0)));
   }
 }
 for (const f of profile.features) for (const engine of engines) {
@@ -69,17 +82,18 @@ for (const f of profile.features) for (const engine of engines) {
 }
 // A real setting change adds only the measured difference from its default.
 const changed = structuredClone(moved);
-changed.push([18, 1, 2, 0, 0, 0]);
+changed[changed.findIndex((e) => e[0] === 18)] = [18, 1, 2, 0, 0, 0];
 assert.deepEqual(decodeProfile(encodeProfile(changed, profile), profile), changed);
 for (const result of cpuUsage(changed, release).engines) {
   const delta = tableDelta(changed.find((e) => e[0] === 18), profile.features[17], result.engine);
-  assert.equal(delta, 0.147);
-  assert.equal(result.percent, round(result.baseline.percent + delta));
+  assert.equal(delta, 0);
+  assert.equal(result.percent, round(result.baseline.percent +
+    (release.cpu.estimated_default_delta?.[result.engine] || 0) + delta));
 }
 const fixedPitch = structuredClone(moved);
 fixedPitch[0] = [1, 1, 0, 0, 0, 0];
 assert.equal(featureDelta(fixedPitch[0], profile.features[0], 'granular'), -0.16);
-assert.equal(cpuUsage(fixedPitch, release).engines.find((e) => e.engine === 'granular').percent, 82.8);
+assert.equal(cpuUsage(fixedPitch, release).engines.find((e) => e.engine === 'granular').percent, 83.6);
 for (const [name, entries] of Object.entries({ Default: defaults(profile), ...templates(profile) })) {
   assert.deepEqual(decodeProfile(encodeProfile(entries, profile), profile), entries, `${name} builds`);
   const usage = cpuUsage(entries, release);
@@ -87,7 +101,7 @@ for (const [name, entries] of Object.entries({ Default: defaults(profile), ...te
   for (const result of usage.engines) {
     // The exact default uses the measured baseline, ahead of estimated costs.
     const isDefault = profileKey(entries, profile) === profileKey(defaults(profile), profile);
-    assert.equal(result.percent, round(result.baseline.percent + (isDefault ? 0 : sum(entries, result.engine))), name);
+    assert.equal(result.percent, round(result.baseline.percent + (isDefault && !release.cpu.estimate_reference ? 0 : sum(entries, result.engine))), name);
     if (!isDefault) assert.equal(result.measured, false);
   }
 }
@@ -127,16 +141,16 @@ for (let i = 0; i < 100; ++i) {
     const delta = sum(entries, result.engine);
     const individual = profile.features.reduce((total, f) =>
       total + featureDelta(entries.find((e) => e[0] === f.id), f, result.engine), 0);
-    assert(Math.abs(individual - delta) < 1e-10);
+    assert(Math.abs(individual + (release.cpu.estimated_default_delta?.[result.engine] || 0) - delta) < 1e-10);
     assert.equal(result.percent, round(result.baseline.percent + delta));
   }
 }
 const app = readFileSync(new URL('../static/js/app.js', import.meta.url), 'utf8');
-assert(app.includes('points versus release default · ' + costSource));
-assert(app.includes('estimated from costs ' + costSource));
-assert(app.includes("e.measured ? ' measured on the module'"));
-assert.equal((app.match(/measured on the module/g) || []).length, 1);
-assert(app.includes('No CPU cost (no per-block work)'));
+assert(app.includes('points vs default · calibrated board'));
+assert(app.includes("e.measured ? ' measured' : ' estimated'"));
+assert(app.includes("e.measured ? ' measured'"));
+assert.equal((app.match(/' measured'/g) || []).length, 1);
+assert(app.includes('No CPU cost'));
 assert(app.includes("engines.length === 1 ? ' only'"));
 assert.equal(release.cpu.costs.source, costSource);
 console.log(`PASS real costs: templates, exhaustive deltas, random sums, measured precedence, labels; maxima ${maxima.join('; ')}`);

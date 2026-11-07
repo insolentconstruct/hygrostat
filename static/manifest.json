@@ -2,16 +2,16 @@
   "format": 2,
   "releases": [
     {
-      "tag": "drizzlet-dev-d02a5b2",
-      "name": "Drizzlet Beta 2 — development (unreleased)",
+      "tag": "drizzlet-dev-4782d53",
+      "name": "Drizzlet Beta 2 — candidate (unreleased)",
       "development": true,
-      "source_commit": "d02a5b21a8bfe31d77a518fd42cbe285410c8b42",
-      "app": "images/drizzlet-dev-d02a5b2/app.bin?v=8db75e3147a4595bc1563704c40fcaa32edb4a0555189e2a63ebb7311b321ca6",
+      "source_commit": "6729648eb582351c548cab343f6cefdf21a14c6b",
+      "app": "images/drizzlet-dev-4782d53/app.bin?v=b11fe81c37349d3d258a1bd6512f13af2c5cd7caa6767a169aea92bb292c74e7",
       "profile": {
         "offset": 1024,
-        "size": 512,
-        "version": 1,
-        "release_id": 2770241376,
+        "size": 4096,
+        "version": 2,
+        "release_id": 539365633,
         "features": [
           {
             "id": 1,
@@ -19,14 +19,20 @@
             "values": [
               "Off",
               "Chromatic",
-              "Fifths and octaves",
+              "Fifths",
               "Major",
               "Minor",
-              "Major pentatonic",
-              "Minor pentatonic",
+              "Pentatonic major",
+              "Pentatonic minor",
               "Pelog",
               "Raag Bhairav",
-              "Raag Shri"
+              "Raag Shri",
+              "User scale 10",
+              "User scale 11",
+              "User scale 12",
+              "User scale 13",
+              "User scale 14",
+              "User scale 15"
             ],
             "page": true,
             "amount": false,
@@ -181,7 +187,7 @@
               2,
               2,
               0,
-              5,
+              6,
               0,
               0
             ],
@@ -238,7 +244,7 @@
               3,
               2,
               0,
-              4,
+              5,
               0,
               0
             ],
@@ -419,7 +425,7 @@
               6,
               2,
               0,
-              6,
+              4,
               0,
               0
             ],
@@ -603,7 +609,7 @@
           },
           {
             "id": 10,
-            "name": "Random intervals",
+            "name": "Random pitch steps",
             "values": [
               "Free (Stock)",
               "Fifths and octaves"
@@ -1118,12 +1124,12 @@
               "Fixed",
               "Adjustable"
             ],
-            "default_in_block": false,
+            "default_in_block": true,
             "default": [
               18,
+              2,
               0,
-              0,
-              0,
+              10,
               0,
               0
             ],
@@ -1302,12 +1308,12 @@
               "Fixed",
               "Adjustable"
             ],
-            "default_in_block": false,
+            "default_in_block": true,
             "default": [
               21,
+              2,
               0,
-              0,
-              0,
+              11,
               0,
               0
             ],
@@ -1476,6 +1482,65 @@
               "note": "granular value=1: worst-case +0 cycles; largest scenario median +280 (q3 dense: TIME amount 0.3, Scan), peak up to +1346, 8 scenarios; synth: 0 by construction (TIME scan is in Processor::Process only)"
             },
             "field": 12
+          },
+          {
+            "id": 24,
+            "default_in_block": false,
+            "default": [
+              24,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "name": "Synth reverb tail",
+            "values": [
+              "Keep (stock)",
+              "Clear"
+            ],
+            "states": [
+              "Off",
+              "Fixed"
+            ],
+            "field": null,
+            "page": false,
+            "amount": false,
+            "action": false,
+            "stateless": false,
+            "synth_path": true,
+            "cpu": {
+              "kind": "zero",
+              "source": "no per-block work (code inspection)",
+              "engines": {
+                "synth": {
+                  "off": 0,
+                  "fixed": [
+                    0,
+                    0
+                  ],
+                  "adjustable": [
+                    0,
+                    0
+                  ]
+                },
+                "granular": {
+                  "off": 0,
+                  "fixed": [
+                    0,
+                    0
+                  ],
+                  "adjustable": [
+                    0,
+                    0
+                  ]
+                }
+              },
+              "uncertainty": {
+                "points": 0
+              },
+              "note": "clearing the synth reverb happens only when leaving synth playback; no per-block or per-tick work"
+            }
           }
         ]
       },
@@ -1486,7 +1551,7 @@
         "warning": 91,
         "margin": 0,
         "combinations": [],
-        "release_note": "Historical default-profile measurements include Clouds-style reverb. Per-feature costs were measured on a module-calibrated development board; estimates sum each engine’s costs. Measured module combinations take precedence. The final image still needs measurement. The default profile is always allowed.",
+        "release_note": "Historical default-profile measurements include Clouds-style reverb. Per-feature costs were measured on a module-calibrated development board; estimates sum each engine’s costs. Measured module combinations take precedence. The final image still needs measurement. The default profile is always allowed. Event-only additions are classified separately by code inspection; they have no per-block cost.",
         "baselines": {
           "synth": {
             "percent": 87.2,
@@ -1505,15 +1570,147 @@
           "source": "measured on a module-calibrated development board",
           "firmware": "hygrostat-profiles 35718f2",
           "table": "costs/cost-table.json",
-          "table_sha256": "dc5f7fef75cb5c0435aa52f5513549a17b48f4daf37d2728ba5debbd281063a3"
+          "table_sha256": "dc5f7fef75cb5c0435aa52f5513549a17b48f4daf37d2728ba5debbd281063a3",
+          "inspected_features": [
+            {
+              "id": 24,
+              "name": "Synth reverb tail",
+              "source": "code inspection"
+            }
+          ]
+        },
+        "default_measured": false,
+        "estimate_reference": {
+          "source_commit": "a780c66d33c4948a42dd9ab2b446f4e60b6f860f",
+          "profile_sha256": "1e27242337c856da25f5aa1412c65f7ab8fd889d5c7ad71f1315130e8267227e",
+          "profile": [
+            [
+              1,
+              2,
+              0,
+              1,
+              0,
+              0
+            ],
+            [
+              2,
+              2,
+              0,
+              5,
+              0,
+              0
+            ],
+            [
+              3,
+              2,
+              0,
+              4,
+              0,
+              0
+            ],
+            [
+              4,
+              2,
+              0,
+              7,
+              0,
+              0
+            ],
+            [
+              5,
+              2,
+              0,
+              12,
+              0,
+              0
+            ],
+            [
+              6,
+              2,
+              0,
+              6,
+              0,
+              0
+            ],
+            [
+              7,
+              2,
+              0,
+              8,
+              0,
+              0
+            ],
+            [
+              8,
+              2,
+              0,
+              3,
+              0,
+              0
+            ],
+            [
+              9,
+              2,
+              0,
+              9,
+              0,
+              3
+            ],
+            [
+              10,
+              2,
+              0,
+              2,
+              0,
+              0
+            ],
+            [
+              11,
+              2,
+              0,
+              0,
+              1,
+              0
+            ],
+            [
+              12,
+              2,
+              0,
+              0,
+              2,
+              0
+            ],
+            [
+              13,
+              2,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              14,
+              1,
+              1,
+              0,
+              0,
+              2
+            ]
+          ],
+          "note": "Historical estimator default reference. The retained module baselines predate profiles; their original measurement scope remains in each baseline provenance."
+        },
+        "estimated_default_delta": {
+          "synth": 0.492,
+          "granular": 0.737
         }
       },
-      "app_sha256": "8db75e3147a4595bc1563704c40fcaa32edb4a0555189e2a63ebb7311b321ca6",
-      "app_size": 641408,
-      "wav_sha256": "0a17523eba494aeab51b373300e0159832ffaaef2d6dccd60fda0c0d946395fe",
+      "app_sha256": "b11fe81c37349d3d258a1bd6512f13af2c5cd7caa6767a169aea92bb292c74e7",
+      "app_size": 649084,
+      "wav_sha256": "d40a5dc20f8b1bb6f8f6f39acd534023098df92c59adebef528bd17d535ade4b",
       "slug": "beta-2-fog",
-      "date": "2026-10-29"
+      "date": "2026-11-01",
+      "binary_source_commit": "9b4546e156bc6917427ce74682169961f365e2f5"
     }
   ],
-  "asset_version": "5ea88b9a31f82023"
+  "asset_version": "a624ef0144a27b33"
 }

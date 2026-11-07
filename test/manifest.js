@@ -8,9 +8,10 @@
 // SHA-256, those hashes are the ones pinned at the release tag, and the image
 // encodes to the release's .wav byte for byte. Needs the release tags.
 //
-// node beads/build/hygrostat/test/manifest.js
+// node test/manifest.js
 
 import { createHash } from 'node:crypto';
+import { firmwareShow, firmwareRepo } from './firmware.js';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { defaults, encodeProfile, equal, validateReleaseId } from '../static/js/profile.js';
@@ -32,13 +33,13 @@ for (const release of manifest.releases) {
   check(app.length === release.app_size && app.length <= MAX_APP_SIZE,
       `${release.tag}: app size ${app.length}`);
   check(hash(app) === release.app_sha256, `${release.tag}: app SHA-256`);
-  check(release.profile && release.profile.offset === 1024 && release.profile.size === 512, `${release.tag}: profile metadata`);
-  check(equal(encodeProfile(defaults(release.profile), release.profile), app.subarray(1024, 1536)), `${release.tag}: default profile equals firmware`);
+  check(release.profile && release.profile.offset === 1024 && release.profile.size === (release.profile.version === 2 ? 4096 : 512) && [1, 2].includes(release.profile.version), `${release.tag}: profile metadata`);
+  check(equal(encodeProfile(defaults(release.profile), release.profile), app.subarray(1024, 1024 + release.profile.size)), `${release.tag}: default profile equals firmware`);
   const wav = encode(app);
   check(equal(decode(wav, app.length), app), `${release.tag}: WAV decodes byte for byte`);
   check(hash(wav) === release.wav_sha256, `${release.tag}: .wav byte-identical`);
   const ref = release.development ? release.source_commit : `refs/tags/${release.tag}`;
-  const header = execFileSync('git', ['show', `${ref}:beads/profile.h`], { encoding: 'utf8' });
+  const header = firmwareShow(ref, 'beads/profile.h', { encoding: 'utf8' });
   try { validateReleaseId(release, header); check(true, `${release.tag}: firmware and dated release ID`); }
   catch { check(false, `${release.tag}: firmware and dated release ID`); }
   if (release.development) {
@@ -46,12 +47,31 @@ for (const release of manifest.releases) {
         /unreleased/i.test(release.name), `${release.tag}: explicitly unreleased development entry`);
     // Development builds have no release tag. Bind their format to the
     // recorded source commit; the independently encoded WAV pins the build.
-    const source = execFileSync('git', ['show', `${release.source_commit}:beads/profile.h`], { encoding: 'utf8' });
+    const source = firmwareShow(release.source_commit, 'beads/profile.h', { encoding: 'utf8' });
     check(source.includes(`kProfileReleaseId = 0x${release.profile.release_id.toString(16)}`),
         `${release.tag}: profile release id pinned at source commit`);
+    if (release.binary_source_commit) {
+      const changed = execFileSync('git', ['-C', firmwareRepo, 'diff', '--no-renames', '--name-only',
+        release.binary_source_commit, release.source_commit], { encoding: 'utf8' }).trim().split('\n').filter(Boolean);
+      check(changed.every((file) => /^beads\/(test\/|build\/(docs\/|release-notes\/|README\.(md|txt)$|expected-(hashes|wav)\.sha256$|tools\/options_(guide|tables_test)\.py$))/.test(file)),
+          `${release.tag}: later source revision changes only documentation, pins and tests`);
+      for (const [file, line] of [['expected-hashes.sha256', `${release.app_sha256}  app.bin`],
+        ['expected-wav.sha256', `${release.wav_sha256}  app.wav`]]) {
+        const pins = firmwareShow(release.source_commit, `beads/build/${file}`, { encoding: 'utf8' });
+        check(pins.split('\n').includes(line), `${release.tag}: ${file} preserves the offered image`);
+      }
+    }
+    if (release.cpu.estimate_reference) {
+      const reference = release.cpu.estimate_reference;
+      const source = firmwareShow(reference.source_commit, 'beads/profile.cc', { encoding: 'utf8' });
+      const block = source.split('const volatile uint8_t kProfileBlock[kProfileSize]')[1].split('};')[0];
+      const bytes = Uint8Array.from([...block.matchAll(/0x([0-9a-f]{2})/g)], (m) => parseInt(m[1], 16));
+      check(hash(bytes) === reference.profile_sha256 &&
+          equal(encodeProfile(reference.profile, release.profile), bytes),
+          `${release.tag}: historical estimator defaults match their original firmware source`);
+    }
   } else {
-    const pinned = (file) => execFileSync('git',
-        ['show', `refs/tags/${release.tag}:beads/build/${file}`],
+    const pinned = (file) => firmwareShow(`refs/tags/${release.tag}`, `beads/build/${file}`,
         { encoding: 'utf8' }).split('\n');
     check(pinned('expected-hashes.sha256').includes(`${release.app_sha256}  app.bin`),
         `${release.tag}: app SHA-256 pinned at the tag`);

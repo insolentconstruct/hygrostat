@@ -5,10 +5,10 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
+import { firmwareShow } from './firmware.js';
 import { defaults, encodeProfile, equal, cpuUsage, profileKey, modes,
   releaseIdForTag, validateReleaseId, initialEntry } from '../static/js/profile.js';
-import { importedCost, costTable, tableBytes, tableSha256, importCosts } from '../tools/import-costs.js';
+import { importedCost, tableBytes, tableSha256, importCosts } from '../tools/import-costs.js';
 import './costs.js';
 import './help.js';
 import { guide } from '../static/js/guide.js';
@@ -19,14 +19,17 @@ const manifest = JSON.parse(read('manifest.json'));
 const catalogue = JSON.parse(read('profile-features.json'));
 const release = manifest.releases[0], profile = release.profile;
 const firmwareRef = release.development ? release.source_commit : 'refs/tags/' + release.tag;
-const source = (file) => execFileSync('git', ['show', `${firmwareRef}:${file}`], { encoding: 'utf8' });
+const source = (file) => firmwareShow(firmwareRef, file, { encoding: 'utf8' });
 const catalogueBytes = readFileSync(new URL('profile-features.json', root));
-// Releases before the move to beads/build/hygrostat keep the catalogue in palette/.
+// Try the standalone firmware catalogue first, then historical page locations.
 const catalogueAt = (ref) => {
-  try {
-    return execFileSync('git', ['show', `${ref}:beads/build/hygrostat/static/profile-features.json`], { stdio: ['ignore', 'pipe', 'ignore'] });
-  } catch (error) {
-    return execFileSync('git', ['show', `${ref}:palette/static/profile-features.json`]);
+  for (const file of ['beads/build/profile-features.json',
+    'beads/build/hygrostat/static/profile-features.json', 'palette/static/profile-features.json']) {
+    try {
+      return firmwareShow(ref, file, { stdio: ['ignore', 'pipe', 'ignore'] });
+    } catch (error) {
+      if (file === 'palette/static/profile-features.json') throw error;
+    }
   }
 };
 assert.deepEqual(catalogueBytes, catalogueAt(firmwareRef), 'copy the authoritative firmware catalogue verbatim');
@@ -36,7 +39,7 @@ if (process.env.FIRMWARE_CATALOGUE_REF) {
 }
 const table = source('beads/profile.cc').split('kFeatureDefinitions[FEATURE_LAST] = {')[1].split('};')[0];
 const definitions = [...table.matchAll(/\{ (\d+), (\w+), (true|false), (true|false), (true|false), (true|false) \}/g)].slice(1);
-assert.equal(profile.features.length, 23);
+assert.equal(profile.features.length, definitions.length);
 assert.equal(catalogue.features.length, definitions.length);
 for (const [i, definition] of definitions.entries()) {
   const f = profile.features[i], c = catalogue.features[i];
@@ -63,7 +66,11 @@ for (const [i, definition] of definitions.entries()) {
   }
   assert.equal(f.stateless, definition[6] === 'true');
   assert.deepEqual(modes(f).map(([, label]) => label), c.states);
-  if (f.id >= 15) {
+  if ([18, 21].includes(f.id)) {
+    assert.equal(f.default_in_block, true);
+    assert.deepEqual(f.default, [f.id, 2, 0, f.id === 18 ? 10 : 11, 0, 0]);
+    assert.deepEqual(initialEntry(f), [f.id, 0, 0, 0, 0, 0]);
+  } else if (f.id >= 15) {
     assert.equal(f.default_in_block, false);
     assert.deepEqual(initialEntry(f), [f.id, 0, c.default, 0, 0, 0]);
   }
@@ -73,13 +80,48 @@ assert.deepEqual(profile.features.find((f) => f.id === 18).values, ['100%', '66%
 assert.equal(release.cpu.baselines.synth.percent, 87.2);
 assert(release.cpu.baselines.synth.provenance.includes('86.1–87.2%'));
 const entries = defaults(profile);
-assert.equal(entries.length, 14);
+assert.equal(entries.length, 16);
 const app = readFileSync(new URL(release.app, root));
-assert(equal(encodeProfile(entries, profile), app.subarray(1024, 1536)));
+assert(equal(encodeProfile(entries, profile), app.subarray(1024, 1024 + profile.size)));
+// A new default uses historical estimates, never an invented module measurement.
+const candidateUsage = cpuUsage(entries, release);
+assert.deepEqual(release.cpu.combinations, [], 'no new module measurements are published for this candidate');
+assert.equal(candidateUsage.kind, 'estimated');
+assert(candidateUsage.engines.every((e) => !e.measured));
+assert.deepEqual(candidateUsage.engines.map((e) => e.percent), [87.7, 83.7]);
+const historicalUsage = cpuUsage(release.cpu.estimate_reference.profile, release);
+assert.equal(historicalUsage.kind, 'estimated');
+assert.deepEqual(historicalUsage.engines.map((e) => e.percent), [87.2, 83]);
+assert(historicalUsage.engines.every((e) => !e.measured));
+const forgedEntries = entries.map((e) => e.slice());
+forgedEntries.default_measured = true;
+assert.equal(cpuUsage(forgedEntries, release).kind, 'estimated');
+for (const mutate of [
+  (r) => { r.cpu.default_measured = true; },
+  (r) => { delete r.cpu.default_measured; },
+  (r) => { delete r.cpu.estimate_reference; },
+  (r) => { r.cpu.estimated_default_delta.synth = 0; }
+]) {
+  const forged = structuredClone(release); mutate(forged);
+  assert.throws(() => cpuUsage(entries, forged));
+}
+const missingCost = structuredClone(release);
+missingCost.profile.features.find((f) => f.id === 18).cpu = null;
+assert.equal(cpuUsage(entries, missingCost).kind, 'not yet measured');
+assert(cpuUsage(entries, missingCost).unknown.includes('LED brightness'));
+const measuredCandidate = structuredClone(release);
+measuredCandidate.cpu.combinations = [{ profile: profileKey(entries, profile), synth: 89, granular: 85 }];
+assert.equal(cpuUsage(entries, measuredCandidate).kind, 'measured');
+const changedCandidate = entries.map((e) => e.slice());
+changedCandidate.find((e) => e[0] === 2)[2] = 1;
+assert.equal(cpuUsage(changedCandidate, measuredCandidate).kind, 'estimated');
 // Threshold regression fixtures retain the former numerical expectations without
 // publishing synthetic deltas as real measurements.
 const measuredCosts = (r) => {
   const fixture = structuredClone(r);
+  delete fixture.cpu.estimate_reference;
+  delete fixture.cpu.default_measured;
+  delete fixture.cpu.estimated_default_delta;
   const costs = JSON.parse(readFileSync(new URL('fixtures/synthetic-costs.json', import.meta.url)));
   for (const f of fixture.profile.features) f.cpu = costs[f.id];
   return fixture;
@@ -111,7 +153,7 @@ assert.equal(cpuUsage(heavy, measuredCosts(release)).percent, 92.5);
 assert.equal(createHash('sha256').update(tableBytes).digest('hex'), tableSha256);
 assert.equal(release.cpu.costs.table_sha256, tableSha256);
 assert.deepEqual(importCosts(structuredClone(manifest)), manifest);
-for (const change of [(r) => r.profile.features.pop(), (r) => { r.profile.features[0].name += ' mismatch'; },
+for (const change of [(r) => r.profile.features.shift(), (r) => { r.profile.features[0].name += ' mismatch'; },
   (r) => { r.profile.features[0].id = 99; }]) {
   const r = structuredClone(release); change(r);
   assert.throws(() => importCosts({ releases: [r] }));
@@ -167,7 +209,7 @@ for (const path of paths) assert.equal(new URL(path, 'https://local.invalid/').s
 for (const r of manifest.releases) assert.equal(new URL(r.app, 'https://local.invalid/').searchParams.get('v'), r.app_sha256);
 const workflow = readFileSync('.github/workflows/pages.yml', 'utf8');
 assert(workflow.includes('  pull_request:'));
-assert(workflow.includes("github.event_name != 'pull_request' && github.ref == 'refs/heads/drizzlet'"));
+assert(workflow.includes("github.event_name != 'pull_request' && github.ref == 'refs/heads/main'"));
 const html = read('index.html');
 for (const text of ['How to install', 'storage-recovery-2026.10.27', ':focus-visible', 'min-height: 44px', 'Made by Insolent Construct']) assert(html.includes(text));
 console.log(`PASS readiness catalogue, default bytes, partial measurements, synthetic CPU thresholds and traced per-engine shipped costs (${cpuUsage(warning, measuredCosts(release)).percent}/${cpuUsage(heavy, measuredCosts(release)).percent}), guides, release IDs, assets and PR CI`);

@@ -562,5 +562,33 @@
         ]
       }
     }
+  },
+  "24": {
+    "kind": "measured",
+    "reference": "release-default",
+    "engines": {
+      "synth": {
+        "off": 0,
+        "fixed": [
+          0,
+          0
+        ],
+        "adjustable": [
+          0,
+          0
+        ]
+      },
+      "granular": {
+        "off": 0,
+        "fixed": [
+          0,
+          0
+        ],
+        "adjustable": [
+          0,
+          0
+        ]
+      }
+    }
   }
 }

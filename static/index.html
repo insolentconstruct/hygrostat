@@ -2,160 +2,504 @@
 <!-- Copyright 2026 Insolent Construct. MIT licence: see js/encoder.js. -->
 <html lang="en">
 <head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://insolentconstruct.goatcounter.com https://api.github.com; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://insolentconstruct.goatcounter.com https://api.github.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="light dark">
 <title>Drizzlet Hygrostat</title>
+<script src="js/theme.js?v=a624ef0144a27b33"></script>
 <style>
+  /* Brushed panel greys, with the module's own LED colours as the only accents. */
   :root {
-    --bg: #fafaf8; --fg: #1d1d1b; --muted: #5c5c58; --line: #d8d8d2;
-    --accent: #2f6f4f; --ok: #2f6f4f; --error: #a3302a; --panel: #ffffff;
+    color-scheme: light;
+    --paper: #e6eaec; --plate: #f7f8f9; --sunk: #dde2e5; --ink: #172026; --muted: #52606a;
+    --rule: #bfc8ce; --link: #1c5784; --go: #1f6e40; --go-ink: #ffffff;
+    --led-green: #2c9a58; --led-yellow: #b98500; --led-red: #c2382f; --glow: rgba(44, 154, 88, .35);
+    --warn-bg: #fbe9c4; --warn-ink: #5b3d00; --error: #a3302a;
+    --heading: "Avenir Next", Avenir, "Futura", "Century Gothic", "URW Gothic", "Segoe UI Variable Display", ui-sans-serif, system-ui, sans-serif;
+    --body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #161615; --fg: #ecece8; --muted: #a6a6a0; --line: #3a3a37;
-      --accent: #7cc39a; --ok: #7cc39a; --error: #f08a80; --panel: #1f1f1d;
-    }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --paper: #12171a; --plate: #1b2227; --sunk: #232c32; --ink: #e4eaed; --muted: #9cabb4;
+    --rule: #34414a; --link: #8ec3ee; --go: #5cc489; --go-ink: #0d1a12;
+    --led-green: #5cc489; --led-yellow: #e2b33c; --led-red: #f07d74; --glow: rgba(92, 196, 137, .3);
+    --warn-bg: #3a2c0b; --warn-ink: #f6d58a; --error: #f08a80;
   }
   * { box-sizing: border-box; }
-  body {
-    margin: 0; background: var(--bg); color: var(--fg);
-    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
-  }
-  main { max-width: 72rem; margin: 0 auto; padding: 2rem 16px 3rem; }
-  h1 { font-size: 1.6rem; margin: 0 0 .25rem; }
-  .lead { color: var(--muted); margin: 0 0 1.5rem; }
-  section.panel {
-    background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
-    padding: 1rem 1.25rem; margin-bottom: 1rem;
-  }
-  section { margin: 0 0 1.75rem; }
-  footer { color: var(--muted); font-size: .85rem; border-top: 1px solid var(--line); padding-top: .75rem; }
-  input[type=file] { min-height: 44px; padding: .5rem 0; max-width: 100%; }
-  label { display: block; font-weight: 600; margin-bottom: .35rem; }
-  select, button { font: inherit; }
-  select { width: 100%; padding: .45rem; border: 1px solid var(--line); border-radius: 6px;
-    background: var(--bg); color: var(--fg); }
-  button, a.button {
-    display: inline-block; margin-top: .75rem; padding: .55rem 1rem; border: 0;
-    border-radius: 6px; background: var(--accent); color: var(--bg); font-weight: 600;
-    text-decoration: none; cursor: pointer;
-  }
+  html { scroll-padding-bottom: 7rem; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.5 var(--body); }
+  a { color: var(--link); }
+  h1, h2, h3 { font-family: var(--heading); line-height: 1.2; }
+  h1 { font-size: 2rem; font-weight: 600; letter-spacing: -.01em; margin: 0; }
+  h2 { font-size: 1.25rem; font-weight: 600; margin: 0 0 .75rem; }
+  h3 { font-size: 1rem; font-weight: 600; margin: 0 0 .5rem; }
+  p { margin: 0 0 .75rem; }
+  .note, small { color: var(--muted); font-size: .9rem; }
+  .legend { font-family: var(--heading); letter-spacing: .06em; font-size: .78rem; font-weight: 600; }
+  :focus-visible { outline: 3px solid var(--link); outline-offset: 2px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+  .wrap { max-width: 80rem; margin: 0 auto; padding: 0 16px; }
+  button, select, input { font: inherit; color: inherit; }
+  button, a.button, select, input[type=number], input[type=search] { min-height: 44px; }
+  select, input[type=number], input[type=search] { width: 100%; padding: .45rem .6rem; border: 1px solid var(--rule);
+    border-radius: 6px; background: var(--plate); }
+  button { cursor: pointer; }
   button:disabled { opacity: .5; cursor: default; }
-  progress { width: 100%; margin-top: .75rem; }
-  #status { margin: .75rem 0 0; min-height: 1.5em; }
-  #status.ok { color: var(--ok); }
-  #status.error { color: var(--error); font-weight: 600; }
+  .primary, a.button { display: inline-flex; align-items: center; justify-content: center; gap: .4rem;
+    padding: .55rem 1.1rem; border: 0; border-radius: 6px; background: var(--go); color: var(--go-ink);
+    font-weight: 600; text-decoration: none; }
+  .quiet { padding: .45rem .9rem; border: 1px solid var(--rule); border-radius: 6px; background: var(--plate); }
+  .linkish { display: inline-flex; align-items: center; min-height: 44px; }
+
+  /* Top */
+  .masthead { padding-top: 1.75rem; padding-bottom: 1rem; }
+  .title-row { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: .75rem 2rem; }
+  .lead { font-size: 1.1rem; margin: .35rem 0 1rem; }
+  .release { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: .4rem .6rem; max-width: 100%; }
+  .release label { font-weight: 600; }
+  .release select { width: auto; max-width: 100%; }
+  .appearance { display: flex; align-items: center; gap: .4rem; color: var(--muted); font-size: .85rem; }
+  .appearance label { font-weight: 400; }
+  .badge { display: inline-flex; align-items: center; gap: .35rem; padding: .2rem .6rem; border-radius: 999px;
+    background: var(--warn-bg); color: var(--warn-ink); font-size: .85rem; font-weight: 600; }
+  .badge::before { content: ""; width: .55rem; height: .55rem; border-radius: 50%; background: var(--led-yellow); }
+  .badge[hidden] { display: none; }
+  #download-counts { flex-basis: 100%; text-align: right; }
+  #download-counts p { margin: 0; font-size: .85rem; color: var(--muted); }
+  #download-counts p[hidden] { display: none; }
+  .presets { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-bottom: .75rem; }
+  .presets > span { font-weight: 600; margin-right: .25rem; }
+  #presets { display: flex; flex-wrap: wrap; gap: .5rem; }
+  .chip { min-height: 44px; padding: .4rem .95rem; border: 1px solid var(--rule); border-radius: 999px; background: var(--plate); }
+  .chip[aria-pressed=true] { border-color: var(--ink); background: var(--ink); color: var(--paper); }
+  .how { color: var(--muted); max-width: 70ch; }
+  .steps { margin-top: -.6rem; }
+  .how b { color: var(--ink); }
+
+  /* Starting points */
+  #template-gallery { padding-bottom: 1.5rem; }
+  .template-group h3 { font-size: 1rem; margin: 1rem 0 .4rem; }
+  .template-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: .5rem; }
+  .template-card { display: grid; gap: .3rem; text-align: left; padding: .8rem; border: 1px solid var(--rule);
+    border-radius: 6px; background: var(--plate); }
+  .template-card[aria-pressed=true] { border-color: var(--link); background: var(--sunk); }
+  .template-card small { color: var(--muted); }
+  #template-preview { margin-top: 1rem; padding: 1rem; background: var(--sunk); border-radius: 6px; }
+  #template-changes li { margin-bottom: .35rem; }
+  .template-change { outline: 3px solid var(--link); outline-offset: -3px; }
+
+  /* Workspace */
+  #workspace { display: grid; gap: 1.5rem 2rem; grid-template-columns: minmax(0, 1fr) 24rem;
+    grid-template-areas: "controls inspector" "slots inspector" "extras inspector"; align-items: start; padding-bottom: 1.5rem; }
+  .controls { grid-area: controls; }
+  .slots-area { grid-area: slots; }
+  .extras { grid-area: extras; }
+  .inspector { grid-area: inspector; position: sticky; top: 1rem; background: var(--plate);
+    border: 1px solid var(--rule); border-radius: 10px; padding: 1rem 1.1rem 1.1rem; }
+  .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+
+  /* The options grid: rows are pages, columns are knobs, as on the module. */
+  .page-tabs { display: none; }
+  .grid { width: 100%; border-collapse: separate; border-spacing: 6px; margin: 0 -6px; table-layout: fixed; }
+  .grid thead th { font-family: var(--heading); font-size: .78rem; letter-spacing: .06em; font-weight: 600;
+    text-align: left; padding: 0 .4rem .1rem; }
+  .grid tbody th { width: 6.5rem; text-align: left; font-weight: 600; font-family: var(--heading); padding: 0 .25rem; }
+  .page-name { display: block; }
+  .leds { display: flex; gap: .3rem; margin-top: .3rem; }
+  .leds i { width: .6rem; height: .6rem; border-radius: 50%; background: var(--sunk); border: 1px solid var(--rule); }
+  .leds i.lit { background: var(--led-green); border-color: var(--led-green); box-shadow: 0 0 0 3px var(--glow); }
+  .grid td { padding: 0; }
+  .cell { position: relative; display: flex; flex-direction: column; align-items: flex-start; justify-content: center;
+    width: 100%; min-height: 4.6rem; padding: .55rem .7rem .55rem 2.6rem; border: 1px solid var(--rule); border-radius: 6px;
+    background: var(--plate); text-align: left; }
+  .cell::before { content: ""; position: absolute; left: .7rem; top: 50%; width: 1.3rem; height: 1.3rem; margin-top: -.65rem;
+    border-radius: 50%; border: 2px solid var(--ink); background: linear-gradient(var(--ink), var(--ink)) center 2px / 2px 40% no-repeat; }
+  .cell.empty { background: transparent; border-style: dashed; color: var(--muted); }
+  .cell.empty::before { border-color: var(--rule); background: none; }
+  .cell[aria-pressed=true] { border: 2px solid var(--link); padding-left: calc(2.6rem - 1px); box-shadow: 0 0 0 3px color-mix(in srgb, var(--link) 18%, transparent); }
+  .cell.drop { border-color: var(--go); border-style: solid; }
+  .cell-knob { display: none; }
+  .cell-name { font-weight: 600; line-height: 1.25; }
+  .cell-value { font-size: .85rem; color: var(--muted); }
+
+  .slots { display: grid; grid-template-columns: 2fr 3fr; gap: 1rem 1.25rem; }
+  .slot-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 6px; }
+  .slot { display: flex; flex-direction: column; align-items: flex-start; width: 100%; min-height: 4.2rem; padding: .5rem .7rem;
+    border: 1px solid var(--rule); border-radius: 6px; background: var(--plate); text-align: left; }
+  .slot.empty { background: transparent; border-style: dashed; color: var(--muted); }
+  .slot[aria-pressed=true] { border: 2px solid var(--link); padding: calc(.5rem - 1px) calc(.7rem - 1px); }
+  .slot .gesture { font-family: var(--heading); font-size: .78rem; letter-spacing: .04em; font-weight: 600; color: var(--muted); }
+  .slot .does { font-weight: 600; line-height: 1.25; }
+  .slot .what { font-size: .85rem; color: var(--muted); }
+  #unplaced { margin: 1rem 0 0; }
+  #unplaced button { min-height: 44px; padding: 0 .2rem; border: 0; background: none; color: var(--link); text-decoration: underline; }
+
+  /* Inspector */
+  /* The module's panel: aluminium face, black knobs, the gesture's controls ringed in the link colour. */
+  #panel { display: block; width: 100%; max-width: 23rem; height: auto; margin: 0 auto .5rem;
+    --face: #e9ecee; --face-edge: #aeb7bd; --print: #2c353b; --knob: #1f2529; --cap: #fbfcfc; --cap-edge: #c4ccd1;
+    --nut: #c9d0d4; --nut-edge: #8c979e; --socket: #171c1f; --lamp: #f4f6ef; --led-off: #c3cacf;
+    --well: #2c353b; --well-ink: #e9ecee; }
+  #panel .face { fill: var(--face); stroke: var(--face-edge); stroke-width: .35; }
+  #panel .hole { fill: var(--plate); stroke: var(--face-edge); stroke-width: .25; }
+  #panel .band { stroke: var(--face-edge); stroke-width: 1.1; stroke-dasharray: .35 .45; }
+  #panel .rule { stroke: var(--face-edge); stroke-width: .3; }
+  #panel .well { fill: var(--well); }
+  #panel .scale { fill: none; stroke: var(--face-edge); stroke-width: .7; stroke-dasharray: .25 .55; }
+  #panel .skirt { fill: var(--knob); stroke: var(--knob); stroke-width: .3; }
+  #panel .cap { fill: var(--cap); stroke: var(--cap-edge); stroke-width: .3; }
+  #panel .mark { stroke: var(--knob); stroke-width: .7; stroke-linecap: round; }
+  #panel .pointer { stroke: #fff; stroke-width: .6; stroke-linecap: round; }
+  #panel .bezel { fill: var(--nut); stroke: var(--nut-edge); stroke-width: .3; }
+  #panel .lamp { fill: var(--lamp); stroke: var(--nut-edge); stroke-width: .25; }
+  #panel .tact { fill: var(--knob); }
+  #panel .led { fill: var(--led-off); stroke: var(--nut-edge); stroke-width: .25; }
+  #panel .nut { fill: var(--nut); stroke: var(--nut-edge); stroke-width: .3; }
+  #panel .sleeve { fill: var(--cap-edge); }
+  #panel .socket { fill: var(--socket); }
+  #panel .print { fill: var(--print); font: 600 2.8px var(--heading); letter-spacing: .03em; }
+  #panel .print.inverse { fill: var(--well-ink); }
+  #panel .halo { fill: none; stroke: var(--link); stroke-width: .9; opacity: 0; transition: opacity .15s; }
+  #panel .halo.on { opacity: 1; }
+  #panel .part.on { fill: var(--link); stroke: var(--link); }
+  #panel .led.lit { fill: var(--led-green); stroke: var(--led-green); filter: drop-shadow(0 0 1px var(--led-green)); animation: pulse 1.2s ease-in-out infinite; }
+  #panel .name { fill: var(--muted); font: 600 4.3px var(--heading); letter-spacing: .02em; }
+  #panel .name.on { fill: var(--link); font-weight: 700; }
+  #panel .leader { stroke: var(--rule); stroke-width: .3; }
+  #panel .leader.on { stroke: var(--link); stroke-width: .45; }
+  @keyframes pulse { 50% { opacity: .35; } }
+  @media (prefers-reduced-motion: reduce) { #panel .led.lit { animation: none; } #panel .halo { transition: none; } }
+  :root[data-theme="dark"] #panel { --face: #3a4349; --face-edge: #5d6a72; --print: #dfe5e8; --knob: #0e1214; --cap: #c9d1d6; --cap-edge: #8a969d;
+    --nut: #8d989f; --nut-edge: #5d6a72; --socket: #07090a; --lamp: #b9c1b4; --led-off: #59656c;
+    --well: #1c2226; --well-ink: #dfe5e8; }
+  #panel-caption { font-size: .9rem; min-height: 2.7em; padding-bottom: .75rem; border-bottom: 1px solid var(--rule); }
+  .where { font-family: var(--heading); font-size: .85rem; letter-spacing: .03em; font-weight: 600; color: var(--muted); margin: 0 0 .15rem; }
+  #inspector h3 { font-size: 1.3rem; margin-bottom: .35rem; }
+  #inspector .description a { white-space: nowrap; }
+  #inspector label.field { display: block; font-weight: 600; margin-top: .85rem; }
+  #inspector label.field select, #inspector label.field input { margin-top: .3rem; font-weight: 400; }
+  fieldset.choices { border: 0; padding: 0; margin: .85rem 0 0; min-width: 0; }
+  fieldset.choices legend { font-weight: 600; padding: 0; margin-bottom: .3rem; }
+  .choice { display: flex; align-items: center; gap: .6rem; min-height: 44px; padding: 0 .7rem; margin-top: 4px;
+    border: 1px solid var(--rule); border-radius: 6px; cursor: pointer; }
+  .choice:has(input:checked) { border-color: var(--ink); background: var(--sunk); font-weight: 600; }
+  .choice input { flex: none; width: 1.1rem; height: 1.1rem; margin: 0; accent-color: var(--ink); }
+  .choice span { display: flex; flex-direction: column; padding: .35rem 0; line-height: 1.3; }
+  .choice small { font-weight: 400; font-size: .82rem; }
+  .confirm { margin-top: .85rem; padding: .75rem; border-radius: 6px; background: var(--sunk); }
+  .confirm p { margin-bottom: .5rem; }
+  .confirm .options { display: grid; gap: 6px; }
+  .confirm button { min-height: 44px; padding: .45rem .8rem; border: 1px solid var(--rule); border-radius: 6px;
+    background: var(--plate); text-align: left; }
+  .confirm button b { display: block; }
+  .inspector-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; }
+  .cost { display: block; margin-top: .85rem; }
+
+  /* Extras */
+  #extras { display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); gap: 0 1.5rem; }
+  .extra { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 0 1rem; padding: .35rem 0 .5rem;
+    border-top: 1px solid var(--rule); }
+  .extra-name { font-weight: 600; }
+  .extra small { grid-column: 1; }
+  .extra > .switch, .extra > select { grid-column: 2; grid-row: 1 / span 2; }
+  .extra select { width: auto; min-width: 8rem; }
+  .extra .placement { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: .25rem .6rem; font-size: .9rem; color: var(--muted); }
+  .extra .placement button { min-height: 44px; border: 0; padding: 0; background: none; color: var(--link); text-decoration: underline; }
+  .switch { position: relative; display: inline-block; width: 3.2rem; height: 44px; }
+  .switch input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+  .switch span { position: absolute; left: 0; right: 0; top: 50%; height: 1.6rem; margin-top: -.8rem; border-radius: 999px;
+    background: var(--sunk); border: 1px solid var(--rule); transition: background .15s; pointer-events: none; }
+  .switch span::after { content: ""; position: absolute; top: 2px; left: 2px; width: calc(1.6rem - 6px); height: calc(1.6rem - 6px);
+    border-radius: 50%; background: var(--muted); transition: transform .15s; }
+  .switch input:checked + span { background: var(--led-green); border-color: var(--led-green); }
+  .switch input:checked + span::after { transform: translateX(1.55rem); background: var(--plate); }
+  .switch input:focus-visible + span { outline: 3px solid var(--link); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { .switch span, .switch span::after { transition: none; } }
+
+  /* Below the workspace */
+  .after { padding-top: 1rem; padding-bottom: 2rem; }
+  .after > section, .after > details { margin-bottom: 1.5rem; }
+  #result { padding: 1.1rem 1.25rem; border-radius: 10px; border: 2px solid var(--go); background: var(--plate); }
+  #result h2 { outline-offset: 4px; }
+  .result-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1.25rem; margin-bottom: .75rem; }
+  .result-actions a:not(.button) { display: inline-flex; align-items: center; min-height: 44px; }
+  #guides { display: contents; }
+  details > summary { cursor: pointer; padding: .65rem 0; font-family: var(--heading); font-weight: 600; font-size: 1.1rem; }
+  .scale-list { padding-left: 1.5rem; }
+  .scale-list li { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; margin: .5rem 0; }
+  .scale-list li > button:first-child { min-width: 12rem; text-align: left; }
+  .scale-list [aria-pressed=true] { outline: 2px solid var(--link); }
+  .scale-swatch { display: inline-block; width: .8rem; height: .8rem; border: 1px solid #777; border-radius: 50%; margin-right: .5rem; }
+  .scale-form { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); padding: 1rem 0; }
+  .scale-form label { display: grid; gap: .3rem; }
+  .scale-form textarea { min-height: 5rem; }
+  #scale-editor { padding-top: 1.5rem; padding-bottom: 1.5rem; border-top: 1px solid var(--rule); }
+  #advanced .inner { display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); gap: 1rem 2rem; }
   dl { margin: 0; font-size: .85rem; }
   dt { color: var(--muted); margin-top: .5rem; }
   dd { margin: 0; font-family: ui-monospace, Menlo, Consolas, monospace; overflow-wrap: anywhere; }
-  details { margin-top: .75rem; color: var(--muted); }
-  small, .note { color: var(--muted); font-size: .9rem; }
-  a { color: var(--accent); }
-  fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
-  #features { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; }
-  .feature { border: 1px solid var(--line); padding: 1rem; border-radius: 6px; }
-  h3 { margin: 0 0 .5rem; font-size: 1rem; }
-  .download-total { font-weight: 600; }
-  .feature a { display: inline-flex; align-items: center; min-height: 44px; }
-  .feature label { font-size: .9rem; }
-  input[type=number] { font: inherit; width: 100%; padding: .4rem; }
-  .cpu-warning { --bg: #f7c58d; --fg: #25201a; --panel: #fff0db; --muted: #58402b; --accent: #68401a; }
-  #cpu { padding: .6rem 0; }
-  h2 { font-size: 1.1rem; margin: 0 0 .5rem; }
-  ol { margin: 0; padding-left: 1.25rem; }
+  input[type=file] { min-height: 44px; padding: .5rem 0; max-width: 100%; }
+  ol { margin: 0 0 .75rem; padding-left: 1.25rem; max-width: 70ch; }
   li + li { margin-top: .35rem; }
+  footer { color: var(--muted); font-size: .85rem; border-top: 1px solid var(--rule); padding: .75rem 0 1rem; }
   .warn { color: var(--error); font-weight: 600; }
-  button, a.button, select { min-height: 44px; }
-  summary { cursor: pointer; padding: .65rem 0; }
-  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
-  input[type=number] { min-height: 44px; }
-  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
-    overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
-  #share, #guides a { display: inline-block; min-height: 44px; padding: .65rem 0; }
+
+  /* Summary and build bar */
+  .buildbar { position: sticky; bottom: 0; z-index: 5; background: var(--plate); border-top: 1px solid var(--rule);
+    box-shadow: 0 -6px 18px rgba(23, 32, 38, .08); }
+  .buildbar .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem 1.25rem; padding-top: .6rem; padding-bottom: .6rem; }
+  .facts { display: flex; flex-wrap: wrap; gap: .2rem 1.1rem; flex: 1 1 22rem; margin: 0; font-size: .92rem; }
+  .facts span { white-space: nowrap; }
+  #cpu-short::before { content: ""; display: inline-block; width: .6rem; height: .6rem; margin-right: .4rem; border-radius: 50%; background: var(--led-green); }
+  body.cpu-warning #cpu-short { color: var(--warn-ink); background: var(--warn-bg); border-radius: 4px; padding: 0 .35rem; font-weight: 600; }
+  body.cpu-warning #cpu-short::before { background: var(--led-yellow); }
+  body.cpu-blocked #cpu-short::before { background: var(--led-red); }
+  .bar-actions { display: flex; align-items: center; gap: 1rem; }
+  #status { flex: 1 1 100%; margin: 0; min-height: 0; font-size: .92rem; }
+  #status:empty { display: none; }
+  #status.ok { color: var(--go); }
+  #status.error { color: var(--error); font-weight: 600; }
+  #progress { flex: 1 1 100%; width: 100%; }
+  #progress[hidden] { display: none; }
+
+  /* Library */
+  dialog { width: min(40rem, calc(100vw - 32px)); max-height: min(44rem, calc(100vh - 32px)); padding: 0; border: 1px solid var(--rule);
+    border-radius: 10px; background: var(--plate); color: var(--ink); }
+  dialog::backdrop { background: rgba(10, 15, 18, .45); }
+  .library-head { position: sticky; top: 0; z-index: 1; background: var(--plate); padding: 1rem 1.1rem .75rem; border-bottom: 1px solid var(--rule); }
+  .library-head .row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+  .library-head h2 { margin: 0; }
+  #library-target { margin: .2rem 0 .6rem; }
+  #library-close { width: 44px; border: 1px solid var(--rule); border-radius: 6px; background: var(--plate); font-size: 1.3rem; line-height: 1; }
+  #library-body { padding: .5rem 1.1rem 1.1rem; }
+  .library-group h3 { margin: .9rem 0 .35rem; font-size: .9rem; color: var(--muted); }
+  .library-item { display: grid; grid-template-columns: 1fr auto; gap: .1rem 1rem; width: 100%; min-height: 44px; margin-top: 4px;
+    padding: .55rem .75rem; border: 1px solid var(--rule); border-radius: 6px; background: var(--plate); text-align: left; }
+  .library-item:hover { background: var(--sunk); }
+  .library-item .name { font-weight: 600; }
+  .library-item .at { font-size: .82rem; color: var(--muted); text-align: right; }
+  .library-item .about { grid-column: 1 / -1; font-size: .88rem; color: var(--muted); }
+  .library-item.here { border-color: var(--ink); }
+  #library-clear { margin-top: .5rem; }
+
+  @media (max-width: 1040px) {
+    #workspace { grid-template-columns: minmax(0, 1fr) 20rem; }
+    .slots { grid-template-columns: 1fr; }
+  }
+  /* Phones: one page at a time, three knob rows. */
+  @media (max-width: 760px) {
+    h1 { font-size: 1.6rem; }
+    .masthead { padding-top: 1rem; }
+    .release { justify-content: flex-start; }
+    #download-counts { text-align: left; }
+    .lead { margin-bottom: .6rem; }
+    .chip { padding: .4rem .8rem; }
+    .template-cards { grid-template-columns: 1fr; }
+    #workspace { grid-template-columns: minmax(0, 1fr); grid-template-areas: "controls" "inspector" "slots" "extras"; }
+    .inspector { position: static; }
+    .page-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: .5rem; }
+    .page-tabs button { min-height: 44px; border: 1px solid var(--rule); border-radius: 6px; background: var(--plate); font-weight: 600; }
+    .page-tabs button[aria-selected=true] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+    .page-tabs .leds { justify-content: center; margin: .2rem 0 0; }
+    .grid, .grid tbody { display: block; margin: 0; }
+    .grid thead { display: none; }
+    .grid tbody tr { display: none; }
+    .grid tbody tr.current { display: grid; gap: 6px; }
+    .grid tbody th { display: none; }
+    .grid td { display: block; }
+    .cell { min-height: 3.6rem; }
+    .cell-knob { display: block; font-family: var(--heading); font-size: .72rem; letter-spacing: .06em; font-weight: 600; color: var(--muted); }
+    .buildbar .wrap { gap: .3rem .75rem; }
+    .facts { font-size: .85rem; gap: 0 .8rem; }
+    .bar-actions { width: 100%; justify-content: space-between; }
+  }
+
   @media print {
-    :root { --bg: #fff; --fg: #000; --muted: #333; --line: #888; --panel: #fff; --accent: #000; }
-    body.cpu-warning { --bg: #fff; --fg: #000; --panel: #fff; --muted: #333; --accent: #000; }
-    main { max-width: none; padding: 0; }
-    .editor-label, #release, #template, #features, #share, #guides, #build, #progress, #status,
-    #result, #download-counts, #compatibility, #cpu-status, details, noscript { display: none !important; }
-    section.panel { border: 0; padding: 0; }
+    #template-gallery { display: none; }
+    :root { --paper: #fff; --plate: #fff; --ink: #000; --muted: #333; --rule: #888; --link: #000; }
+    .masthead, #workspace, .buildbar, #result, #advanced, dialog, noscript, .privacy { display: none !important; }
+    .print-note { display: block !important; }
     section, li { break-inside: avoid; }
     a { color: #000; text-decoration: underline; }
-    .print-note { display: block !important; }
   }
 </style>
 </head>
 <body>
-<main>
-  <noscript><p class="warn">This page needs JavaScript to edit profiles and build and verify firmware files. Enable JavaScript and reload, or download a ready-made update from the <a href="https://github.com/insolentconstruct/eurorack/releases">releases page</a>.</p></noscript>
-  <h1>Drizzlet Hygrostat</h1>
-  <p class="lead">Makes the firmware update file for Mutable Instruments Beads in your browser. Nothing is uploaded.</p>
-
-  <p id="compatibility" class="note">Loading the profile builder… If it does not load, enable JavaScript and use a current browser with module worker support over HTTPS (or localhost).</p>
-  <p class="print-note" hidden>This is the builder page. For your profile’s control layout, download the printable SVG guide before printing.</p>
-
-  <section class="panel" aria-labelledby="make">
-    <h2 id="make">Make the update file</h2>
-    <label for="release" class="editor-label">Release</label>
-    <select id="release"></select>
-    <div id="download-counts" aria-live="polite"></div>
-    <p id="development" class="note" hidden>Development build for Beta 2. Unreleased. Feature CPU costs use measurements from a module-calibrated development board; final-image module measurements are still pending.</p>
-    <fieldset id="editor">
-      <legend>Profile options</legend>
-      <label for="template" class="editor-label">Start from</label><select id="template"></select>
-      <p class="note">Off removes this feature’s controls and uses its stock behaviour (Diffusion Off removes grain diffusion). Fixed keeps the chosen value without an editable control. Adjustable starts from the chosen default and lets you change it on the module using a page knob, an [A]+knob amount or an action, where available. Saved adjustable values are kept when you move their controls. Other stock gestures keep their meaning.</p>
-      <p id="cpu"></p>
-      <p id="cpu-status" class="sr-only" role="status" aria-atomic="true"></p>
-      <details><summary>CPU costs and measurement history</summary><p id="cpu-provenance" class="note"></p></details>
-      <div id="features"></div>
-    </fieldset>
-    <p>Profile <code id="fingerprint"></code> · <a id="share" href="#">Share this profile</a></p>
-    <p id="guides" hidden><a id="guide">Download printable guide</a> · <a id="guide-mobile">Download phone guide</a></p>
-    <button id="build" disabled>Make the update file</button>
-    <progress id="progress" max="1" value="0" aria-label="Encoding progress" hidden></progress>
-    <p id="status" role="status" aria-live="polite"></p>
-    <div id="result" hidden>
-      <a id="download" class="button" href="#">Download</a>
-      <dl>
-        <dt>App image (SHA-256)</dt><dd id="app-hash"></dd>
-        <dt>Update file (SHA-256)</dt><dd id="wav-hash"></dd>
-        <dt>Release update file (SHA-256)</dt><dd id="expected-hash"></dd>
-      </dl>
+<noscript><p class="wrap warn">Enable JavaScript to build firmware, or use a ready-made update from the <a href="https://github.com/insolentconstruct/eurorack/releases">releases page</a>.</p></noscript>
+<header class="masthead wrap">
+  <div class="title-row">
+    <h1>Drizzlet Hygrostat</h1>
+    <div class="release">
+      <label for="release">Firmware</label>
+      <select id="release"></select>
+      <div class="appearance">
+        <label for="theme">Theme</label>
+        <select id="theme">
+          <option value="system">System</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+      </div>
+      <span id="development" class="badge" hidden>Development build</span>
+      <div id="download-counts" aria-live="polite"></div>
     </div>
-    <details>
-      <summary>Use an app image you already have</summary>
-      <p class="note">It must be the selected release's <code>app.bin</code>; anything else is refused.</p>
-      <label for="local">App image file</label>
-      <input id="local" type="file" accept=".bin,application/octet-stream">
-    </details>
+  </div>
+  <p class="lead">Choose Beads features and where you control them.</p>
+  <p class="steps">Select a position, choose a feature and its starting value, then build the update.</p>
+  <p id="starting-point-note" class="note" hidden>Starting points replace your setup and restore factory scales.</p>
+  <div class="presets" role="group" aria-labelledby="presets-label">
+    <span id="presets-label">Start from</span>
+    <div id="presets"></div>
+  </div>
+  <p class="how"><b>Options pages:</b> hold [M] for 3 seconds to open them, tap [M] to change page, hold it again to close. The knob LEDs show the page.</p>
+  <p id="compatibility" class="note">Loading… Needs JavaScript and a current browser over HTTPS (or localhost).</p>
+</header>
+<p class="print-note wrap" hidden>For your controls, print the downloaded SVG guide.</p>
+
+<section id="template-gallery" class="wrap" aria-labelledby="templates-title" hidden>
+  <div class="section-head">
+    <h2 id="templates-title">More starting points</h2>
+    <button id="templates-close" class="quiet" type="button">Close</button>
+  </div>
+  <p>Choose one to preview its changes. Your setup stays as it is until you use it.</p>
+  <div id="template-groups"></div>
+  <section id="template-preview" aria-labelledby="template-preview-title" hidden>
+    <h3 id="template-preview-title"></h3>
+    <p class="note">Outlined controls would change. The grid still shows your current setup.</p>
+    <div id="template-changes"></div>
+    <div class="inspector-actions">
+      <button id="use-template" class="primary" type="button">Use template</button>
+      <button id="cancel-template" class="quiet" type="button">Cancel</button>
+    </div>
   </section>
+</section>
+
+<main id="workspace" class="wrap">
+  <section class="controls" aria-labelledby="pages-title">
+    <div class="section-head">
+      <h2 id="pages-title">Options pages</h2>
+      <button id="browse" class="quiet" type="button">All features</button>
+    </div>
+    <div class="page-tabs" role="tablist" aria-label="Options page"></div>
+    <table id="grid" class="grid">
+      <caption class="sr-only">Options pages 1 to 4 by knob. Arrow keys move, Enter selects, Delete empties a position.</caption>
+      <thead><tr><td></td><th scope="col">FEEDBACK</th><th scope="col">DRY/WET</th><th scope="col">REVERB</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <div class="slots-area">
+    <div class="slots">
+      <section aria-labelledby="amounts-title">
+        <h3 id="amounts-title">Hold [A] and turn</h3>
+        <div id="amounts" class="slot-row"></div>
+      </section>
+      <section aria-labelledby="actions-title">
+        <h3 id="actions-title">[A] gestures</h3>
+        <div id="actions" class="slot-row"></div>
+      </section>
+    </div>
+    <p id="unplaced" class="note" hidden></p>
+  </div>
+
+  <aside class="inspector" aria-label="Selected">
+    <svg id="panel" role="img" aria-labelledby="panel-caption" xmlns="http://www.w3.org/2000/svg"></svg>
+    <p id="panel-caption"></p>
+    <div id="inspector"></div>
+  </aside>
+
+  <section class="extras" aria-labelledby="extras-title">
+    <h2 id="extras-title">Extras</h2>
+    <div id="extras"></div>
+  </section>
+</main>
+
+<section id="scale-editor" class="wrap" aria-label="Pitch scales" hidden></section>
+
+<div class="after wrap">
+  <section id="result" hidden aria-labelledby="result-title">
+    <h2 id="result-title" tabindex="-1">Your update is ready</h2>
+    <div class="result-actions">
+      <a id="download" class="button" href="#">Download WAV</a>
+      <span id="guides"><a id="guide">Printable guide</a><a id="guide-mobile">Phone guide</a></span>
+      <a href="#install">How to install</a>
+    </div>
+    <p id="test-status"></p>
+    <p>Installing keeps your stock settings and calibration. Drizzlet options saved by an earlier version reset to this profile’s starting values.</p>
+    <p>To go back, play another update the same way: Mutable Instruments’ firmware, or a Drizzlet release from the <a href="https://github.com/insolentconstruct/eurorack/releases">releases page</a>.</p>
+  </section>
+
+  <details id="advanced">
+    <summary>Advanced</summary>
+    <div class="inner">
+      <section aria-labelledby="cpu-title">
+        <h3 id="cpu-title">CPU</h3>
+        <p id="cpu"></p>
+        <p id="cpu-provenance" class="note"></p>
+      </section>
+      <section aria-labelledby="files-title">
+        <h3 id="files-title">Files</h3>
+        <p>Profile <code id="fingerprint"></code></p>
+        <dl>
+          <dt>App image (SHA-256)</dt><dd id="app-hash">After building</dd>
+          <dt>Update file (SHA-256)</dt><dd id="wav-hash">After building</dd>
+          <dt>Release update file (SHA-256)</dt><dd id="expected-hash"></dd>
+        </dl>
+        <p class="note">Build from a local copy: choose the selected release’s <code>app.bin</code>.</p>
+        <label for="local" class="sr-only">Local app.bin</label>
+        <input id="local" type="file" accept=".bin,application/octet-stream">
+      </section>
+    </div>
+  </details>
 
   <section aria-labelledby="install">
     <h2 id="install">How to install</h2>
     <ol>
-      <li>Unplug all CV cables. Patch your audio interface's output to <strong>IN L</strong> and set <strong>TIME</strong> to an intermediate position.</li>
-      <li>Power on your system with <strong>FREEZE</strong> held down.</li>
-      <li>Disconnect your speakers: the update file is loud and harsh. Close anything else that could make a sound.</li>
-      <li>Play the update file. The quality LED <strong>[A]</strong> shows the level: yellow is right; turn <strong>TIME</strong> to adjust.</li>
-      <li>At the end the module restarts by itself and runs the new firmware.</li>
+      <li>Disconnect your speakers (the update is loud) and all CV cables. Close other apps that make sound.</li>
+      <li>Patch your audio output to <strong>IN L</strong>. Set <strong>TIME</strong> about halfway.</li>
+      <li>Power on holding <strong>FREEZE</strong>, then play the update. Yellow on <strong>[A]</strong> means the level is right; adjust with <strong>TIME</strong>.</li>
+      <li>When the file ends, Beads restarts by itself. If it doesn’t, start again.</li>
     </ol>
-    <p class="note">If all LEDs blink red, the level was wrong: press <strong>FREEZE</strong> and play it again louder. Avoid equalizers or automatic gain in the signal chain. Full steps: the <a href="https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/#firmware">Beads manual</a>. <strong>Don't hold SEED at power-on:</strong> it resets your settings.</p>
-    <p class="note">Module stuck at startup even after reinstalling? Read the <a href="https://github.com/insolentconstruct/eurorack/releases/tag/storage-recovery-2026.10.27">storage recovery tool</a> and its warnings first: it erases your settings and may reset your calibration.</p>
+    <p class="note">All LEDs blinking red means the level was wrong: press <strong>FREEZE</strong> and play it again louder. Other problems: see the <a href="https://pichenettes.github.io/mutable-instruments-documentation/modules/beads/manual/#firmware">Beads manual</a>.</p>
+    <p class="note">Stuck at startup? Read the <a href="https://github.com/insolentconstruct/eurorack/releases/tag/storage-recovery-2026.10.27">storage recovery warnings</a>: recovery erases settings and may reset calibration.</p>
   </section>
 
-  <section aria-labelledby="about">
-    <h2 id="about">About</h2>
-    <p class="note">The default Drizzlet profile makes the release update file byte for byte. Each generated WAV is decoded and checked before download.</p>
-    <p class="note">Drizzlet is community firmware; it is not a Mutable Instruments product, so please do not contact Mutable Instruments about it.</p>
-    <p class="note">Successful builds and WAV download clicks are counted by version with <a href="https://www.goatcounter.com">GoatCounter</a>, respecting “do not track”. Each event contains only its build or download event name; no profile or personal data is added. Requests expose your IP address and browser to the service. After your first interaction, download totals are requested from GoatCounter and api.github.com, and site visitor counts from GoatCounter; both services receive your IP address and browser. Totals include GitHub WAV downloads and may merge repeat downloads by the same visitor on the same day.</p>
+  <section class="privacy" aria-label="Privacy">
+    <p class="note"><a href="https://www.goatcounter.com">GoatCounter</a> counts visits, builds and downloads without cookies or profile data; do-not-track is respected, and requests reveal your IP and browser. Download totals are read from GoatCounter and GitHub after your first interaction.</p>
   </section>
 
   <footer>
-    <p>Made by Insolent Construct; <a href="https://github.com/insolentconstruct/eurorack">source on GitHub</a>. The encoder is based on Mutable Instruments' (MIT), with sine and cosine from the GNU C Library (LGPL 2.1 or later).</p>
-    <p>Not an ultrasonic humidifier. Please do not fill with water.</p>
+    <p>Made by Insolent Construct; <a href="https://github.com/insolentconstruct/hygrostat">source on GitHub</a>. The encoder is based on Mutable Instruments' (MIT), with sine and cosine from the GNU C Library (LGPL 2.1 or later).</p>
   </footer>
-</main>
-<script type="module" src="js/app.js?v=5ea88b9a31f82023"></script>
+</div>
+
+<div class="buildbar" id="summary">
+  <div class="wrap">
+    <p class="facts"><span id="changes"></span><span id="positions"></span><span id="cpu-short"></span></p>
+    <div class="bar-actions">
+      <a id="share" class="linkish" href="#">Share link</a>
+      <button id="build" class="primary" type="button" disabled>Build firmware WAV</button>
+    </div>
+    <progress id="progress" max="1" value="0" aria-label="Encoding progress" hidden></progress>
+    <p id="status" role="status" aria-live="polite"></p>
+  </div>
+</div>
+<p id="cpu-status" class="sr-only" role="status" aria-atomic="true"></p>
+
+<dialog id="library" aria-labelledby="library-title">
+  <div class="library-head">
+    <div class="row">
+      <h2 id="library-title">Choose a feature</h2>
+      <button id="library-close" type="button" aria-label="Close">×</button>
+    </div>
+    <p id="library-target" class="note"></p>
+    <input id="library-search" type="search" placeholder="Search features" aria-label="Search features" autocomplete="off">
+  </div>
+  <div id="library-body"></div>
+</dialog>
+<script type="module" src="js/app.js?v=a624ef0144a27b33"></script>
 </body>
 </html>

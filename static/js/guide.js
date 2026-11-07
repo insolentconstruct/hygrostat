@@ -23,14 +23,16 @@
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
 // Knob cards port options_guide.py: 270-degree arcs and the same LED ladder.
-import { defaults, equal, encodeProfile } from './profile.js?v=5ea88b9a31f82023';
-import { RELEASE_GUIDES, RELEASE_GUIDE_ID } from './release_guides.js?v=5ea88b9a31f82023';
+import { effectiveScales, PULSE_NAMES } from './scales.js?v=a624ef0144a27b33';
+import { defaults, equal, encodeProfile } from './profile.js?v=a624ef0144a27b33';
+import { RELEASE_GUIDES, RELEASE_GUIDE_ID } from './release_guides.js?v=a624ef0144a27b33';
 
 const KNOBS = ['FEEDBACK', 'DRY/WET', 'REVERB'];
 export const ACTIONS = ['None', '[A]+SEED', '[A]+FREEZE', '[A] hold'];
 export const AMOUNTS = ['None', '[A]+DRY/WET', '[A]+REVERB'];
 export const pageName = (slot) => slot ? `[M] page ${Math.ceil(slot / 3)} · ${KNOBS[(slot - 1) % 3]}` : 'None';
-const escape = (s) => String(s).replace(/[&<>"']/g, (c) =>
+// Valid UTF-8 scale names can contain these XML 1.0 noncharacters.
+const escape = (s) => String(s).replace(/[\ufffe\uffff]/g, '\ufffd').replace(/[&<>"']/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;' })[c]);
 const COLOURS = ['#247443', '#a87900', '#bd3030'];
 export function indication(index) {
@@ -89,14 +91,17 @@ class Drawing {
     });
     bands.forEach(([a, b]) => this.arc(cx, cy, a, b, true));
     let base = y + 125;
-    const values = f.values || (f.id === 11 ? ['Stock', 'Width (wider →)'] : ['None', 'Diffusion (more →)']);
+    const values = f.scales ? ['Off', 'Chromatic', ...f.scales.map((s) => s.name)] : f.values || (f.id === 11 ? ['Stock', 'Width (wider →)'] : ['None', 'Diffusion (more →)']);
     values.forEach((value, i) => {
       if (f.id === 1 && i === 2) {
         this.text(x, base, 'Scale (tap SEED to step through):', 15, 'bold'); base += 26;
       }
       const meter = !f.values && i === 1;
-      const shown = meter ? 'green → yellow → red' : indication(i);
-      this.circle(x + 9, base - 5, 8, meter ? '#777' : COLOURS[i === 9 ? 1 : i % 3], i);
+      const scale = f.scales && i >= 2 ? f.scales[i - 2] : null;
+      const rgb = scale && '#' + scale.color.map((v) => v.toString(16).padStart(2, '0')).join('');
+      const shown = scale ? `${rgb}; ${PULSE_NAMES[scale.pulses].toLowerCase()}` : meter ? 'green → yellow → red' : indication(i);
+      const pattern = scale ? [0, 3, 6, 9][scale.pulses] : i;
+      this.circle(x + 9, base - 5, 8, scale ? rgb : meter ? '#777' : COLOURS[i === 9 ? 1 : i % 3], pattern);
       this.text(x + 25, base, value);
       if (mobile) {
         this.text(x + 25, base + 19, shown, 15, 'normal', '#555');
@@ -114,35 +119,39 @@ class Drawing {
   }
 }
 
-export function guide(entries, release, fp, mobile = false) {
-  if (release.profile.release_id === RELEASE_GUIDE_ID && equal(encodeProfile(entries, release.profile),
+export function guide(entries, release, fp, mobile = false, scales = null) {
+  if (scales === null && release.profile.release_id === RELEASE_GUIDE_ID && equal(encodeProfile(entries, release.profile, scales),
       encodeProfile(defaults(release.profile), release.profile))) {
     // Normalisation removes this added fingerprint text; the remaining SVG
     // is byte-identical to options_guide.py's release drawing.
-    return RELEASE_GUIDES[Number(mobile)].replace('</g>\n</svg>',
-        `<text data-profile-fingerprint="true" x="${mobile ? 22 : 35}" y="52" font-size="12">Profile ${escape(fp)}</text>\n</g>\n</svg>`);
+    const reference = RELEASE_GUIDES[Number(mobile)];
+    const height = Number(reference.match(/viewBox="0 0 \d+ ([\d.]+)"/)[1]);
+    return reference.replace('</g>\n</svg>',
+        `<text data-profile-fingerprint="true" x="${mobile ? 22 : 35}" y="${height - 8}" font-size="12">Profile ${escape(fp)}</text>\n</g>\n</svg>`);
   }
   const d = new Drawing();
   const width = mobile ? 390 : 1100;
   const margin = mobile ? 22 : 35;
-  const features = release.profile.features;
+  const features = release.profile.features.map((f) => f.id !== 1 || release.profile.version !== 2 ? f :
+    { ...f, scales: effectiveScales(scales), values: Array.from({ length: 16 }, (_, id) => id < 2 ? f.values[id] :
+      effectiveScales(scales).find((s) => s.id === id)?.name || 'Off (scale removed)') });
   const feature = (e) => features.find((f) => f.id === e[0]);
   d.text(margin, 35, 'Drizzlet Hidden Options', 24, 'bold');
   d.text(margin, 61, `Profile ${fp} · ${release.tag}`, 15);
   let y = 90;
   for (const line of (entries.some((e) => e[3]) ? [
-    'Open: hold the CV-assign button [M] 3 seconds, release.',
-    'Change page: tap [M]. Empty pages are skipped. Pages 1–4 pulse FEEDBACK, DRY/WET, REVERB, then all three.',
-    '[A] shows each stored value in turn. Turn a knob to change it; it saves by itself.',
-    'Close: hold [M] 3 seconds or press another button. With Scale selected, SEED taps step the scale.',
-    'Move a knob a little before it responds. Wait a moment before powering off.'
+    'Open: hold [M] 3 seconds; all three mix LEDs pulse. Release.',
+    'Change page: tap [M]; empty pages skip. LEDs: FEEDBACK, DRY/WET, REVERB, then all three.',
+    '[A] shows stored values. Turn knobs to change; changes save automatically.',
+    'Close: hold [M] 3 seconds or press another button; release before normal use. On the Pitch scale page with Scale selected, tap SEED to step.',
+    'Move knobs more than a tenth of their travel to engage. Wait before powering off.'
   ] : ['This profile has no options pages. Hold [M] does nothing.'])) y = d.lines(margin, y, line, mobile ? 43 : 140) + 3;
   // Share the release's to-scale control sketch and LED legend.
   const reference = RELEASE_GUIDES[0];
-  const panelStart = reference.indexOf('<text x="405" y="70"');
+  const panelStart = reference.indexOf('<text x="405" y="20"');
   const panelEnd = reference.indexOf('<text x="780" y="70"');
   if (panelStart >= 0 && panelEnd > panelStart) {
-    d.items.push(`<g transform="translate(${margin} ${y}) scale(${mobile ? 0.85 : 1}) translate(-405 -70)">${reference.slice(panelStart, panelEnd)}</g>`);
+    d.items.push(`<g transform="translate(${margin} ${y}) scale(${mobile ? 0.85 : 1}) translate(-405 -20)">${reference.slice(panelStart, panelEnd)}</g>`);
     y += 285;
   }
   for (let page = 1; page <= 4; ++page) {
@@ -179,6 +188,15 @@ export function guide(entries, release, fp, mobile = false) {
   for (const e of entries.filter((e) => e[1] === 2 && !e[3] && !e[4] && !e[5])) {
     const f = feature(e);
     y = d.lines(margin, y + 10, `${f.name}: ${f.values ? f.values[e[2]] : e[2]} · set on the page: not placed`, mobile ? 43 : 140);
+  }
+  if (release.profile.version === 2) {
+    y = d.lines(margin, y + 20, 'Scale cycle: Off and Chromatic are separate knob choices; SEED steps the following scales in order.', mobile ? 43 : 140);
+    for (const scale of effectiveScales(scales)) {
+      const rgb = '#' + scale.color.map((v) => v.toString(16).padStart(2, '0')).join('');
+      const notes = scale.notes.map((v) => Number((v * 100).toFixed(4))).join(', ');
+      y = d.lines(margin, y + 10, `${scale.name}: ${rgb}, ${PULSE_NAMES[scale.pulses].toLowerCase()}. Notes ${notes} cents; repeat ${Number((scale.repeat * 100).toFixed(4))} cents.`, mobile ? 43 : 140);
+    }
+    if (!effectiveScales(scales).length) y = d.lines(margin, y + 10, 'No scales in the cycle; the Scale position selects Off.', mobile ? 43 : 140);
   }
   y = d.lines(margin, y + 20, 'Do not hold SEED while powering on: it resets all settings to the profile defaults. Calibration is kept.', mobile ? 43 : 140);
   d.text(margin, y + 15, `Author: Insolent Construct · Profile ${fp}`, 15);

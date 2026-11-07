@@ -1,156 +1,68 @@
 # Drizzlet Hygrostat
 
-The Drizzlet Hygrostat: set your firmware's climate. (A hygrostat is the industrial humidity controller; this one controls drizzle.)
+**https://hygrostat.insolentconstruct.net/**
 
-A static page that makes the Beads firmware update file (`.wav`) in the browser, from a release's app image. Nothing is uploaded; no server or build step.
+Hygrostat builds a [Drizzlet](https://github.com/insolentconstruct/eurorack/tree/drizzlet) firmware update for Mutable Instruments Beads in your browser. You pick which features your firmware has, where their controls sit and their defaults. You then download the update file (`.wav`) and a printable guide to your layout. Nothing is uploaded.
 
-The profile editor targets profile-capable Beta 2 and later firmware. It offers
-Off, Fixed and Adjustable features, defaults, page/amount/action placements,
-templates, share links and desktop/phone SVG guides. Conflicts and invalid
-firmware profiles are refused. Older plain-WAV releases are not offered.
+It works with Drizzlet Beta 2 and later. Firmware releases are on the [eurorack releases page](https://github.com/insolentconstruct/eurorack/releases).
 
-Per-feature CPU costs are measured on a module-calibrated development board;
-four event-only features have no per-block work by code inspection. Estimates
-sum each engine's own costs. The synth baseline is the measured default-profile
-worst case, **87.2% with Clouds-style reverb**, width 255 and Raag Shri; it already
-includes Clouds-style reverb. Granular's historical baseline is 83.0% and
-already includes its default settings too. Per-feature estimates subtract each
-feature's default cost for both engines, so moving slots leaves both baselines
-unchanged.
+Beta 2's factory layout is a starting point: change control placement and defaults in Hygrostat to suit your playing. Feedback on Beta 2 may inform a different factory layout in Beta 3; saved custom layouts keep their explicit placements.
 
-Measurement provenance: measured on the module, October 2026. Clouds-style
-synth reverb ranged from 86.1–87.2%; Plaits with Clouds-style reverb measured
-69.4%, and vanilla granular 92.1% supplies the provisional ceiling. These builds
-predate profiles and paired grains; invalid boot-guard measurements are excluded.
+For firmware with scale-bank support, the scale editor chooses which scales are available and their order. Replace the factory definitions, enter notes in cents or import a Scala file, and choose each scale's LED colour and flash pattern. Off and Chromatic remain separate knob choices. Profiles support up to 14 scales with 24 notes each; shared links and downloaded guides include the bank. A custom bank's CPU cost is marked unmeasured until the relevant measurements are available.
 
-A custom profile enabling any feature without a measured cost shows
-“CPU cost not yet measured for: …” instead of a computed percentage. It does
-not warn or block on unknown costs. The exact release default is always allowed.
-Once all enabled features have measured costs, each engine rounds to 0.1%:
-warn from 91% and block above the provisional 92% ceiling. Exact measured
-combinations key on the complete encoded 512-byte profile
-(`cpu.combinations[].profile`, hex). Missing engine measurements fall back to
-that engine's baseline plus measured feature deltas; placement changes require
-another exact match. Exact module measurements take precedence over per-feature estimates.
+## Privacy
 
-Before each release, check the final image's default profile and heaviest
-supported combinations on the module. Historical baselines remain provisional;
-module measurements take precedence over estimates.
+The page counts visits, builds and downloads with [GoatCounter](https://www.goatcounter.com): no cookies, no profile data, and "do not track" is respected. After your first click it also reads public download totals from GoatCounter and GitHub. Like any web request, these reveal your IP address and browser.
 
-Layout: everything served as-is is under `static/`, where a Hugo site expects it, so moving to Hugo later only adds configuration and templates. Tests are outside it.
-
-- `static/js/profile.js`: wire-format parser/encoder, validation, templates,
-  share links, fingerprints, names and CPU rules. Metadata mirrors
-  `beads/profile.cc`; a differential test checks the real parser.
-- `static/js/guide.js`: custom layout drawing, with knob-card geometry ported
-  from `options_guide.py`. `release_guides.js` preserves the canonical release
-  drawings for the untouched default. Update these two SVG strings when the
-  release guides change. Normalisation removes only the added fingerprint
-  `<text data-profile-fingerprint="true">` element: every remaining byte of
-  the default guide must equal the release SVG. Edited layouts reuse the
-  release's to-scale panel geometry and draw their own pages and gestures.
-- `static/js/decoder.js`: generated-PCM QPSK demodulator, with packet headers,
-  CRCs, descrambling and padding checks. This checks generated WAVs, not audio
-  recorded from a player.
-- `static/js/encoder.js`: Mutable Instruments' QPSK encoder (`stm_audio_bootloader/qpsk/encoder.py`) as Beads' release build runs it. One unminified module, used by both the page and the Node tests.
-- `static/js/glibc_sincos.js`: sine and cosine ported from the GNU C Library 2.36, LGPL 2.1 or later (`static/js/COPYING.LIB`). The release file is encoded by numpy on glibc; one last bit of a sine decides between samples 32766 and 32767, and the browser's own `Math.sin` differs in about 636,000 samples of the Beta 2 file.
-- `static/index.html`, `static/js/app.js`, `static/js/worker.js`: the page; encoding and decode-back verification run in a worker.
-- `static/manifest.json` and `static/images/`: the releases offered, with each app image and update file pinned by SHA-256. GitHub release downloads cannot be fetched from another site, so the images are served with the page.
-
-Tests (Node 18 or later, g++, and the pinned stmlib submodule):
+## Run it locally
 
 ```sh
-node beads/build/hygrostat/test/manifest.js
-node beads/build/hygrostat/test/profile.js
-node beads/build/hygrostat/test/downloads.js
-node beads/build/hygrostat/test/help.js
-node beads/build/hygrostat/test/readiness.js
-node beads/build/hygrostat/test/golden.js APP.bin EXPECTED_WAV_SHA256
+python3 -m http.server -d static
 ```
 
-`beads/build/hygrostat/test/browser.mjs` adds every-feature Fixed/Off byte round trips and
-same-document share-link regressions in Chromium, Firefox and WebKit. Run it
-with Playwright available in an offline Docker container serving the page;
-`SITE` names the static directory and `BASE` the local HTTP URL. Browser test
-dependencies belong to the test harness and are never served by the page.
+Then open http://localhost:8000.
 
-The profile test compiles a small oracle from the manifest source commit or release tag’s firmware parser and
-compares more than 26,000 candidate blocks. With stmlib already available in a
-separate checkout, `STMLIB_INCLUDE` can name that checkout's root. No firmware
-source or Git metadata needs changing. When the pinned firmware is an ancestor
-of HEAD, the working parser source and header must also match it byte for byte.
+## Development
 
-Manifest format 2 stores the profile offset, size, version, release ID and
-feature table per release. `default_in_block: false` omits a feature from the
-untouched wire block while its catalogue default remains available in the editor.
-The 23-feature catalogue must match the pinned firmware file byte for byte and
-is checked against its definition table. `FIRMWARE_CATALOGUE_REF` adds a second
-byte-identity check against a prepared firmware revision. The default block still
-contains 14 entries. `states` controls editor modes.
-Released `release_id` values are the tag date as hexadecimal YYYYMMDD (for example,
-2026-11-05 becomes `0x20261105`), and must equal that tag's firmware
-`kProfileReleaseId`; development entries retain the development constant. `values: null` means a full byte. The `page`,
-`amount`, `action` and `stateless` fields mirror the firmware definition table.
-The page verifies the pinned base app first, patches only bytes 1024–1535, then
-encodes and decodes the WAV. The untouched default also checks the release WAV
-hash. Custom WAVs and guides carry the first eight hex digits of SHA-256 of the
-512-byte profile; share links carry all 512 bytes and the release tag.
+Read [STYLE.md](docs/STYLE.md) before editing, including agent-assisted work.
+See [SECURITY.md](docs/SECURITY.md) for the static build, browser boundaries and deployment checks.
+Use Node 22.13+ on the 22 LTS line, or Node 24+, and the pinned lockfile:
 
-CI also encodes every build's `app.bin` and checks it against `beads/build/expected-wav.sha256`.
+```sh
+npm ci
+npm run lint
+npm run lint:controls
+```
 
-Publishing: `.github/workflows/pages.yml` runs on every push to `drizzlet` that touches `beads/build/hygrostat/`. Pull requests run all Hygrostat suites too; only the drizzlet branch can deploy. It reruns the manifest test, builds with a pinned Hugo (version and SHA-256 in the workflow), checks that the output is `static/` byte for byte, and publishes it with GitHub Pages. `hugo.toml` only tells Hugo to copy `static/`; there are no templates yet.
+Lint checks maintained JavaScript, static HTML and inline CSS. It runs as a
+required deployment gate. Keep the relevant functional tests below as well;
+format and lint checks do not establish firmware or browser correctness.
 
-To update the page for a release:
+## Tests
 
-1. Wait for the firmware release tag and its published assets. Copy that tag’s
-   `app.bin` into `static/images/<tag>/` and set the manifest entry’s tag, display
-   name (for example, “Beta 2 (Fog)”), date and stable download-event slug.
-   Replace the development entry, remove its `development` and `source_commit`
-   fields, and remove its image and on-page development notice.
-2. Take the app size, app/WAV SHA-256 values, profile release ID and catalogue
-   from the tagged firmware. The release ID must equal the tag date as
-   hexadecimal YYYYMMDD and the firmware constant. Update CPU measurements and
-   provenance from the final image; keep estimates labelled. Refresh canonical
-   release guides when they change. Feature help resolves `{TAG}` links from
-   the selected manifest release, so documentation follows the installed version.
-3. Run the Node suites above and the three-browser checks. Verify the untouched
-   default WAV against the published release and a custom profile with both
-   guides. Run `node beads/build/hygrostat/tools/version-assets.js` after browser or manifest
-   edits, then rerun readiness. Remove the development-source fetch path from
-   the Pages workflow and its development-only manifest validation at release.
-4. Merge the page PR into `drizzlet` after the tag exists. Check the Pages
-   deployment, offered release, default/custom WAVs, guides and deferred counts
-   on the live site. GoatCounter public counts must be enabled; new counts can
-   take up to four hours to appear. Record the last good deployment and release
-   before publishing; follow [ROLLBACK.md](ROLLBACK.md) if a deploy or release
-   entry needs withdrawing.
+The tests check the page against the firmware it offers. They need a supported Node version, g++, and a copy of the firmware repository in `./firmware`:
 
-Counting: Successful builds send `/render/<tag>` events; WAV download clicks send one
-`download/<release-slug>` event through GoatCounter's scriptless `/count` endpoint (`p` is the event
-path and `e=true` marks an event). The event name is
-the only application data sent: no profile, fingerprint, custom/default marker,
-page URL, referrer or personal data. The request necessarily exposes the browser
-and IP address to the service. “Do not track” is respected. Guide downloads are not counted. Both event types use the same tested transport. Custom and default downloads share one event per version because
-GoatCounter has no separate event properties that preserve that count page.
-See the [GoatCounter endpoint parameters](https://www.goatcounter.com/help/pixel).
+```sh
+git clone --branch drizzlet https://github.com/insolentconstruct/eurorack.git firmware
+git -C firmware submodule update --init stmlib
+for t in manifest profile scales scales_firmware event_costs downloads help layout readiness costs; do node test/$t.js; done
+```
 
-The owner must enable **Allow adding visitor counts** in GoatCounter settings.
-After the first pointer or keyboard interaction, the page reads `/counter/<encoded-event-name>.json` for each release and adds GitHub release asset
-`download_count` values from api.github.com for names ending `-wav.zip`.
-Named release download totals appear first, in bold. The secondary site visitor
-count uses GoatCounter’s public `/counter/TOTAL.json` endpoint; it is not the
-number of successful builds. Both services receive the browser and IP address. Counts may merge repeat
-downloads by the same visitor on the same day. Download totals of at least 10 are shown;
-otherwise the manifest date is shown, or the line is hidden if no date exists.
-Visitor counts are hidden when unavailable. Either download source can fail independently; results (including failures) are cached
-in sessionStorage for the browser tab session, with an in-memory fallback.
-Requests time out after five seconds and never delay or block building. Tests use only stubbed fetches; the Docker test container runs
-without network access. See [public counter setup](https://www.goatcounter.com/help/visitor-counter).
+`test/browser.mjs` and `test/scales_browser.mjs` run the page in Chromium, Firefox and WebKit (CI runs it in the Playwright 1.48.2 image). It needs Playwright with its browsers and the page served locally: `SITE=static BASE=http://localhost:8000/ node test/browser.mjs` (and the same command with `test/scales_browser.mjs`). The scale browser test uses a synthetic release list and never builds or offers a synthetic firmware image. `test/scales_firmware.js` checks the V2 codec against the current firmware parser; it needs firmware with scale-bank support.
 
-To try the page locally, serve `static/` over HTTP (`python3 -m http.server -d beads/build/hygrostat/static`); the hash check needs a secure context, which `localhost` is.
+`BASE=http://localhost:8000/ node test/security_browser.mjs` checks actual CSP blocking and referrer behaviour in all three engines without re-encoding a WAV.
 
-Browser modules, worker dependencies and the manifest URL carry `?v=` versions
-bound to the manifest and module contents; image URLs carry their SHA-256.
-After changing browser code or manifest data, run
-`node beads/build/hygrostat/tools/version-assets.js`. The readiness suite verifies every
-referenced browser asset has the matching version or hash.
+After changing anything in `static/js/` or `static/manifest.json`, run `node tools/version-assets.js`.
+
+## Adding a release
+
+1. After the firmware is tagged, copy the tag's `app.bin` to `static/images/<tag>/` and delete the development image.
+2. Replace the development entry in `static/manifest.json` with the release: tag, name, date, hashes, profile release ID, catalogue and CPU measurements from the tagged firmware. Remove `development` and `source_commit`. Update `static/js/release_guides.js` if the release guides changed.
+3. Run `node tools/version-assets.js` and the tests.
+4. Merge to `main`. CI tests, builds and deploys the page.
+
+If a deploy goes wrong, see [ROLLBACK.md](ROLLBACK.md). Design notes for maintainers are in [docs/DESIGN.md](docs/DESIGN.md).
+
+## Licence
+
+MIT, see [LICENSE](LICENSE). `static/js/glibc_sincos.js` is ported from the GNU C Library (LGPL 2.1 or later, `static/js/COPYING.LIB`). The QPSK encoder follows Mutable Instruments' `stm_audio_bootloader`.
