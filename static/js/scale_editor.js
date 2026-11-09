@@ -22,7 +22,7 @@
 //
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
-import { effectiveScales, importScala, MAX_SCALES, PULSE_NAMES, validateScales } from './scales.js?v=a624ef0144a27b33';
+import { effectiveScales, importScala, MAX_SCALES, PULSE_NAMES, validateScales } from './scales.js?v=9f6ef1591a2e16d3';
 
 const node = (tag, text = '') => {
   const value = document.createElement(tag);

@@ -8,15 +8,15 @@
 // check the release's app image against the manifest, encode the update .wav
 // in the browser, check the .wav, offer it for download.
 
-import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, cpuUsage, featureDelta, modes, normalise } from './profile.js?v=a624ef0144a27b33';
-import { effectiveScales, validateScales } from './scales.js?v=a624ef0144a27b33';
-import { scaleEditor } from './scale_editor.js?v=a624ef0144a27b33';
-import { guide } from './guide.js?v=a624ef0144a27b33';
-import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=a624ef0144a27b33';
-import { featureHelp, actionHelp } from './help.js?v=a624ef0144a27b33';
+import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, cpuUsage, featureDelta, modes, normalise } from './profile.js?v=9f6ef1591a2e16d3';
+import { effectiveScales, validateScales } from './scales.js?v=9f6ef1591a2e16d3';
+import { scaleEditor } from './scale_editor.js?v=9f6ef1591a2e16d3';
+import { guide } from './guide.js?v=9f6ef1591a2e16d3';
+import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=9f6ef1591a2e16d3';
+import { featureHelp, actionHelp } from './help.js?v=9f6ef1591a2e16d3';
 import { KNOBS, KINDS, GROUPS, ACTION_DOES, placeName, pageOf, entryOf, occupant, places, valueLabel, stateLabel,
-  summary, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, fits } from './layout.js?v=a624ef0144a27b33';
-import { drawPanel, highlight } from './panel.js?v=a624ef0144a27b33';
+  summary, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, fits } from './layout.js?v=9f6ef1591a2e16d3';
+import { drawPanel, highlight } from './panel.js?v=9f6ef1591a2e16d3';
 
 const $ = (id) => document.getElementById(id);
 const cap = (text) => text.replace(/^./, (c) => c.toUpperCase());
@@ -39,7 +39,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=a624ef0144a27b33', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=9f6ef1591a2e16d3', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.ready) return;
       if (data.progress !== undefined) {
@@ -141,7 +141,7 @@ async function build(release, app) {
 
 function testStatus(release) {
   if (release.development) {
-    return ['Development build, not a release: the final image is not yet measured on a module, so CPU figures are provisional.'];
+    return ['Development build, not a release: CPU figures are provisional, and changed settings are estimates until measured on a module.'];
   }
   return [`${release.name}, released ${release.date}. Testing: see the `,
     el('a', { href: `https://github.com/insolentconstruct/eurorack/releases/tag/${encodeURIComponent(release.tag)}`, text: 'release notes' }), '.'];
@@ -802,9 +802,9 @@ async function refresh() {
     cpu.percent === null ? 'Some CPU costs unmeasured. Build allowed.' : 'Within CPU limit. Build allowed.';
   if ($('cpu-status').textContent !== announcement) $('cpu-status').textContent = announcement;
   $('cpu-provenance').textContent = `Contributing settings: ${cpu.names}. ` +
-      Object.entries(release.cpu.baselines).map(([engine, baseline]) => ({ engine, baseline })).map((e) => `${release.cpu.estimate_reference ? 'Historical ' : ''}${e.engine} baseline ${e.baseline.percent}% (${e.baseline.kind}, provisional): ${e.baseline.provenance.replace(/[.]+$/, '')}.`).join(' ') +
+      Object.entries(release.cpu.baselines).map(([engine, baseline]) => ({ engine, baseline })).map((e) => `${e.engine} baseline ${e.baseline.percent}% (${e.baseline.kind}, provisional): ${e.baseline.provenance.replace(/[.]+$/, '')}.`).join(' ') +
       (release.cpu.estimate_reference ? ' This candidate default is estimated, not measured.' : '') +
-      ' Estimates sum per-engine costs measured on a module-calibrated development board. Final-image measurements are pending.';
+      ' Estimates sum per-engine costs measured on a module-calibrated development board. Setting combinations are not yet measured on the module.';
   $('build').disabled = $('local').disabled = busy || cpu.blocked;
   const changed = changes(entries, templates(release.profile)[preset] || defaults(release.profile), release.profile).length + Number(scales !== null);
   $('changes').textContent = changed ? `${changed} change${changed === 1 ? '' : 's'} from ${preset}` : `${preset}, unchanged`;
@@ -841,7 +841,7 @@ async function checkCapabilities() {
   }
   // A constructor alone does not establish support for module workers.
   await new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=a624ef0144a27b33', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=9f6ef1591a2e16d3', { type: 'module' });
     const done = (error) => {
       clearTimeout(timer); worker.terminate();
       error ? reject(error) : resolve();
@@ -860,7 +860,7 @@ async function init() {
   }
   $('compatibility').hidden = true;
   try {
-    const response = await fetch('manifest.json?v=a624ef0144a27b33', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=9f6ef1591a2e16d3', { cache: 'no-cache' });
     manifest = await response.json();
   } catch {
     status('Could not load the release list.', 'error');

@@ -70,7 +70,7 @@ export function importCosts(manifest) {
   release.cpu.costs = { source: costSource, firmware: costTable.firmware,
     table: 'costs/cost-table.json', table_sha256: tableSha256 };
   if (additions.length) release.cpu.costs.inspected_features = additions.map((f) => ({ id: f.id, name: f.name, source: 'code inspection' }));
-  release.cpu.release_note = 'Historical default-profile measurements include Clouds-style reverb. Per-feature costs were measured on a module-calibrated development board; estimates sum each engine’s costs. Measured module combinations take precedence. The final image still needs measurement. The default profile is always allowed.' + (additions.length ? ' Event-only additions are classified separately by code inspection; they have no per-block cost.' : '');
+  release.cpu.release_note = 'Default-profile baselines include Clouds-style reverb. Per-feature costs were measured on a module-calibrated development board; estimates sum each engine’s costs. Measured module combinations take precedence. Setting combinations still need module measurement. The default profile is always allowed.' + (additions.length ? ' Event-only additions are classified separately by code inspection; they have no per-block cost.' : '');
   return manifest;
 }
 

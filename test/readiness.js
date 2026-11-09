@@ -77,8 +77,11 @@ for (const [i, definition] of definitions.entries()) {
 }
 assert.deepEqual(profile.features.find((f) => f.id === 21).values, ['Off', 'Ignore', 'Sync', 'Add']);
 assert.deepEqual(profile.features.find((f) => f.id === 18).values, ['100%', '66%', '33%']);
-assert.equal(release.cpu.baselines.synth.percent, 87.2);
-assert(release.cpu.baselines.synth.provenance.includes('86.1–87.2%'));
+assert.equal(release.cpu.baselines.synth.percent, 83.7);
+assert.equal(release.cpu.baselines.synth.kind, 'measured');
+assert(release.cpu.baselines.synth.provenance.includes('SIZE at 97%'));
+assert.equal(release.cpu.baselines.granular.percent, 83);
+assert.equal(release.cpu.baselines.granular.kind, 'partly measured');
 const entries = defaults(profile);
 assert.equal(entries.length, 16);
 const app = readFileSync(new URL(release.app, root));
@@ -88,10 +91,10 @@ const candidateUsage = cpuUsage(entries, release);
 assert.deepEqual(release.cpu.combinations, [], 'no new module measurements are published for this candidate');
 assert.equal(candidateUsage.kind, 'estimated');
 assert(candidateUsage.engines.every((e) => !e.measured));
-assert.deepEqual(candidateUsage.engines.map((e) => e.percent), [87.7, 83.7]);
+assert.deepEqual(candidateUsage.engines.map((e) => e.percent), [84.2, 83.7]);
 const historicalUsage = cpuUsage(release.cpu.estimate_reference.profile, release);
 assert.equal(historicalUsage.kind, 'estimated');
-assert.deepEqual(historicalUsage.engines.map((e) => e.percent), [87.2, 83]);
+assert.deepEqual(historicalUsage.engines.map((e) => e.percent), [83.7, 83]);
 assert(historicalUsage.engines.every((e) => !e.measured));
 const forgedEntries = entries.map((e) => e.slice());
 forgedEntries.default_measured = true;
@@ -122,6 +125,7 @@ const measuredCosts = (r) => {
   delete fixture.cpu.estimate_reference;
   delete fixture.cpu.default_measured;
   delete fixture.cpu.estimated_default_delta;
+  fixture.cpu.baselines.synth.percent = 87.2; // Former synth baseline these thresholds were set against.
   const costs = JSON.parse(readFileSync(new URL('fixtures/synthetic-costs.json', import.meta.url)));
   for (const f of fixture.profile.features) f.cpu = costs[f.id];
   return fixture;

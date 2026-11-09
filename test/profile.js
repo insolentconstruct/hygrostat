@@ -187,8 +187,8 @@ const withMeasuredCosts = (r) => {
     assert.equal(usage.kind, 'partly measured'); assert(!usage.blocked);
     const historical = structuredClone(r); historical.cpu.baselines.synth.percent = 85.8;
     assert.equal(cpuUsage(defaults(historical.profile), historical).engines.find((e) => e.engine === 'synth').percent, 85.8);
-    assert.equal(usage.engines.find((e) => e.engine === 'synth').percent, 87.2);
-    assert.match(r.cpu.baselines.synth.provenance, /measured on the module, October 2026/);
+    assert.equal(usage.engines.find((e) => e.engine === 'synth').percent, 83.7);
+    assert.match(r.cpu.baselines.synth.provenance, /measured on the module with this release's code/);
     assert.match(r.cpu.baselines.synth.provenance, /already includes Clouds-style reverb/);
     const highDefault = structuredClone(r);
     highDefault.cpu.baselines.synth.percent = 99;
@@ -201,7 +201,8 @@ const withMeasuredCosts = (r) => {
     const heavy = defaults(r.profile).map((e) => e.slice());
     heavy.find((e) => e[0] === 7)[2] = 1;
     heavy.find((e) => e[0] === 12)[2] = 255;
-    assert(cpuUsage(heavy, r).engines.find((e) => e.engine === 'synth').percent > 85.8,
+    assert(cpuUsage(heavy, r).engines.find((e) => e.engine === 'synth').percent >
+        usage.engines.find((e) => e.engine === 'synth').percent,
         'real manifest heavy custom combination costs more than the default');
     const nearCeiling = structuredClone(r); nearCeiling.cpu.baselines.synth.percent = 91;
     assert(cpuUsage(heavy, nearCeiling).blocked, 'heavy custom combination blocks near the ceiling');
@@ -230,6 +231,7 @@ const withMeasuredCosts = (r) => {
   }
   assert.deepEqual(cpuUsage(chosen, release).unknown, ['Reverb character']);
   const partialCosts = structuredClone(release);
+  partialCosts.cpu.baselines.synth.percent = 87.2; // Former synth baseline this block threshold was set against.
   partialCosts.profile.features.find((f) => f.id === 2).cpu = {
     kind: 'measured', engines: { synth: { off: 0, fixed: [0, 6], adjustable: [0, 6] },
       granular: { off: 0, fixed: [0, 6], adjustable: [0, 6] } } };

@@ -1551,19 +1551,19 @@
         "warning": 91,
         "margin": 0,
         "combinations": [],
-        "release_note": "Historical default-profile measurements include Clouds-style reverb. Per-feature costs were measured on a module-calibrated development board; estimates sum each engine’s costs. Measured module combinations take precedence. The final image still needs measurement. The default profile is always allowed. Event-only additions are classified separately by code inspection; they have no per-block cost.",
+        "release_note": "Default-profile baselines include Clouds-style reverb. Per-feature costs were measured on a module-calibrated development board; estimates sum each engine’s costs. Measured module combinations take precedence. Setting combinations still need module measurement. The default profile is always allowed. Event-only additions are classified separately by code inspection; they have no per-block cost.",
         "baselines": {
           "synth": {
-            "percent": 87.2,
-            "kind": "partly measured",
+            "percent": 83.7,
+            "kind": "measured",
             "provisional": true,
-            "provenance": "Default-profile worst case: synth with Clouds-style reverb, width 255 and Raag Shri, measured on the module, October 2026 (86.1–87.2%). The 87.2% baseline already includes Clouds-style reverb. These builds predate profiles; the final image still needs measurement."
+            "provenance": "Default-profile worst case: synth with Clouds-style reverb, width 255, Raag Shri and SIZE at 97%, measured on the module with this release's code (timing build), November 2026. The 83.7% baseline already includes Clouds-style reverb."
           },
           "granular": {
             "percent": 83,
             "kind": "partly measured",
             "provisional": true,
-            "provenance": "Granular measured 83.0% in the 2026-10-27/28 sessions. Final profile image measurement is pending."
+            "provenance": "Granular with Clouds-style reverb, diffusion, width 255, a pitch scale and Evolving feedback measured 83.0% on the module in October 2026, before profiles. With this release's code, heavy granular at stock settings measured 79.3%; the combined settings are not yet remeasured."
           }
         },
         "costs": {
@@ -1697,7 +1697,7 @@
               2
             ]
           ],
-          "note": "Historical estimator default reference. The retained module baselines predate profiles; their original measurement scope remains in each baseline provenance."
+          "note": "Historical estimator default reference. Each baseline provenance gives its measurement scope."
         },
         "estimated_default_delta": {
           "synth": 0.492,
@@ -1712,5 +1712,5 @@
       "binary_source_commit": "9b4546e156bc6917427ce74682169961f365e2f5"
     }
   ],
-  "asset_version": "a624ef0144a27b33"
+  "asset_version": "9f6ef1591a2e16d3"
 }
