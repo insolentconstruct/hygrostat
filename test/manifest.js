@@ -14,7 +14,7 @@ import { createHash } from 'node:crypto';
 import { firmwareShow, firmwareRepo } from './firmware.js';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { defaults, encodeProfile, equal, validateReleaseId } from '../static/js/profile.js';
+import { decodeProfile, defaults, encodeProfile, equal, validateProfileFormat } from '../static/js/profile.js';
 import { decode } from '../static/js/decoder.js';
 import { encode, MAX_APP_SIZE } from '../static/js/encoder.js';
 
@@ -27,7 +27,7 @@ const check = (ok, text) => {
   failures += !ok;
 };
 
-check(manifest.format === 2 && manifest.releases.length > 0, 'manifest format 2 with releases');
+check(manifest.format === 3 && manifest.releases.length > 0, 'manifest format 3 with releases');
 for (const release of manifest.releases) {
   const app = readFileSync(new URL(release.app, root));
   check(app.length === release.app_size && app.length <= MAX_APP_SIZE,
@@ -40,16 +40,11 @@ for (const release of manifest.releases) {
   check(hash(wav) === release.wav_sha256, `${release.tag}: .wav byte-identical`);
   const ref = release.development ? release.source_commit : `refs/tags/${release.tag}`;
   const header = firmwareShow(ref, 'beads/profile.h', { encoding: 'utf8' });
-  try { validateReleaseId(release, header); check(true, `${release.tag}: firmware and dated release ID`); }
-  catch { check(false, `${release.tag}: firmware and dated release ID`); }
+  try { validateProfileFormat(release, header); check(true, `${release.tag}: firmware profile format`); }
+  catch { check(false, `${release.tag}: firmware profile format`); }
   if (release.development) {
     check(/^drizzlet-dev-[0-9a-f]+$/.test(release.tag) && release.app.includes('-dev-') &&
         /unreleased/i.test(release.name), `${release.tag}: explicitly unreleased development entry`);
-    // Development builds have no release tag. Bind their format to the
-    // recorded source commit; the independently encoded WAV pins the build.
-    const source = firmwareShow(release.source_commit, 'beads/profile.h', { encoding: 'utf8' });
-    check(source.includes(`kProfileReleaseId = 0x${release.profile.release_id.toString(16)}`),
-        `${release.tag}: profile release id pinned at source commit`);
     if (release.binary_source_commit) {
       const changed = execFileSync('git', ['-C', firmwareRepo, 'diff', '--no-renames', '--name-only',
         release.binary_source_commit, release.source_commit], { encoding: 'utf8' }).trim().split('\n').filter(Boolean);
@@ -77,8 +72,13 @@ for (const release of manifest.releases) {
     const source = firmwareShow(reference.source_commit, 'beads/profile.cc', { encoding: 'utf8' });
     const block = source.split('const volatile uint8_t kProfileBlock[kProfileSize]')[1].split('};')[0];
     const bytes = Uint8Array.from([...block.matchAll(/0x([0-9a-f]{2})/g)], (m) => parseInt(m[1], 16));
-    check(hash(bytes) === reference.profile_sha256 &&
-        equal(encodeProfile(reference.profile, release.profile), bytes),
+    // Decode the original producer bytes under their own header word; never re-encode history.
+    const header = firmwareShow(reference.source_commit, 'beads/profile.h', { encoding: 'utf8' });
+    const word = Number(/\bkProfile(?:ReleaseId|Format)\s*=\s*(0x[0-9a-f]+|\d+)\s*;/i.exec(header)?.[1]);
+    let decoded = null;
+    try { decoded = decodeProfile(bytes, { ...release.profile, format: word }); } catch { /* reported below */ }
+    check(hash(bytes) === reference.profile_sha256 && new DataView(bytes.buffer).getUint32(8, true) === word &&
+        JSON.stringify(decoded) === JSON.stringify(reference.profile),
         `${release.tag}: historical estimator defaults match their original firmware source`);
   }
 }

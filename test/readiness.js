@@ -7,7 +7,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync } from 'node:fs';
 import { firmwareShow } from './firmware.js';
 import { defaults, encodeProfile, equal, cpuUsage, profileKey, modes,
-  releaseIdForTag, validateReleaseId, initialEntry } from '../static/js/profile.js';
+  validateProfileFormat, initialEntry } from '../static/js/profile.js';
 import { importedCost, tableBytes, tableSha256, importCosts } from '../tools/import-costs.js';
 import './costs.js';
 import './help.js';
@@ -190,12 +190,20 @@ for (const mobile of [false, true]) {
   const brightness = guide([[18, 2, 2, 1, 0, 0]], release, 'test', mobile);
   for (const label of ['100%', '66%', '33%']) assert(brightness.includes(`>${label}</text>`));
 }
-assert.equal(releaseIdForTag('drizzlet-2026.11.05'), 0x20261105);
-const dated = { tag: 'drizzlet-2026.11.05', profile: { release_id: 0x20261105 } };
-validateReleaseId(dated, 'const uint32_t kProfileReleaseId = 0x20261105;');
-assert.throws(() => validateReleaseId(dated, 'kProfileReleaseId = 0xa51e8760;'));
-assert.throws(() => validateReleaseId({ ...dated, profile: { release_id: 0xa51e8760 } }, 'kProfileReleaseId = 0xa51e8760;'));
-validateReleaseId(release, source('beads/profile.h'));
+// The profile format comes from the firmware alone; any tag date works.
+assert.equal(profile.format, 1);
+validateProfileFormat(release, source('beads/profile.h'));
+const retagged = { ...release, tag: 'drizzlet-2026.11.09' };
+validateProfileFormat(retagged, source('beads/profile.h'));
+assert(equal(encodeProfile(defaults(retagged.profile), retagged.profile), encodeProfile(defaults(profile), profile)));
+assert.throws(() => validateProfileFormat(release, 'const uint32_t kProfileReleaseId = 0x20261101;'));
+assert.throws(() => validateProfileFormat(release, 'const uint32_t kProfileFormat = 2;'));
+for (const format of [0x20261101, undefined, 0, 1.5, 2 ** 32]) {
+  assert.throws(() => validateProfileFormat({ ...release, profile: { ...profile, format } }, 'const uint32_t kProfileFormat = 1;'));
+}
+for (const format of [undefined, 0, 2 ** 32]) {
+  assert.throws(() => encodeProfile(defaults(profile), { ...profile, format }), /Unsupported profile format/);
+}
 // Follow every static dependency, including worker and nested module imports.
 const version = manifest.asset_version;
 assert.match(version, /^[a-f0-9]{16}$/);
@@ -219,4 +227,4 @@ assert(workflow.includes('  pull_request:'));
 assert(workflow.includes("github.event_name != 'pull_request' && github.ref == 'refs/heads/main'"));
 const html = read('index.html');
 for (const text of ['How to install', 'storage-recovery-2026.10.27', ':focus-visible', 'min-height: 44px', 'Made by Insolent Construct']) assert(html.includes(text));
-console.log(`PASS readiness catalogue, default bytes, partial measurements, synthetic CPU thresholds and traced per-engine shipped costs (${cpuUsage(warning, measuredCosts(release)).percent}/${cpuUsage(heavy, measuredCosts(release)).percent}), guides, release IDs, assets and PR CI`);
+console.log(`PASS readiness catalogue, default bytes, partial measurements, synthetic CPU thresholds and traced per-engine shipped costs (${cpuUsage(warning, measuredCosts(release)).percent}/${cpuUsage(heavy, measuredCosts(release)).percent}), guides, profile format, assets and PR CI`);

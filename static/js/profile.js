@@ -22,7 +22,7 @@
 //
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
-import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=8cb01926b9f9d7cd';
+import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=04bcbfc0777de166';
 
 // Six-byte entries are kept in wire order: id, state, value, page, amount, action.
 export function crc32(bytes) {
@@ -70,10 +70,13 @@ function validatePitchDefault(entries, scales) {
   }
 }
 
+const validFormat = (format) => Number.isInteger(format) && format > 0 && format <= 0xffffffff;
+
 export function encodeProfile(entries, profile, scales = null) {
   validate(entries, profile);
   const version = profile.version || 1;
-  if (![1, 2].includes(version) || profile.size !== (version === 2 ? 4096 : 512)) throw new Error('Unsupported profile format.');
+  if (![1, 2].includes(version) || profile.size !== (version === 2 ? 4096 : 512) ||
+      !validFormat(profile.format)) throw new Error('Unsupported profile format.');
   if (version === 1 && scales !== null) throw new Error('This release cannot customize scales.');
   const bank = validateScales(scales);
   validatePitchDefault(entries, bank);
@@ -84,7 +87,7 @@ export function encodeProfile(entries, profile, scales = null) {
   b[4] = version;
   b[5] = entries.length;
   v.setUint16(6, payload, true);
-  v.setUint32(8, profile.release_id, true);
+  v.setUint32(8, profile.format, true);
   v.setUint32(12, 0, true);
   if (version === 2) { b[12] = bank === null ? 0 : 1; b[13] = bank?.length || 0; }
   entries.forEach((e, i) => b.set(e, 16 + i * 6));
@@ -113,7 +116,7 @@ export function decodeSettings(b, profile) {
   if (count > 82 || scaleCount > 14 || custom > 1 || (!custom && scaleCount) ||
       end + 4 > limit || v.getUint16(6, true) !== payload ||
       v.getUint32(0, true) !== 0x46505a44 || !compatible ||
-      v.getUint32(8, true) !== profile.release_id || b[14] || b[15] ||
+      !validFormat(profile.format) || v.getUint32(8, true) !== profile.format || b[14] || b[15] ||
       (version === 1 && v.getUint32(12, true) !== 0) ||
       v.getUint32(end, true) !== crc32(b.subarray(0, end))) {
     throw new Error('Invalid profile header or checksum.');
@@ -166,7 +169,7 @@ export function unshare(text, releases) {
   const block = Uint8Array.from(hex.match(/../g), (v) => parseInt(v, 16));
   const header = new DataView(block.buffer);
   if (header.getUint32(0, true) === 0x46505a44 &&
-      (block[4] !== release.profile.version || header.getUint32(8, true) !== release.profile.release_id)) {
+      (block[4] !== release.profile.version || header.getUint32(8, true) !== release.profile.format)) {
     throw new Error('Share link version mismatch. Use its original page or start again.');
   }
   try {
@@ -286,21 +289,10 @@ export const modes = (feature) => (feature.states || ['Off', 'Fixed', 'Adjustabl
 export const initialEntry = (feature) => feature.default_in_block === false ?
   feature.default.slice() : [feature.id, 0, 0, 0, 0, 0];
 
-// Release tags encode a BCD-like hexadecimal calendar date, not epoch time.
-export function releaseIdForTag(tag) {
-  const match = /^drizzlet-(\d{4})\.(\d{2})\.(\d{2})$/.exec(tag);
-  if (!match) throw new Error('Expected a dated release tag.');
-  const [, year, month, day] = match;
-  const date = `${year}-${month}-${day}`;
-  if (new Date(`${date}T00:00:00Z`).toISOString().slice(0, 10) !== date) {
-    throw new Error('Invalid release date.');
-  }
-  return parseInt(year + month + day, 16) >>> 0;
-}
-export function validateReleaseId(release, source) {
-  const match = /kProfileReleaseId\s*=\s*(0x[0-9a-f]+)/i.exec(source);
-  if (!match || Number(match[1]) !== release.profile.release_id ||
-      (!release.development && release.profile.release_id !== releaseIdForTag(release.tag))) {
-    throw new Error('Release ID must match the firmware and release tag date.');
+// Bytes 8-11 carry the firmware's assigned kProfileFormat, never a date.
+export function validateProfileFormat(release, source) {
+  const match = /\bkProfileFormat\s*=\s*(0x[0-9a-f]+|\d+)\s*;/i.exec(source);
+  if (!match || Number(match[1]) !== release.profile.format) {
+    throw new Error('Profile format must match the firmware.');
   }
 }

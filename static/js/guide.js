@@ -23,9 +23,9 @@
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
 // Knob cards port options_guide.py: 270-degree arcs and the same LED ladder.
-import { effectiveScales, PULSE_NAMES } from './scales.js?v=8cb01926b9f9d7cd';
-import { defaults, equal, encodeProfile } from './profile.js?v=8cb01926b9f9d7cd';
-import { RELEASE_GUIDES, RELEASE_GUIDE_ID } from './release_guides.js?v=8cb01926b9f9d7cd';
+import { effectiveScales, PULSE_NAMES } from './scales.js?v=04bcbfc0777de166';
+import { defaults, equal, encodeProfile } from './profile.js?v=04bcbfc0777de166';
+import { RELEASE_GUIDES, RELEASE_GUIDE_TAG } from './release_guides.js?v=04bcbfc0777de166';
 
 const KNOBS = ['FEEDBACK', 'DRY/WET', 'REVERB'];
 export const ACTIONS = ['None', '[A]+SEED', '[A]+FREEZE', '[A] hold'];
@@ -120,7 +120,7 @@ class Drawing {
 }
 
 export function guide(entries, release, fp, mobile = false, scales = null) {
-  if (scales === null && release.profile.release_id === RELEASE_GUIDE_ID && equal(encodeProfile(entries, release.profile, scales),
+  if (scales === null && release.tag === RELEASE_GUIDE_TAG && equal(encodeProfile(entries, release.profile, scales),
       encodeProfile(defaults(release.profile), release.profile))) {
     // Normalisation removes this added fingerprint text; the remaining SVG
     // is byte-identical to options_guide.py's release drawing.

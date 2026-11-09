@@ -117,6 +117,11 @@ for (const count of [82, 83]) {
   new DataView(b.buffer).setUint16(6, 6 * count, true);
   reject(count === 82 ? reseal(b) : b);
 }
+// Bytes 8-11 carry format 1; the former date ID is refused despite a valid CRC.
+assert.equal(new DataView(block.buffer).getUint32(8, true), 1);
+const dated = block.slice(); new DataView(dated.buffer).setUint32(8, 0x20261101, true); reject(reseal(dated));
+assert.deepEqual(decodeProfile(dated, { ...profile, format: 0x20261101 }), entries, 'only the header word differs');
+assert.throws(() => unshare(share(release, dated), manifest.releases), /version mismatch/);
 for (const chosen of Object.values(templates(profile))) encodeProfile(chosen, profile);
 const fp = await fingerprint(block);
 assert.equal(fp.length, 8);
@@ -322,6 +327,9 @@ for (const mobile of [false, true]) {
   assert(fingerprintY > height - 30 && fingerprintY < height, 'fingerprint stays in the clear footer');
   assert(text(guide([[1, 2, 3, 0, 0, 0]], release, fp, mobile)).join(' ').includes('set on the page: not placed'));
   if (mobile) assert(custom.includes('scale(0.85)'));
+  // Release artwork follows the tag, not the profile format, which can stay 1.
+  const later = guide(entries, { ...release, tag: 'drizzlet-2026.11.09' }, fp, mobile);
+  assert(!later.includes('data-profile-fingerprint') && later.includes('drizzlet-2026.11.09'));
   assert(!guide([], release, fp, mobile).includes('PAGE 1'));
 }
 // Differential coverage: byte mutations of every entry field, all headers,

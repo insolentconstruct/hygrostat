@@ -25,10 +25,10 @@ The page checks the pinned base `app.bin` against its SHA-256 and patches only t
 - Placing a feature on a taken destination offers Swap (the occupant takes the feature's old place) or Replace (the occupant leaves). A feature taken off its last control keeps its value as Fixed, or goes Off at value 0; a Fixed gesture-only setting goes Off without its gesture.
 - `static/js/panel.js` draws the whole front panel to scale from the guide's geometry (`panel_geometry.tsv` in the firmware) and highlights the selected destination's controls.
 
-## Manifest (`static/manifest.json`, format 2)
+## Manifest (`static/manifest.json`, format 3)
 
-- Each release pins its app image and WAV by SHA-256 and carries its profile offset, size, version, release ID and feature table.
-- `release_id` is the tag date as hex YYYYMMDD (2026-11-05 is `0x20261105`) and must equal the tag's `kProfileReleaseId`. Development entries instead pin `source_commit` and its declared `kProfileReleaseId`; they establish no release tag or module qualification.
+- Each release pins its app image and WAV by SHA-256 and carries its profile offset, size, version, format and feature table.
+- `profile.format` is the firmware's assigned `kProfileFormat`, written little endian to profile bytes 8–11 (Beta 2: 1). It changes only when existing profile bytes change meaning, so it may stay the same across releases; nothing is derived from the tag or its date. A block with another number, including the former date ID `0x20261101`, is refused even with a valid checksum, as the firmware refuses it. Development entries pin `source_commit` instead of a tag; they establish no release tag or module qualification. Format 3 replaced format 2's dated `release_id`.
 - The current feature catalogue (24 features) must match the firmware's `beads/build/profile-features.json` at the release, byte for byte. `FIRMWARE_CATALOGUE_REF` adds a check against a second firmware revision.
 - `default_in_block: false` leaves a feature out of the default profile while its default stays available in the editor. `values: null` means a full byte. `page`, `amount`, `action` and `stateless` mirror the firmware table.
 
@@ -55,7 +55,7 @@ Do not rewrite an existing custom profile's explicit slots when defaults change.
 
 ## Guides
 
-`static/js/guide.js` draws custom layouts with knob geometry ported from the firmware's `options_guide.py`. `release_guides.js` holds the release's own SVGs for the untouched default; apart from the added fingerprint element, the default guide must equal the release SVG byte for byte.
+`static/js/guide.js` draws custom layouts with knob geometry ported from the firmware's `options_guide.py`. `release_guides.js` holds the release's own SVGs for the untouched default, selected by `RELEASE_GUIDE_TAG` because the profile format can stay the same across releases; apart from the added fingerprint element, the default guide must equal the release SVG byte for byte.
 
 ## Counting
 
@@ -76,6 +76,6 @@ Hugo copies `static/` unchanged (no templates yet); CI checks `public/` equals `
 
 The accepted Beta 2 factory layout keeps Pitch scale, Random pitch steps and Attacks on page 1; page 2 is Frozen feedback, Delay mode and Reverb character; page 3 remains Processor, Synth and Synth start. Page 4 adds LED brightness and SEED latch beside Limiter, initially 100%, Off (Stock) and Stock. Users can change placements and defaults in Hygrostat. Beta 2 feedback may inform Beta 3's factory layout; existing custom profiles retain their explicit placements.
 
-The Beta 2 release entry is `drizzlet-2026.11.01`, the date the firmware's `kProfileReleaseId` (`0x20261101`) encodes; `date` is the publication date. Tests read the tag's own app/WAV pins, guides and catalogue. The synth baseline was measured on this release's timing build; the granular baseline and cost table are historical. Setting combinations remain unmeasured.
+The Beta 2 release entry is `drizzlet-2026.11.01`; the tag may be renamed at release without changing the profile bytes. `date` is the publication date. Tests read the tag's own app/WAV pins, guides and catalogue. The synth baseline was measured on this release's timing build; the granular baseline and cost table are historical. Setting combinations remain unmeasured.
 
 The release keeps the historical granular baseline and cost table unchanged. `cpu.estimate_reference` pins the former estimator defaults and their firmware source/profile hash; `default_measured: false` prevents new-default measurement claims. The table-derived Off-to-Adjustable allowances are 0.492 synth and 0.737 granular points, yielding provisional default estimates of 84.2% and 83.7%. These are estimates, not module measurements of the new default; legacy explicit profiles cancel those allowances. Runtime estimation checks the declared allowances against the same reference costs, and incomplete or contradictory reference flags refuse.
