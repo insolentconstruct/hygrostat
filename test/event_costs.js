@@ -27,7 +27,8 @@ assert.deepEqual(importedCost(intervals), importedCost({ ...intervals, name: 'Ra
 assert.throws(() => importedCost({ ...intervals, name: 'Unknown pitch mode' }));
 assert.throws(() => importedCost({ ...intervals, id: 1 }));
 const extended = structuredClone(manifest);
-const release = extended.releases.find((r) => r.development);
+const release = extended.releases[0];
+release.development = true; // The importer only updates a development entry.
 release.profile.version = 2; release.profile.size = 4096;
 release.profile.features = release.profile.features.filter((f) => f.id !== 24);
 release.profile.features.push(structuredClone(feature));
@@ -75,6 +76,7 @@ for (const change of [
   assert.throws(() => importCosts({ releases: [invalid] }));
 }
 const prior = structuredClone(manifest);
+prior.releases[0].development = true;
 prior.releases[0].profile.features = prior.releases[0].profile.features.filter((f) => f.id !== 24);
 assert.equal(importCosts(prior).releases[0].profile.features.length, 23);
 assert(!('inspected_features' in prior.releases[0].cpu.costs));

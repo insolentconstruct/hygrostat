@@ -134,7 +134,8 @@ const damagedShare = block.slice(); damagedShare[20] ^= 1;
 assert.throws(() => unshare(share(release, damagedShare), manifest.releases), /Damaged/);
 
 assert.equal(filenames(release, fp, true).wav, release.tag + '.wav');
-assert.equal(filenames(release, fp, true).desktop, 'options-guide-dev.svg');
+assert.equal(filenames(release, fp, true).desktop, 'options-guide.svg');
+assert.equal(filenames({ ...release, development: true }, fp, true).desktop, 'options-guide-dev.svg');
 assert.equal(filenames(release, fp, false).wav, `${release.tag}-${fp}.wav`);
 assert.equal(filenames({ ...release, tag: 'drizzlet-dev-a70e669' }, fp, false).mobile, `options-guide-dev-a70e669-${fp}-mobile.svg`);
 assert.equal(filenames(release, fp, false).mobile, `options-guide-${release.tag.replace(/^drizzlet-/, '')}-${fp}-mobile.svg`);

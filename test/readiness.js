@@ -156,10 +156,13 @@ assert.equal(cpuUsage(warning, measuredCosts(release)).percent, 91.1);
 assert.equal(cpuUsage(heavy, measuredCosts(release)).percent, 92.5);
 assert.equal(createHash('sha256').update(tableBytes).digest('hex'), tableSha256);
 assert.equal(release.cpu.costs.table_sha256, tableSha256);
-assert.deepEqual(importCosts(structuredClone(manifest)), manifest);
+// The importer only updates a development entry; the tagged costs must still be its exact output.
+const reimported = structuredClone(manifest); reimported.releases[0].development = true;
+importCosts(reimported); delete reimported.releases[0].development;
+assert.deepEqual(reimported, manifest);
 for (const change of [(r) => r.profile.features.shift(), (r) => { r.profile.features[0].name += ' mismatch'; },
   (r) => { r.profile.features[0].id = 99; }]) {
-  const r = structuredClone(release); change(r);
+  const r = structuredClone(release); r.development = true; change(r);
   assert.throws(() => importCosts({ releases: [r] }));
 }
 for (const candidate of [warning, heavy]) {

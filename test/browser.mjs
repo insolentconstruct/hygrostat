@@ -402,8 +402,9 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
       await mode(f, 0);
       await waitFingerprint(releaseFP);
       assert.deepEqual(await pressed(), ['Drizzlet']);
-      assert.equal(await page.getAttribute('#guide', 'download'), 'options-guide-dev.svg');
-      assert.equal(await page.getAttribute('#guide-mobile', 'download'), 'options-guide-dev-mobile.svg');
+      const dev = release.development ? '-dev' : '';
+      assert.equal(await page.getAttribute('#guide', 'download'), `options-guide${dev}.svg`);
+      assert.equal(await page.getAttribute('#guide-mobile', 'download'), `options-guide${dev}-mobile.svg`);
     }
     // Extras: switches and value menus give the same bytes as the inspector.
     for (const f of release.profile.features.filter((f) => f.default_in_block === false)) {

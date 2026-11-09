@@ -18,8 +18,10 @@ for (const release of manifest.releases) {
     assert.equal(url.pathname, `/insolentconstruct/eurorack/blob/${release.development ? release.source_commit : release.tag}/beads/build/docs/FEATURES.md`);
     assert(headings.includes(url.hash.slice(1)), `${feature.name}: real FEATURES.md section`);
     const tagged = { ...release, development: false, tag: 'drizzlet-2026.11.05' };
+    const development = { ...release, development: true, source_commit: '6729648eb582351c548cab343f6cefdf21a14c6b' };
     assert(featureHelp(feature, tagged).url.includes('/blob/drizzlet-2026.11.05/'));
-    assert(!featureHelp(feature, tagged).url.includes(release.source_commit));
+    assert(featureHelp(feature, development).url.includes(`/blob/${development.source_commit}/`));
+    assert(!featureHelp(feature, { ...tagged, source_commit: development.source_commit }).url.includes(development.source_commit));
   }
 }
 assert.match(actionHelp({ id: 13 }), /gesture switches it.*no page knob/);

@@ -61,15 +61,6 @@ for (const release of manifest.releases) {
         check(pins.split('\n').includes(line), `${release.tag}: ${file} preserves the offered image`);
       }
     }
-    if (release.cpu.estimate_reference) {
-      const reference = release.cpu.estimate_reference;
-      const source = firmwareShow(reference.source_commit, 'beads/profile.cc', { encoding: 'utf8' });
-      const block = source.split('const volatile uint8_t kProfileBlock[kProfileSize]')[1].split('};')[0];
-      const bytes = Uint8Array.from([...block.matchAll(/0x([0-9a-f]{2})/g)], (m) => parseInt(m[1], 16));
-      check(hash(bytes) === reference.profile_sha256 &&
-          equal(encodeProfile(reference.profile, release.profile), bytes),
-          `${release.tag}: historical estimator defaults match their original firmware source`);
-    }
   } else {
     const pinned = (file) => firmwareShow(`refs/tags/${release.tag}`, `beads/build/${file}`,
         { encoding: 'utf8' }).split('\n');
@@ -77,6 +68,18 @@ for (const release of manifest.releases) {
         `${release.tag}: app SHA-256 pinned at the tag`);
     check(pinned('expected-wav.sha256').includes(`${release.wav_sha256}  app.wav`),
         `${release.tag}: .wav SHA-256 pinned at the tag`);
+    const date = new Date(`${release.date}T00:00:00Z`);
+    check(/^\d{4}-\d{2}-\d{2}$/.test(release.date) && !Number.isNaN(date.getTime()) &&
+        date.toISOString().slice(0, 10) === release.date, `${release.tag}: publication date set`);
+  }
+  if (release.cpu.estimate_reference) {
+    const reference = release.cpu.estimate_reference;
+    const source = firmwareShow(reference.source_commit, 'beads/profile.cc', { encoding: 'utf8' });
+    const block = source.split('const volatile uint8_t kProfileBlock[kProfileSize]')[1].split('};')[0];
+    const bytes = Uint8Array.from([...block.matchAll(/0x([0-9a-f]{2})/g)], (m) => parseInt(m[1], 16));
+    check(hash(bytes) === reference.profile_sha256 &&
+        equal(encodeProfile(reference.profile, release.profile), bytes),
+        `${release.tag}: historical estimator defaults match their original firmware source`);
   }
 }
 let refused = false;
