@@ -4,7 +4,7 @@
     {
       "tag": "drizzlet-2026.11.01",
       "name": "Drizzlet Beta 2 “Fog”",
-      "app": "images/drizzlet-2026.11.01/app.bin?v=819c0988998dbdcf432ebe05f8666de9c49571739211e626310d70ac32de7e78",
+      "app": "images/drizzlet-2026.11.01/app.bin?v=2558dd77768fb4538ab7a574b19283f55a129ab6859e3f53fcc2fad1690b1cce",
       "profile": {
         "offset": 1024,
         "size": 4096,
@@ -1702,12 +1702,12 @@
           "granular": 0.737
         }
       },
-      "app_sha256": "819c0988998dbdcf432ebe05f8666de9c49571739211e626310d70ac32de7e78",
-      "app_size": 649076,
-      "wav_sha256": "483cd4d4b8638b72dff1c38ab26f2ca11d35b172b185c7abcb69ac464d895b59",
+      "app_sha256": "2558dd77768fb4538ab7a574b19283f55a129ab6859e3f53fcc2fad1690b1cce",
+      "app_size": 649308,
+      "wav_sha256": "28e28efa8264664d667ecba4a2e478675851367d274b472efd2d263d47fd0ec1",
       "slug": "beta-2-fog",
       "date": "YYYY-MM-DD"
     }
   ],
-  "asset_version": "04bcbfc0777de166"
+  "asset_version": "da0451ebd88dfdfa"
 }
