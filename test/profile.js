@@ -193,7 +193,7 @@ const withMeasuredCosts = (r) => {
     assert.equal(usage.kind, 'partly measured'); assert(!usage.blocked);
     const historical = structuredClone(r); historical.cpu.baselines.synth.percent = 85.8;
     assert.equal(cpuUsage(defaults(historical.profile), historical).engines.find((e) => e.engine === 'synth').percent, 85.8);
-    assert.equal(usage.engines.find((e) => e.engine === 'synth').percent, 83.7);
+    assert.equal(usage.engines.find((e) => e.engine === 'synth').percent, 83.4);
     assert.match(r.cpu.baselines.synth.provenance, /measured on the module with this release's code/);
     assert.match(r.cpu.baselines.synth.provenance, /already includes Clouds-style reverb/);
     const highDefault = structuredClone(r);

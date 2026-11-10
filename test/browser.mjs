@@ -160,7 +160,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     const releaseBlock = encodeProfile(defaults(release.profile), release.profile);
     const releaseFP = await fingerprint(releaseBlock);
     await waitFingerprint(releaseFP);
-    assert((await page.textContent('#cpu')).startsWith('84.2% estimated.'));
+    assert((await page.textContent('#cpu')).startsWith('83.9% estimated.'));
     assert((await page.textContent('#cpu')).includes('granular 83.7% estimated'));
     assert((await page.textContent('#cpu-provenance')).includes('This candidate default is estimated, not measured.'));
     if (release.profile.version === 2) {
@@ -341,7 +341,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     const stockFP = await fingerprint(encodeProfile(templates(release.profile)['Stock plus fixes'], release.profile));
     await waitFingerprint(stockFP);
     assert.equal(await page.textContent('#cpu'),
-      '83.4% estimated. synth 83.4% estimated; granular 78.6% estimated. Provisional limit 92%. Within CPU limit.');
+      '83.1% estimated. synth 83.1% estimated; granular 78.6% estimated. Provisional limit 92%. Within CPU limit.');
     assert.equal(await page.textContent('#positions'), '0 of 12 page positions used');
     const stockShare = await page.getAttribute('#share', 'href');
     const manifestURL = /\/manifest\.json(?:\?|$)/;
@@ -464,7 +464,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     await page.evaluate((hash) => { location.hash = hash; }, share(release, releaseBlock));
     await waitFingerprint(releaseFP);
     assert.deepEqual(await pressed(), ['Drizzlet']);
-    assert((await page.textContent('#cpu')).includes('84.2% estimated'));
+    assert((await page.textContent('#cpu')).includes('83.9% estimated'));
     assert.equal(await page.isDisabled('#build'), false);
     await context.unroute(manifestURL, unknownRoute);
     // Reject wrong-sized local files before reading or hashing their contents.

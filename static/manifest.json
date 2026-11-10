@@ -1552,16 +1552,16 @@
         "release_note": "Default-profile baselines include Clouds-style reverb. Per-feature costs were measured on a module-calibrated development board; estimates sum each engine’s costs. Measured module combinations take precedence. Setting combinations still need module measurement. The default profile is always allowed. Event-only additions are classified separately by code inspection; they have no per-block cost.",
         "baselines": {
           "synth": {
-            "percent": 83.7,
+            "percent": 83.4,
             "kind": "measured",
             "provisional": true,
-            "provenance": "Default-profile worst case: synth with Clouds-style reverb, width 255, Raag Shri and SIZE at 97%, measured on the module with this release's code (timing build), November 2026. The 83.7% baseline already includes Clouds-style reverb."
+            "provenance": "Default-profile worst case: synth with Clouds-style reverb, width 255, Raag Shri and SIZE at 97%, measured on the module with this release's code (timing build), November 2026: 100073 cycles of a 120000-cycle audio block (83.3942%), rounded to 83.4%. The baseline already includes Clouds-style reverb."
           },
           "granular": {
             "percent": 83,
             "kind": "partly measured",
             "provisional": true,
-            "provenance": "Granular with Clouds-style reverb, diffusion, width 255, a pitch scale and Evolving feedback measured 83.0% on the module in October 2026, before profiles. With this release's code, heavy granular at stock settings measured 79.3%; the combined settings are not yet remeasured."
+            "provenance": "Granular with Clouds-style reverb, diffusion, width 255, a pitch scale and Evolving feedback measured 83.0% on the module in October 2026, before profiles. With this release's code, heavy granular at stock settings measured 80.4%; the combined settings are not yet remeasured."
           }
         },
         "costs": {
@@ -1709,5 +1709,5 @@
       "date": "YYYY-MM-DD"
     }
   ],
-  "asset_version": "da0451ebd88dfdfa"
+  "asset_version": "99b2d3e57c5d66ae"
 }
