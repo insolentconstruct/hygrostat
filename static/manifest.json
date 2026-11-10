@@ -2,9 +2,9 @@
   "format": 3,
   "releases": [
     {
-      "tag": "drizzlet-2026.11.01",
+      "tag": "drizzlet-2026.11.09",
       "name": "Drizzlet Beta 2 “Fog”",
-      "app": "images/drizzlet-2026.11.01/app.bin?v=2558dd77768fb4538ab7a574b19283f55a129ab6859e3f53fcc2fad1690b1cce",
+      "app": "images/drizzlet-2026.11.09/app.bin?v=2558dd77768fb4538ab7a574b19283f55a129ab6859e3f53fcc2fad1690b1cce",
       "profile": {
         "offset": 1024,
         "size": 4096,
@@ -1706,8 +1706,8 @@
       "app_size": 649308,
       "wav_sha256": "28e28efa8264664d667ecba4a2e478675851367d274b472efd2d263d47fd0ec1",
       "slug": "beta-2-fog",
-      "date": "YYYY-MM-DD"
+      "date": "2026-11-10"
     }
   ],
-  "asset_version": "99b2d3e57c5d66ae"
+  "asset_version": "8355fb4d45474343"
 }

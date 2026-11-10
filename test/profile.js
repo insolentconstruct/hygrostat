@@ -328,8 +328,8 @@ for (const mobile of [false, true]) {
   assert(text(guide([[1, 2, 3, 0, 0, 0]], release, fp, mobile)).join(' ').includes('set on the page: not placed'));
   if (mobile) assert(custom.includes('scale(0.85)'));
   // Release artwork follows the tag, not the profile format, which can stay 1.
-  const later = guide(entries, { ...release, tag: 'drizzlet-2026.11.09' }, fp, mobile);
-  assert(!later.includes('data-profile-fingerprint') && later.includes('drizzlet-2026.11.09'));
+  const later = guide(entries, { ...release, tag: 'drizzlet-2099.01.01' }, fp, mobile);
+  assert(!later.includes('data-profile-fingerprint') && later.includes('drizzlet-2099.01.01'));
   assert(!guide([], release, fp, mobile).includes('PAGE 1'));
 }
 // Differential coverage: byte mutations of every entry field, all headers,

@@ -193,7 +193,7 @@ for (const mobile of [false, true]) {
 // The profile format comes from the firmware alone; any tag date works.
 assert.equal(profile.format, 1);
 validateProfileFormat(release, source('beads/profile.h'));
-const retagged = { ...release, tag: 'drizzlet-2026.11.09' };
+const retagged = { ...release, tag: 'drizzlet-2099.01.01' };
 validateProfileFormat(retagged, source('beads/profile.h'));
 assert(equal(encodeProfile(defaults(retagged.profile), retagged.profile), encodeProfile(defaults(profile), profile)));
 assert.throws(() => validateProfileFormat(release, 'const uint32_t kProfileReleaseId = 0x20261101;'));
