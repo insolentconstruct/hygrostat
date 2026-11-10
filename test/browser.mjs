@@ -8,7 +8,7 @@ import { chromium, firefox, webkit } from 'playwright';
 const base = process.env.BASE || 'http://127.0.0.1:8080/';
 const site = process.env.SITE || '/site';
 const release = JSON.parse(readFileSync(`${site}/manifest.json`)).releases[0];
-const { encodeProfile, defaults, share, fingerprint, templates, profileKey } = await import(
+const { encodeProfile, defaults, share, unshare, fingerprint, templates, profileKey, cpuUsage } = await import(
   pathToFileURL(resolve(site, 'js/profile.js')).href);
 const layout = await import(pathToFileURL(resolve(site, 'js/layout.js')).href);
 const { guide } = await import(pathToFileURL(resolve(site, 'js/guide.js')).href);
@@ -177,6 +177,10 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     };
     const waitFingerprint = (fp) => until(async () =>
       await page.textContent('#fingerprint') === fp && await page.getAttribute('#summary', 'data-fingerprint') === fp);
+    const noCPU = async () => {
+      assert.equal(await page.locator('[id^="cpu"]').count(), 0);
+      assert.equal(await page.locator('body').evaluate((b) => b.classList.contains('cpu-warning')), false);
+    };
     const pressed = () => page.locator('#presets [aria-pressed=true]').allTextContents();
     phase = 'feature library and templates';
     // Open a feature from the library, as a person would.
@@ -192,9 +196,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     const releaseBlock = encodeProfile(defaults(release.profile), release.profile);
     const releaseFP = await fingerprint(releaseBlock);
     await waitFingerprint(releaseFP);
-    assert((await page.textContent('#cpu')).startsWith('83.9% estimated.'));
-    assert((await page.textContent('#cpu')).includes('granular 83.7% estimated'));
-    assert((await page.textContent('#cpu-provenance')).includes('This candidate default is estimated, not measured.'));
+    await noCPU();
     if (release.profile.version === 2) {
       for (const character of ['\ufffe', '\uffff']) {
         const bank = factoryScales(); bank[0].name = `Scale${character} & <test>`;
@@ -346,10 +348,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     assert.equal(await page.evaluate(() => document.activeElement.id), 'cell-9');
     await page.click('#preset-drizzlet');
     await waitFingerprint(releaseFP);
-    assert.equal(await page.locator('#cpu').getAttribute('role'), null);
-    assert.equal(await page.locator('#cpu-status').getAttribute('role'), 'status');
-    assert((await page.textContent('#cpu-status')).length < 100);
-    assert((await page.textContent('#cpu-short')).includes('provisional'));
+    await noCPU();
     for (const f of release.profile.features.filter((f) => !f.values)) {
       await page.click(`#amount-${f.default[4]}`);
       const input = page.getByRole('spinbutton', { name: `${f.name}: Starting value (0–255)`, exact: true });
@@ -374,13 +373,12 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     await page.click('#preset-stock-plus-fixes');
     const stockFP = await fingerprint(encodeProfile(templates(release.profile)['Stock plus fixes'], release.profile));
     await waitFingerprint(stockFP);
-    assert.equal(await page.textContent('#cpu'),
-      '83.1% estimated. synth 83.1% estimated; granular 78.6% estimated. Provisional limit 92%. Within CPU limit.');
+    await noCPU();
     assert.equal(await page.textContent('#positions'), '0 of 12 page positions used');
     const stockShare = await page.getAttribute('#share', 'href');
     const manifestURL = /\/manifest\.json(?:\?|$)/;
     phase = 'legacy CPU fixture';
-    // The legacy no-reference path retains its measured-default bound.
+    // Historical metadata is inert even without feature costs or a reference.
     const boundedManifest = JSON.parse(readFileSync(`${site}/manifest.json`));
     delete boundedManifest.releases[0].cpu.estimate_reference;
     delete boundedManifest.releases[0].cpu.default_measured;
@@ -398,10 +396,9 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     await page.reload();
     await waitFingerprint(stockFP);
     assert.equal(boundedRequests, 1, 'reload fetched the versioned manifest fixture');
-    assert.equal(await page.textContent('#cpu'),
-      'Within measured default; savings unmeasured.');
-    assert(!/%|estimated/.test(await page.textContent('#cpu')));
-    assert(!/%/.test(await page.textContent('#cpu-short')));
+    await noCPU();
+    assert.equal(await page.isDisabled('#build'), false);
+    assert.equal(await page.isDisabled('#local'), false);
     await context.unroute(manifestURL, boundedRoute);
     phase = 'unknown CPU fixture';
     // Preserve the enabled/unknown regression using an explicit Off-default fixture.
@@ -419,12 +416,11 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     await waitFingerprint(stockFP);
     for (const f of release.profile.features) {
       await mode(f, 1);
-      await until(async () => (await page.textContent('#cpu')).startsWith('CPU not measured for:'));
-      assert((await page.textContent('#cpu')).includes(f.name));
-      assert(!/%/.test(await page.textContent('#cpu')));
+      await until(async () => unshare(await page.getAttribute('#share', 'href'), [release])
+          .entries.find((e) => e[0] === f.id)?.[1] === 1);
+      await noCPU();
       assert.equal(await page.isDisabled('#build'), false);
       assert.equal(await page.isDisabled('#local'), false);
-      assert.equal(await page.locator('body').evaluate((b) => b.classList.contains('cpu-warning')), false);
       await mode(f, 0);
       await waitFingerprint(stockFP);
       assert.equal(await page.getAttribute('#share', 'href'), stockShare, `${f.name}: exact Off bytes`);
@@ -494,7 +490,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     assert((await page.getAttribute('#guide', 'download')).includes(customFP));
     assert((await page.getAttribute('#share', 'href')).includes(share(release, customBlock)));
     assert.equal(await page.isDisabled('#build'), false);
-    assert.equal(await page.textContent('#cpu'), 'CPU not measured for: Pitch scale.');
+    await noCPU();
     // Invalid input reports its error and leaves the valid profile intact.
     await page.evaluate(() => { location.hash = 'release=missing&profile=00'; });
     await until(async () => await page.getAttribute('#status', 'class') === 'error');
@@ -502,7 +498,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     await page.evaluate((hash) => { location.hash = hash; }, share(release, releaseBlock));
     await waitFingerprint(releaseFP);
     assert.deepEqual(await pressed(), ['Drizzlet']);
-    assert((await page.textContent('#cpu')).includes('83.9% estimated'));
+    await noCPU();
     assert.equal(await page.isDisabled('#build'), false);
     await context.unroute(manifestURL, unknownRoute);
     phase = 'local image refusal';
@@ -555,24 +551,37 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
       assert((await page.textContent('#result')).includes('calibration'));
     }
     phase = 'measured CPU fixture';
-    // Exact measured combinations take precedence even with a missing feature cost.
+    // Historical thresholds never disable a valid build or local-image input.
     const measuredManifest = JSON.parse(readFileSync(`${site}/manifest.json`));
     const measured = measuredManifest.releases[0];
     measured.profile.features.find((f) => f.id === 1).cpu = null;
     measured.cpu.combinations = [{ profile: profileKey(chosen, release.profile), synth: 90.4, granular: 89 }];
     const measuredRoute = (route) => route.fulfill({ json: measuredManifest });
     await context.route(manifestURL, measuredRoute);
-    for (const [percent, blocked] of [[90.4, false], [92, false], [92.1, true]]) {
+    for (const percent of [90.4, 92, 92.1]) {
       phase = `measured CPU fixture ${percent}`;
       measured.cpu.combinations[0].synth = percent;
       await page.evaluate((hash) => history.replaceState(null, '', hash), '#' + share(release, customBlock));
       await page.reload();
       await waitFingerprint(customFP);
-      assert((await page.textContent('#cpu')).startsWith(`${percent.toFixed(1)}% measured.`));
-      assert.equal(await page.isDisabled('#build'), blocked);
-      assert.equal(await page.isDisabled('#local'), blocked);
-      assert.equal(await page.locator('body').evaluate((b) => b.classList.contains('cpu-warning')), percent >= 91);
-      assert.equal((await page.textContent('#cpu-short')).includes('build blocked'), blocked);
+      assert.equal(cpuUsage(chosen, measured).blocked, percent > 92, 'fixture exercises the historical threshold');
+      await noCPU();
+      assert.equal(await page.isDisabled('#build'), false);
+      assert.equal(await page.isDisabled('#local'), false);
+    }
+    if (name === 'chromium') {
+      phase = 'formerly blocked custom WAV';
+      // The real worker encodes and independently decodes this custom image.
+      await page.click('#build');
+      await until(async () => await page.isVisible('#result'));
+      assert.equal(await page.getAttribute('#status', 'class'), 'ok');
+      assert((await page.textContent('#status')).includes(`Profile ${customFP}; audio checked.`));
+      assert.match(await page.textContent('#wav-hash'), /^[0-9a-f]{64}$/);
+      assert.notEqual(await page.textContent('#wav-hash'), release.wav_sha256);
+      assert((await page.getAttribute('#download', 'download')).includes(customFP));
+      assert((await page.getAttribute('#guide', 'download')).includes(customFP));
+      assert((await page.getAttribute('#guide-mobile', 'download')).includes(customFP));
+      await noCPU();
     }
     phase = 'phone layout';
     // Phones: pages become tabs with three knob rows.
@@ -651,7 +660,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     assert.deepEqual(errors, []);
     await context.tracing.stop();
     traceContext = null;
-    console.log(`PASS ${name}: grid place/swap/replace/keyboard${name === 'chromium' ? '/drag and release WAV build' : ''}, phone tabs, every feature Fixed/Off exact bytes, extras, default names, unknown CPU costs, same-document share links and invalid-link recovery`);
+    console.log(`PASS ${name}: grid place/swap/replace/keyboard${name === 'chromium' ? '/drag, release and custom WAV builds' : ''}, phone tabs, every feature Fixed/Off exact bytes, extras, default names, no CPU UI or build gating, same-document share links and invalid-link recovery`);
   } catch (error) {
     console.error(`Browser diagnostics ${name}: ${JSON.stringify(diagnostics)}`);
     if (traceContext) {

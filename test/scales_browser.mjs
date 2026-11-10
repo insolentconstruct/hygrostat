@@ -43,7 +43,9 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     assert.equal(await page.locator('#extra-24-place').count(), 0, 'event-only setting has no page placement');
     await page.selectOption('#extra-24', '1');
     await until(async () => unshare(await page.getAttribute('#share', 'href'), [release]).entries.some((e) => e[0] === 24 && e[1] === 1 && e[2] === 1));
-    assert(!/not measured/.test(await page.textContent('#cpu-short')));
+    assert.equal(await page.locator('[id^="cpu"]').count(), 0);
+    assert.equal(await page.isDisabled('#build'), false);
+    assert.equal(await page.isDisabled('#local'), false);
     await page.click('#browse');
     await page.click('#lib-24');
     assert.equal(await page.textContent('#inspector-title'), 'Synth reverb tail');
@@ -69,7 +71,9 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     const edited = (await bank()).find((s) => s.name === '<Custom & scale>');
     assert(edited); assert.equal(edited.id, 10); assert.deepEqual(edited.color, [18, 52, 86]); assert.equal(edited.pulses, 2);
     assert.equal(edited.notes.length, 3);
-    assert.match(await page.textContent('#cpu-short'), /not measured/);
+    assert.equal(await page.locator('[id^="cpu"]').count(), 0);
+    assert.equal(await page.isDisabled('#build'), false);
+    assert.equal(await page.isDisabled('#local'), false);
     const shared = await page.getAttribute('#share', 'href');
     await page.reload();
     await until(async () => await page.getAttribute('#summary', 'data-fingerprint'));

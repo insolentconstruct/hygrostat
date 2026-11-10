@@ -146,11 +146,8 @@ for (let i = 0; i < 100; ++i) {
   }
 }
 const app = readFileSync(new URL('../static/js/app.js', import.meta.url), 'utf8');
-assert(app.includes('points vs default · calibrated board'));
-assert(app.includes("e.measured ? ' measured' : ' estimated'"));
-assert(app.includes("e.measured ? ' measured'"));
-assert.equal((app.match(/' measured'/g) || []).length, 1);
-assert(app.includes('No CPU cost'));
-assert(app.includes("engines.length === 1 ? ' only'"));
+assert(!app.includes('cpuUsage'), 'historical cost calculations are not consumed by the editor');
+assert(!app.includes('CPU limit exceeded'));
+assert(!app.includes('No CPU cost'));
 assert.equal(release.cpu.costs.source, costSource);
-console.log(`PASS real costs: templates, exhaustive deltas, random sums, measured precedence, labels; maxima ${maxima.join('; ')}`);
+console.log(`PASS historical costs: templates, exhaustive deltas, random sums and measured precedence; maxima ${maxima.join('; ')}`);

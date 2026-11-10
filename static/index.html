@@ -8,7 +8,7 @@
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="light dark">
 <title>Drizzlet Hygrostat</title>
-<script src="js/theme.js?v=e6154c777d49ad21"></script>
+<script src="js/theme.js?v=b6b5654a4917d7c6"></script>
 <style>
   /* Brushed panel greys, with the module's own LED colours as the only accents. */
   :root {
@@ -196,7 +196,6 @@
     background: var(--plate); text-align: left; }
   .confirm button b { display: block; }
   .inspector-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; }
-  .cost { display: block; margin-top: .85rem; }
 
   /* Extras */
   #extras { display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); gap: 0 1.5rem; }
@@ -253,10 +252,6 @@
   .buildbar .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem 1.25rem; padding-top: .6rem; padding-bottom: .6rem; }
   .facts { display: flex; flex-wrap: wrap; gap: .2rem 1.1rem; flex: 1 1 22rem; margin: 0; font-size: .92rem; }
   .facts span { white-space: nowrap; }
-  #cpu-short::before { content: ""; display: inline-block; width: .6rem; height: .6rem; margin-right: .4rem; border-radius: 50%; background: var(--led-green); }
-  body.cpu-warning #cpu-short { color: var(--warn-ink); background: var(--warn-bg); border-radius: 4px; padding: 0 .35rem; font-weight: 600; }
-  body.cpu-warning #cpu-short::before { background: var(--led-yellow); }
-  body.cpu-blocked #cpu-short::before { background: var(--led-red); }
   .bar-actions { display: flex; align-items: center; gap: 1rem; }
   #status { flex: 1 1 100%; margin: 0; min-height: 0; font-size: .92rem; }
   #status:empty { display: none; }
@@ -435,11 +430,6 @@
   <details id="advanced">
     <summary>Advanced</summary>
     <div class="inner">
-      <section aria-labelledby="cpu-title">
-        <h3 id="cpu-title">CPU</h3>
-        <p id="cpu"></p>
-        <p id="cpu-provenance" class="note"></p>
-      </section>
       <section aria-labelledby="files-title">
         <h3 id="files-title">Files</h3>
         <p>Profile <code id="fingerprint"></code></p>
@@ -478,7 +468,7 @@
 
 <div class="buildbar" id="summary">
   <div class="wrap">
-    <p class="facts"><span id="changes"></span><span id="positions"></span><span id="cpu-short"></span></p>
+    <p class="facts"><span id="changes"></span><span id="positions"></span></p>
     <div class="bar-actions">
       <a id="share" class="linkish" href="#">Share link</a>
       <button id="build" class="primary" type="button" disabled>Build firmware WAV</button>
@@ -487,7 +477,6 @@
     <p id="status" role="status" aria-live="polite"></p>
   </div>
 </div>
-<p id="cpu-status" class="sr-only" role="status" aria-atomic="true"></p>
 
 <dialog id="library" aria-labelledby="library-title">
   <div class="library-head">
@@ -500,6 +489,6 @@
   </div>
   <div id="library-body"></div>
 </dialog>
-<script type="module" src="js/app.js?v=e6154c777d49ad21"></script>
+<script type="module" src="js/app.js?v=b6b5654a4917d7c6"></script>
 </body>
 </html>

@@ -8,7 +8,7 @@ It works with Drizzlet Beta 2 and later. Firmware releases are on the [eurorack 
 
 Beta 2's factory layout is a starting point: change control placement and defaults in Hygrostat to suit your playing. Feedback on Beta 2 may inform a different factory layout in Beta 3; saved custom layouts keep their explicit placements.
 
-For firmware with scale-bank support, the scale editor chooses which scales are available and their order. Replace the factory definitions, enter notes in cents or import a Scala file, and choose each scale's LED colour and flash pattern. Off and Chromatic remain separate knob choices. Profiles support up to 14 scales with 24 notes each; shared links and downloaded guides include the bank. A custom bank's CPU cost is marked unmeasured until the relevant measurements are available.
+For firmware with scale-bank support, the scale editor chooses which scales are available and their order. Replace the factory definitions, enter notes in cents or import a Scala file, and choose each scale's LED colour and flash pattern. Off and Chromatic remain separate knob choices. Profiles support up to 14 scales with 24 notes each; shared links and downloaded guides include the bank.
 
 ## Privacy
 
@@ -57,7 +57,7 @@ After changing anything in `static/js/` or `static/manifest.json`, run `node too
 ## Adding a release
 
 1. After the firmware is tagged, copy the tag's `app.bin` to `static/images/<tag>/` and delete the development image.
-2. Replace the development entry in `static/manifest.json` with the release: tag, name, date, hashes, profile format, catalogue and CPU measurements from the tagged firmware. Remove `development` and `source_commit`. Set `RELEASE_GUIDE_TAG` in `static/js/release_guides.js` to the tag and update its drawings if the release guides changed.
+2. Replace the development entry in `static/manifest.json` with the release: tag, name, date, hashes, profile format and catalogue. Preserve historical measurement data. Remove `development` and `source_commit`. Set `RELEASE_GUIDE_TAG` in `static/js/release_guides.js` to the tag and update its drawings if the release guides changed.
 3. Run `node tools/version-assets.js` and the tests.
 4. Merge to `main`. CI tests, builds and deploys the page.
 

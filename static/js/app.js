@@ -8,15 +8,15 @@
 // check the release's app image against the manifest, encode the update .wav
 // in the browser, check the .wav, offer it for download.
 
-import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, cpuUsage, featureDelta, modes, normalise } from './profile.js?v=e6154c777d49ad21';
-import { effectiveScales, validateScales } from './scales.js?v=e6154c777d49ad21';
-import { scaleEditor } from './scale_editor.js?v=e6154c777d49ad21';
-import { guide } from './guide.js?v=e6154c777d49ad21';
-import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=e6154c777d49ad21';
-import { featureHelp, actionHelp } from './help.js?v=e6154c777d49ad21';
+import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, normalise } from './profile.js?v=b6b5654a4917d7c6';
+import { effectiveScales, validateScales } from './scales.js?v=b6b5654a4917d7c6';
+import { scaleEditor } from './scale_editor.js?v=b6b5654a4917d7c6';
+import { guide } from './guide.js?v=b6b5654a4917d7c6';
+import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=b6b5654a4917d7c6';
+import { featureHelp, actionHelp } from './help.js?v=b6b5654a4917d7c6';
 import { KNOBS, KINDS, GROUPS, ACTION_DOES, placeName, pageOf, entryOf, occupant, places, valueLabel, stateLabel,
-  summary, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, fits } from './layout.js?v=e6154c777d49ad21';
-import { drawPanel, highlight } from './panel.js?v=e6154c777d49ad21';
+  summary, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, fits } from './layout.js?v=b6b5654a4917d7c6';
+import { drawPanel, highlight } from './panel.js?v=b6b5654a4917d7c6';
 
 const $ = (id) => document.getElementById(id);
 const cap = (text) => text.replace(/^./, (c) => c.toUpperCase());
@@ -39,7 +39,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=e6154c777d49ad21', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=b6b5654a4917d7c6', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.ready) return;
       if (data.progress !== undefined) {
@@ -98,7 +98,6 @@ async function build(release, app) {
   const chosen = entries.map((e) => e.slice());
   const chosenScales = validateScales(scales);
   validate(chosen, release.profile);
-  if (cpuUsage(chosen, release, chosenScales).blocked) throw new Error('CPU limit exceeded.');
   const block = encodeProfile(chosen, release.profile, chosenScales);
   const original = app.slice(release.profile.offset, release.profile.offset + release.profile.size);
   if (!equal(original, encodeProfile(defaults(release.profile), release.profile))) {
@@ -141,7 +140,7 @@ async function build(release, app) {
 
 function testStatus(release) {
   if (release.development) {
-    return ['Development build, not a release: CPU figures are provisional, and changed settings are estimates until measured on a module.'];
+    return ['Development build, not a release.'];
   }
   return [`${release.name}, released ${release.date}. Testing: see the `,
     el('a', { href: `https://github.com/insolentconstruct/eurorack/releases/tag/${encodeURIComponent(release.tag)}`, text: 'release notes' }), '.'];
@@ -194,8 +193,6 @@ async function run(getApp) {
     busy = false;
     if (pendingShare) { pendingShare = false; loadSharedProfile(); }
     $('scale-editor').inert = $('workspace').inert = $('presets').inert = $('template-gallery').inert = false;
-    const blocked = cpuUsage(entries, selected(), scales).blocked;
-    $('build').disabled = $('local').disabled = blocked;
   }
 }
 
@@ -283,8 +280,6 @@ function renderTemplates() {
   $('template-groups').replaceChildren(...startingPoints.map(([group, items]) =>
     el('section', { class: 'template-group', 'aria-label': group }, el('h3', { text: group }),
       el('div', { class: 'template-cards' }, ...items.map(([name, about]) => {
-        const cpu = cpuUsage(candidates[name], selected());
-        const cost = cpu.percent === null ? 'CPU not measured for some settings' : `CPU ${cpu.percent.toFixed(1)}%, provisional`;
         return el('button', {
           type: 'button', class: 'template-card', id: `template-${templateId(name)}`,
           'aria-pressed': String(templatePreview === name),
@@ -294,7 +289,7 @@ function renderTemplates() {
             markTemplateChanges();
             $(`template-${templateId(name)}`).focus({ preventScroll: true });
           }
-        }, el('strong', { text: name }), el('span', { text: about }), el('small', { text: cost }));
+        }, el('strong', { text: name }), el('span', { text: about }));
       })))));
   const candidate = candidates[templatePreview];
   $('template-preview').hidden = !candidate;
@@ -558,15 +553,6 @@ function confirmChoices(id, kind, slot, done, back) {
     el('div', { class: 'options' }, ...options));
 }
 
-function costLine(f, e) {
-  const engines = ['synth', 'granular'].filter((engine) => f.cpu?.engines?.[engine]);
-  return !f.cpu ? 'CPU not measured' : f.cpu.kind === 'zero' ?
-    'No CPU cost' : 'CPU ' + engines.map((engine) => {
-      const delta = featureDelta(e, f, engine);
-      return `${engine}${engines.length === 1 ? ' only' : ''} ${delta >= 0 ? '+' : ''}${delta.toFixed(1)}`;
-    }).join(', ') + ' points vs default · calibrated board';
-}
-
 const STATE_HINTS = [
   (f) => f.id === 12 ? 'Grains go to the reverb unsoftened.' : 'As in Mutable Instruments’ firmware.',
   () => 'No control on the module.',
@@ -668,7 +654,6 @@ function renderInspector() {
       el('button', { type: 'button', class: 'quiet', id: 'choose-feature', onclick: () => openLibrary({ kind, slot }) }, 'Choose another feature'),
       el('button', { type: 'button', class: 'quiet', id: 'clear-position', onclick: () => { clear(kind, slot); focusSelection(); } }, kind === 'action' ? 'Remove gesture' : 'Empty this position')));
   }
-  body.push(el('small', { class: 'cost', text: costLine(f, e) }));
   $('inspector').replaceChildren(...body);
 }
 
@@ -786,26 +771,7 @@ async function refresh() {
   const token = ++revision;
   $('result').hidden = true;
   const release = selected();
-  const cpu = cpuUsage(entries, release, scales);
-  document.body.classList.toggle('cpu-warning', cpu.warning);
-  document.body.classList.toggle('cpu-blocked', cpu.blocked);
-  $('cpu').textContent = cpu.withinMeasuredDefault ? 'Within measured default; savings unmeasured.' : cpu.percent === null ? `CPU not measured for: ${cpu.unknown.join(', ')}.` :
-      `${cpu.percent.toFixed(1)}% ${cpu.kind}. ` +
-      cpu.engines.map((e) => `${e.engine} ${e.percent.toFixed(1)}%${e.measured ? ' measured' : ' estimated'}`).join('; ') +
-      `. Provisional limit ${release.cpu.ceiling}%. ` +
-      (cpu.blocked ? 'Build blocked.' : cpu.warning ? 'Near the CPU limit.' : 'Within CPU limit.');
-  $('cpu-short').textContent = cpu.withinMeasuredDefault ? 'CPU within the measured default' :
-    cpu.percent === null ? 'CPU not measured for some settings' :
-    `CPU ${cpu.percent.toFixed(1)}%, provisional` + (cpu.blocked ? ': over the limit, build blocked' : cpu.warning ? ': near the limit' : '');
-  const announcement = cpu.blocked ? 'CPU limit exceeded. Build blocked.' :
-    cpu.warning ? 'Near the CPU limit. Build allowed.' :
-    cpu.percent === null ? 'Some CPU costs unmeasured. Build allowed.' : 'Within CPU limit. Build allowed.';
-  if ($('cpu-status').textContent !== announcement) $('cpu-status').textContent = announcement;
-  $('cpu-provenance').textContent = `Contributing settings: ${cpu.names}. ` +
-      Object.entries(release.cpu.baselines).map(([engine, baseline]) => ({ engine, baseline })).map((e) => `${e.engine} baseline ${e.baseline.percent}% (${e.baseline.kind}, provisional): ${e.baseline.provenance.replace(/[.]+$/, '')}.`).join(' ') +
-      (release.cpu.estimate_reference ? ' This candidate default is estimated, not measured.' : '') +
-      ' Estimates sum per-engine costs measured on a module-calibrated development board. Setting combinations are not yet measured on the module.';
-  $('build').disabled = $('local').disabled = busy || cpu.blocked;
+  $('build').disabled = $('local').disabled = busy;
   const changed = changes(entries, templates(release.profile)[preset] || defaults(release.profile), release.profile).length + Number(scales !== null);
   $('changes').textContent = changed ? `${changed} change${changed === 1 ? '' : 's'} from ${preset}` : `${preset}, unchanged`;
   const used = Array.from({ length: 12 }, (_, i) => occupant(entries, 'page', i + 1)).filter(Boolean).length;
@@ -841,7 +807,7 @@ async function checkCapabilities() {
   }
   // A constructor alone does not establish support for module workers.
   await new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=e6154c777d49ad21', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=b6b5654a4917d7c6', { type: 'module' });
     const done = (error) => {
       clearTimeout(timer); worker.terminate();
       error ? reject(error) : resolve();
@@ -860,7 +826,7 @@ async function init() {
   }
   $('compatibility').hidden = true;
   try {
-    const response = await fetch('manifest.json?v=e6154c777d49ad21', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=b6b5654a4917d7c6', { cache: 'no-cache' });
     manifest = await response.json();
   } catch {
     status('Could not load the release list.', 'error');

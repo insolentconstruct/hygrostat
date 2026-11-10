@@ -14,7 +14,7 @@ The page checks the pinned base `app.bin` against its SHA-256 and patches only t
 
 ## Profiles
 
-- `static/js/profile.js`: profile parser and encoder, validation, templates, share links, fingerprints, names and CPU rules. Its metadata mirrors the firmware's `beads/profile.cc`.
+- `static/js/profile.js`: profile parser and encoder, validation, templates, share links, fingerprints and names. Its metadata mirrors the firmware's `beads/profile.cc`. Historical CPU helpers remain for reference tests; the editor does not use them.
 - `test/profile.js` compiles the firmware's own parser from the release and compares it with the page's on more than 26,000 candidate profiles.
 - The page refuses conflicts and anything the firmware would refuse. Only profile-capable releases (Beta 2 and later) are offered.
 
@@ -36,7 +36,7 @@ The page checks the pinned base `app.bin` against its SHA-256 and patches only t
 
 Tests read firmware files with `git -C $FIRMWARE_REPO show <ref>:<file>`, where `<ref>` is the manifest's `source_commit` (development) or `refs/tags/<tag>`. So the page is always checked against the release it offers, not the firmware branch's current state. CI also runs `test/golden.js` on each manifest image against its WAV hash.
 
-Templates keep Drizzlet and Stock plus fixes as direct choices. Seven focused starting points start from all features Off. The grouped gallery shows provisional CPU estimates and previews changed controls and values; only Use applies a template. Previewing leaves the profile, share link, guides and firmware build unchanged.
+Templates keep Drizzlet and Stock plus fixes as direct choices. Seven focused starting points start from all features Off. The grouped gallery previews changed controls and values; only Use applies a template. Previewing leaves the profile, share link, guides and firmware build unchanged.
 
 The Drizzlet template copies the selected firmware's embedded defaults. Beta 2
 places page 2 Frozen feedback on FEEDBACK, Delay mode on DRY/WET and
@@ -44,14 +44,18 @@ Reverb character on REVERB. Publish that layout only with its matching app,
 catalogue and guides: changing default slots changes the profile block and CRC.
 Do not rewrite an existing custom profile's explicit slots when defaults change.
 
-## CPU estimates
+## Historical CPU estimates
+
+The launch editor does not display CPU estimates or use them to block builds.
+The following data and helper tests are retained as historical evidence, not an
+assurance that every configuration is safe or a measured physical CPU limit.
+Any future estimator needs separately qualified workloads and policy.
 
 - Per-feature costs were measured on a development board calibrated to the module. Four event-only features have no per-block cost.
 - Baselines are worst-case module measurements: synth 83.4% (with Clouds-style reverb, measured on the codec-fix Beta 2 timing build), granular 83.0% (an October build, before profiles). Each feature adds its cost minus its default's cost, so moving a control between slots doesn't change the estimate.
 - Per-feature costs on the development board predict module changes within about half a point on the granular engine; setting combinations still need module measurement.
 - Exact module measurements of a complete profile (`cpu.combinations[].profile`, hex) take precedence over estimates.
-- Each engine rounds to 0.1%. The page warns from 91% and blocks above the provisional 92% ceiling (vanilla granular measured 92.1%). If an enabled setting has no measured cost and isn't covered by the default, the page lists it and does not warn or block. Exact module measurements still warn or block, and the release default is always allowed.
-- Remeasure the default and heaviest combinations on the final image before each release.
+- The historical helper rounds each engine to 0.1%, warns from 91% and marks values above the provisional 92% policy as blocked. This policy was not a measured failure threshold. These results no longer control the page or its downloads.
 
 ## Guides
 
