@@ -11,7 +11,7 @@ function recordEvent(path, fetcher, dnt, event = true) {
   if (dnt === '1') return;
   try {
     const query = new URLSearchParams(event ? { p: path, e: 'true' } : { p: path });
-    Promise.resolve(fetcher(`https://insolentconstruct.goatcounter.com/count?${query}`, {
+    Promise.resolve(fetcher(`https://stats.insolentconstruct.net/count?${query}`, {
       mode: 'no-cors', credentials: 'omit', referrerPolicy: 'no-referrer', cache: 'no-store'
     })).catch(() => {});
   } catch { /* Counts are optional; keep the builder usable. */ } // A blocked or unavailable counter must not interrupt a download.
@@ -77,7 +77,7 @@ export function downloadCounts(fetcher = globalThis.fetch, cache = new Map(), st
         } catch { return null; }
       };
       const counts = await Promise.all([
-        get(`https://insolentconstruct.goatcounter.com/counter/${encodeURIComponent(eventName(release))}.json`, (data) => number(data.count)),
+        get(`https://stats.insolentconstruct.net/counter/${encodeURIComponent(eventName(release))}.json`, (data) => number(data.count)),
         get(`https://api.github.com/repos/insolentconstruct/eurorack/releases/tags/${encodeURIComponent(release.tag)}`, (data) => {
           if (!Array.isArray(data.assets)) return null;
           const values = data.assets.filter((a) => typeof a.name === 'string' && a.name.endsWith('-wav.zip')).map((a) => number(a.download_count));
@@ -108,7 +108,7 @@ export function visitorCounts(fetcher = globalThis.fetch, storage) {
       } catch { /* Counts are optional; keep the builder usable. */ }
       let total = null;
       try {
-        const response = await fetcher('https://insolentconstruct.goatcounter.com/counter/TOTAL.json', {
+        const response = await fetcher('https://stats.insolentconstruct.net/counter/TOTAL.json', {
           credentials: 'omit', referrerPolicy: 'no-referrer', signal: AbortSignal.timeout(5000)
         });
         if (response.ok) total = number((await response.json()).count);

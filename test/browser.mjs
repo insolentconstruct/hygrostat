@@ -620,7 +620,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
       const url = new URL(route.request().url());
       if (url.origin === new URL(base).origin) return route.continue();
       counterRequests.push(url.href);
-      if (url.hostname === 'insolentconstruct.goatcounter.com' && url.pathname.startsWith('/counter/')) {
+      if (url.hostname === 'stats.insolentconstruct.net' && url.pathname.startsWith('/counter/')) {
         return route.fulfill({ headers: { 'access-control-allow-origin': '*' }, json: { count: url.pathname.endsWith('/TOTAL.json') ? '400' : '12' } });
       }
       if (url.hostname === 'api.github.com') return route.fulfill({ headers: { 'access-control-allow-origin': '*' }, json: { assets: [{ name: 'release-wav.zip', download_count: 8 }] } });

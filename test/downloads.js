@@ -20,6 +20,8 @@ function checkScripts(source) {
   assert.deepEqual(directives, [['script-src', "'self'"]]);
 }
 checkScripts(html);
+assert(html.includes("connect-src 'self' https://stats.insolentconstruct.net https://api.github.com;"));
+assert(!html.includes('insolentconstruct.goatcounter.com'));
 for (const script of ['<script src="https://external.invalid/a.js"></script>', '<script src=//external.invalid/a.js></script>']) {
   assert.throws(() => checkScripts(html + script));
 }
@@ -30,8 +32,9 @@ assert.equal(eventName(release), 'download/beta-2-fog');
 {
   const urls = [];
   recordVisit((url, options) => { urls.push([url, options.credentials]); return Promise.resolve(); }, '0');
-  assert.deepEqual(urls, [['https://insolentconstruct.goatcounter.com/count?p=%2F', 'omit']], 'a visit is a page view, not an event');
-  recordVisit(() => { throw new Error('do not track ignored'); }, '1');
+  assert.deepEqual(urls, [['https://stats.insolentconstruct.net/count?p=%2F', 'omit']], 'a visit is a page view, not an event');
+  recordVisit((url, options) => { urls.push([url, options.credentials]); }, '1');
+  assert.equal(urls.length, 1, 'DNT suppresses the visit request');
 }
 const response = (data) => ({ ok: true, json: async () => data });
 const assets = { assets: [{ name: 'a-wav.zip', download_count: 3 }, { name: 'b-wav.zip', download_count: 2 }, { name: 'app.zip', download_count: 1000 }] };
@@ -44,13 +47,13 @@ for (const [goat, github, total] of [
   const urls = [];
   const get = downloadCounts(async (url) => {
     urls.push(url);
-    const data = url.includes('goatcounter') ? goat : github;
+    const data = new URL(url).origin === 'https://stats.insolentconstruct.net' ? goat : github;
     if (data === null) throw new Error('offline');
     return response(data);
   });
   const [a, b] = await Promise.all([get(release), get(release)]);
   assert.equal(a, total); assert.equal(b, total); assert.equal(urls.length, 2);
-  assert(urls[0].endsWith('/counter/download%2Fbeta-2-fog.json'));
+  assert.equal(urls[0], 'https://stats.insolentconstruct.net/counter/download%2Fbeta-2-fog.json');
   assert(urls[1].endsWith('/releases/tags/drizzlet-test'));
   assert.equal(await get(release), total); assert.equal(urls.length, 2);
 }
@@ -67,6 +70,7 @@ assert.equal(events.length, 0);
 recordDownload(release, send, '0');
 assert.equal(events.length, 1);
 const [url, options] = events[0];
+assert.equal(new URL(url).origin, 'https://stats.insolentconstruct.net');
 const query = new URL(url).searchParams;
 assert.deepEqual([...query], [['p', 'download/beta-2-fog'], ['e', 'true']]);
 assert.deepEqual(options, { mode: 'no-cors', credentials: 'omit', referrerPolicy: 'no-referrer', cache: 'no-store' });
@@ -98,6 +102,7 @@ for (const dnt of ['0', undefined, '1']) {
   assert.equal(builds.length, dnt === '1' ? 0 : 1);
   if (builds.length) {
     const [url, options] = builds[0];
+    assert.equal(new URL(url).origin, 'https://stats.insolentconstruct.net');
     assert.deepEqual([...new URL(url).searchParams], [['p', '/render/drizzlet-test'], ['e', 'true']]);
     assert.deepEqual(options, { mode: 'no-cors', credentials: 'omit', referrerPolicy: 'no-referrer', cache: 'no-store' });
   }
@@ -107,6 +112,7 @@ recordBuild(release, async () => { throw new Error('offline'); }, '0');
 const app = readFileSync(new URL('../static/js/app.js', import.meta.url), 'utf8');
 assert.equal((app.match(/recordBuild\(release\)/g) || []).length, 1);
 assert(app.indexOf('recordBuild(release)') > app.indexOf('await updateGuides(release, chosen'));
+assert(!app.includes('stats.insolentconstruct.net/count'));
 assert(!app.includes('goatcounter.com/count'));
 console.log('PASS successful-build event, DNT, private parameters and quiet failures');
 
@@ -123,7 +129,7 @@ for (const [data, expected] of [[{ count: '1,234' }, 1234], [{ count: 0 }, 0], [
   }, blockedStorage);
   assert.equal(await visitors(), expected);
   assert.equal(await visitors(), expected);
-  assert.deepEqual(requests, ['https://insolentconstruct.goatcounter.com/counter/TOTAL.json']);
+  assert.deepEqual(requests, ['https://stats.insolentconstruct.net/counter/TOTAL.json']);
 }
 assert.equal(await visitorCounts(async () => { throw new Error('offline'); }, blockedStorage)(), null);
 assert.equal(await visitorCounts(async () => ({ ok: false }), blockedStorage)(), null);
