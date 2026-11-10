@@ -1,7 +1,7 @@
 // Copyright 2026 Insolent Construct. MIT licence: see ../static/js/encoder.js.
 // Run with Playwright available, against a local server in an offline container.
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { chromium, firefox, webkit } from 'playwright';
@@ -128,14 +128,45 @@ async function checkThemes(browser) {
 }
 for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['webkit', webkit]]) {
   const browser = await engine.launch();
+  let traceContext;
+  let phase = 'themes';
+  const diagnostics = [];
+  const record = (event, detail) => {
+    diagnostics.push({ event, phase, time: Date.now(), ...detail });
+    if (diagnostics.length > 200) diagnostics.shift();
+  };
+  const documentURL = (url) => url.split('#')[0];
   try {
     await checkThemes(browser);
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    traceContext = context;
+    await context.tracing.start({ snapshots: true });
+    context.on('requestfailed', (request) => {
+      if (new URL(request.url()).origin === new URL(base).origin) {
+        record('requestfailed', { url: documentURL(request.url()), failure: request.failure() });
+      }
+    });
+    context.on('response', (response) => {
+      if (response.status() >= 400 && new URL(response.url()).origin === new URL(base).origin) {
+        record('response', { url: documentURL(response.url()), status: response.status() });
+      }
+    });
     await context.route('**/*', (route) => new URL(route.request().url()).origin === new URL(base).origin ?
       route.continue() : route.abort('internetdisconnected'));
     const page = await context.newPage();
     const errors = [];
-    page.on('pageerror', (error) => errors.push(String(error)));
+    page.on('pageerror', (error) => {
+      errors.push(String(error));
+      record('pageerror', { url: documentURL(page.url()), message: String(error), stack: error.stack });
+    });
+    page.on('framenavigated', (frame) => {
+      if (frame === page.mainFrame()) record('navigation', { url: documentURL(frame.url()) });
+    });
+    page.on('worker', (worker) => {
+      record('worker', { url: worker.url() });
+      worker.on('close', () => record('worker-close', { url: worker.url() }));
+    });
+    phase = 'initial load';
     await page.goto(base);
     const until = async (predicate) => {
       const deadline = Date.now() + 30000;
@@ -147,6 +178,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     const waitFingerprint = (fp) => until(async () =>
       await page.textContent('#fingerprint') === fp && await page.getAttribute('#summary', 'data-fingerprint') === fp);
     const pressed = () => page.locator('#presets [aria-pressed=true]').allTextContents();
+    phase = 'feature library and templates';
     // Open a feature from the library, as a person would.
     const selectFeature = async (f) => {
       await page.click('#browse');
@@ -213,6 +245,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
       assert((await link.locator('..').innerText()).length > 'Documentation'.length);
       if (f.id === 13) assert((await page.textContent('#action-help')).includes('no page knob'));
     }
+    phase = 'grid and keyboard';
     // The grid matches the module: page rows, knob columns.
     assert.equal(await page.getAttribute('#cell-1', 'aria-label'), 'Page 1, FEEDBACK: Pitch scale, starts off');
     assert.equal(await page.getAttribute('#cell-10', 'aria-label'), 'Page 4, FEEDBACK: LED brightness, starts 100%');
@@ -336,6 +369,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     assert.equal(await page.locator('.print-note').isVisible(), true);
     assert.equal(await page.locator('#install').isVisible(), true);
     await page.emulateMedia({ media: 'screen' });
+    phase = 'feature bytes';
     // Every feature returns to byte-identical Off state, including value/slots.
     await page.click('#preset-stock-plus-fixes');
     const stockFP = await fingerprint(encodeProfile(templates(release.profile)['Stock plus fixes'], release.profile));
@@ -345,6 +379,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     assert.equal(await page.textContent('#positions'), '0 of 12 page positions used');
     const stockShare = await page.getAttribute('#share', 'href');
     const manifestURL = /\/manifest\.json(?:\?|$)/;
+    phase = 'legacy CPU fixture';
     // The legacy no-reference path retains its measured-default bound.
     const boundedManifest = JSON.parse(readFileSync(`${site}/manifest.json`));
     delete boundedManifest.releases[0].cpu.estimate_reference;
@@ -368,6 +403,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     assert(!/%|estimated/.test(await page.textContent('#cpu')));
     assert(!/%/.test(await page.textContent('#cpu-short')));
     await context.unroute(manifestURL, boundedRoute);
+    phase = 'unknown CPU fixture';
     // Preserve the enabled/unknown regression using an explicit Off-default fixture.
     const offManifest = JSON.parse(readFileSync(`${site}/manifest.json`));
     delete offManifest.releases[0].cpu.estimate_reference;
@@ -406,6 +442,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
       assert.equal(await page.getAttribute('#guide', 'download'), `options-guide${dev}.svg`);
       assert.equal(await page.getAttribute('#guide-mobile', 'download'), `options-guide${dev}-mobile.svg`);
     }
+    phase = 'extras';
     // Extras: switches and value menus give the same bytes as the inspector.
     for (const f of release.profile.features.filter((f) => f.default_in_block === false)) {
       const control = page.locator(`#extra-${f.id}`);
@@ -433,6 +470,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     await waitFingerprint(await fingerprint(encodeProfile(layout.place(roomForExtra, release.profile, 23, 'page', 10), release.profile)));
     await page.click('#preset-drizzlet');
     await waitFingerprint(releaseFP);
+    phase = 'share links';
     // Keep the unknown-cost share-link regression independent of shipped costs.
     const unknownManifest = JSON.parse(readFileSync(`${site}/manifest.json`));
     unknownManifest.releases[0].profile.features.find((f) => f.id === 1).cpu = null;
@@ -467,6 +505,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     assert((await page.textContent('#cpu')).includes('83.9% estimated'));
     assert.equal(await page.isDisabled('#build'), false);
     await context.unroute(manifestURL, unknownRoute);
+    phase = 'local image refusal';
     // Reject wrong-sized local files before reading or hashing their contents.
     await page.evaluate(() => {
       window.localBoundary = { reads: 0, hashes: 0, digest: crypto.subtle.digest };
@@ -501,6 +540,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
       crypto.subtle.digest = window.localBoundary.digest;
       delete window.localBoundary;
     });
+    phase = 'release WAV';
     // Building the release default reproduces the release WAV, with its guides.
     if (name === 'chromium') {
       await page.click('#build');
@@ -514,6 +554,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
       assert.equal(await page.evaluate(() => document.activeElement.id), 'result-title');
       assert((await page.textContent('#result')).includes('calibration'));
     }
+    phase = 'measured CPU fixture';
     // Exact measured combinations take precedence even with a missing feature cost.
     const measuredManifest = JSON.parse(readFileSync(`${site}/manifest.json`));
     const measured = measuredManifest.releases[0];
@@ -522,8 +563,9 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     const measuredRoute = (route) => route.fulfill({ json: measuredManifest });
     await context.route(manifestURL, measuredRoute);
     for (const [percent, blocked] of [[90.4, false], [92, false], [92.1, true]]) {
+      phase = `measured CPU fixture ${percent}`;
       measured.cpu.combinations[0].synth = percent;
-      await page.goto(base + '#' + share(release, customBlock));
+      await page.evaluate((hash) => history.replaceState(null, '', hash), '#' + share(release, customBlock));
       await page.reload();
       await waitFingerprint(customFP);
       assert((await page.textContent('#cpu')).startsWith(`${percent.toFixed(1)}% measured.`));
@@ -532,6 +574,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
       assert.equal(await page.locator('body').evaluate((b) => b.classList.contains('cpu-warning')), percent >= 91);
       assert.equal((await page.textContent('#cpu-short')).includes('build blocked'), blocked);
     }
+    phase = 'phone layout';
     // Phones: pages become tabs with three knob rows.
     const phone = await browser.newContext({ viewport: { width: 390, height: 844 } });
     await phone.route('**/*', (route) => new URL(route.request().url()).origin === new URL(base).origin ?
@@ -570,6 +613,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     }
     assert.equal(await phonePage.evaluate(() => document.documentElement.scrollWidth), 390, 'no sideways scroll');
     await phone.close();
+    phase = 'download counters';
     const counters = await browser.newContext();
     const counterRequests = [];
     await counters.route('**/*', (route) => {
@@ -593,6 +637,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     assert((await lines.first().textContent()).includes(`${release.name}: downloaded 20 times`));
     assert.equal(await lines.last().textContent(), 'Site visitors: 400');
     await counters.close();
+    phase = 'capability refusal';
     // Capability failure gives an actionable message before enabling builds.
     await page.addInitScript(() => { window.Worker = undefined; });
     await page.goto(base);
@@ -604,6 +649,16 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     assert((await noJSPage.locator('noscript').innerText()).includes('Enable JavaScript'));
     await noJS.close();
     assert.deepEqual(errors, []);
+    await context.tracing.stop();
+    traceContext = null;
     console.log(`PASS ${name}: grid place/swap/replace/keyboard${name === 'chromium' ? '/drag and release WAV build' : ''}, phone tabs, every feature Fixed/Off exact bytes, extras, default names, unknown CPU costs, same-document share links and invalid-link recovery`);
+  } catch (error) {
+    console.error(`Browser diagnostics ${name}: ${JSON.stringify(diagnostics)}`);
+    if (traceContext) {
+      mkdirSync('test-artifacts', { recursive: true });
+      try { await traceContext.tracing.stop({ path: `test-artifacts/browser-${name}.zip` }); }
+      catch (traceError) { console.error(`Trace capture failed: ${traceError.message}`); }
+    }
+    throw error;
   } finally { await browser.close(); }
 }

@@ -106,11 +106,19 @@ jobs:
         run: npm install --omit=dev --no-save --no-package-lock --no-audit --no-fund playwright@1.48.2
       - name: The page works in three browsers
         run: |
-          python3 -m http.server 8080 --bind 127.0.0.1 -d static >/dev/null 2>&1 &
+          mkdir -p test-artifacts
+          python3 -m http.server 8080 --bind 127.0.0.1 -d static >test-artifacts/http-server.log 2>&1 &
           for i in $(seq 50); do curl -fs -o /dev/null http://127.0.0.1:8080/ && break; sleep 0.2; done
           SITE=static BASE=http://127.0.0.1:8080/ node test/browser.mjs
           SITE=static BASE=http://127.0.0.1:8080/ node test/scales_browser.mjs
           BASE=http://127.0.0.1:8080/ node test/security_browser.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: failure()
+        with:
+          name: browser-diagnostics
+          path: test-artifacts/
+          retention-days: 7
+          if-no-files-found: warn
 
   deploy:
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
