@@ -23,9 +23,9 @@
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
 // Knob cards port options_guide.py: 270-degree arcs and the same LED ladder.
-import { effectiveScales, PULSE_NAMES } from './scales.js?v=0413669ba9a13b2b';
-import { defaults, equal, encodeProfile } from './profile.js?v=0413669ba9a13b2b';
-import { RELEASE_GUIDES, RELEASE_GUIDE_TAG } from './release_guides.js?v=0413669ba9a13b2b';
+import { effectiveScales, PULSE_NAMES } from './scales.js?v=d0c0228e8b9e63a7';
+import { defaults, equal, encodeProfile } from './profile.js?v=d0c0228e8b9e63a7';
+import { RELEASE_GUIDES, RELEASE_GUIDE_TAG } from './release_guides.js?v=d0c0228e8b9e63a7';
 
 const KNOBS = ['FEEDBACK', 'DRY/WET', 'REVERB'];
 export const ACTIONS = ['None', '[A]+SEED', '[A]+FREEZE', '[A] hold'];
@@ -35,6 +35,10 @@ export const pageName = (slot) => slot ? `[M] page ${Math.ceil(slot / 3)} · ${K
 const escape = (s) => String(s).replace(/[\ufffe\uffff]/g, '\ufffd').replace(/[&<>"']/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;' })[c]);
 const COLOURS = ['#247443', '#a87900', '#bd3030'];
+// The release guide's names for the factory scale colours (options_guide.py).
+const SCALE_COLOURS = { '#ff4020': 'coral', '#ffa000': 'amber', '#2060ff': 'blue', '#00dca0': 'teal', '#a030ff': 'violet', '#ff2090': 'pink' };
+const rgbOf = (scale) => '#' + scale.color.map((v) => v.toString(16).padStart(2, '0')).join('');
+const colourName = (scale) => SCALE_COLOURS[rgbOf(scale)] || rgbOf(scale);
 export function indication(index) {
   const colour = index === 9 ? 'yellow' : ['green', 'yellow', 'red'][index % 3];
   return `${colour}; ${index === 9 ? 'two pulses' : index >= 6 ? 'fast blink' : index >= 3 ? 'slow blink' : 'steady'}`;
@@ -98,8 +102,8 @@ class Drawing {
       }
       const meter = !f.values && i === 1;
       const scale = f.scales && i >= 2 ? f.scales[i - 2] : null;
-      const rgb = scale && '#' + scale.color.map((v) => v.toString(16).padStart(2, '0')).join('');
-      const shown = scale ? `${rgb}; ${PULSE_NAMES[scale.pulses].toLowerCase()}` : meter ? 'green → yellow → red' : indication(i);
+      const rgb = scale && rgbOf(scale);
+      const shown = scale ? `${colourName(scale)}; ${PULSE_NAMES[scale.pulses].toLowerCase()}` : meter ? 'green → yellow → red' : indication(i);
       const pattern = scale ? [0, 3, 6, 9][scale.pulses] : i;
       this.circle(x + 9, base - 5, 8, scale ? rgb : meter ? '#777' : COLOURS[i === 9 ? 1 : i % 3], pattern);
       this.text(x + 25, base, value);
@@ -192,9 +196,8 @@ export function guide(entries, release, fp, mobile = false, scales = null) {
   if (release.profile.version === 2) {
     y = d.lines(margin, y + 20, 'Scale cycle: Off and Chromatic are separate knob choices; SEED steps the following scales in order.', mobile ? 43 : 140);
     for (const scale of effectiveScales(scales)) {
-      const rgb = '#' + scale.color.map((v) => v.toString(16).padStart(2, '0')).join('');
       const notes = scale.notes.map((v) => Number((v * 100).toFixed(4))).join(', ');
-      y = d.lines(margin, y + 10, `${scale.name}: ${rgb}, ${PULSE_NAMES[scale.pulses].toLowerCase()}. Notes ${notes} cents; repeat ${Number((scale.repeat * 100).toFixed(4))} cents.`, mobile ? 43 : 140);
+      y = d.lines(margin, y + 10, `${scale.name}: ${colourName(scale)}, ${PULSE_NAMES[scale.pulses].toLowerCase()}. Notes ${notes} cents; repeat ${Number((scale.repeat * 100).toFixed(4))} cents.`, mobile ? 43 : 140);
     }
     if (!effectiveScales(scales).length) y = d.lines(margin, y + 10, 'No scales in the cycle; the Scale position selects Off.', mobile ? 43 : 140);
   }

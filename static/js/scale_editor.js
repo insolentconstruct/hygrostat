@@ -22,7 +22,7 @@
 //
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
-import { effectiveScales, importScala, MAX_SCALES, PULSE_NAMES, validateScales } from './scales.js?v=0413669ba9a13b2b';
+import { effectiveScales, importScala, MAX_SCALES, PULSE_NAMES, validateScales } from './scales.js?v=d0c0228e8b9e63a7';
 
 const node = (tag, text = '') => {
   const value = document.createElement(tag);
@@ -31,7 +31,7 @@ const node = (tag, text = '') => {
 };
 const button = (label, action) => {
   const value = node('button', label);
-  value.type = 'button';
+  value.type = 'button'; value.className = 'quiet';
   value.onclick = action;
   return value;
 };
@@ -132,7 +132,7 @@ export function scaleEditor(root, { get, set, error, releaseKey }) {
     const pulses = node('select'); pulses.name = 'pulses'; pulses.id = 'scale-pulses';
     PULSE_NAMES.forEach((text, i) => pulses.add(new Option(text, i))); pulses.value = scale.pulses;
     label.append(pulses); form.append(label);
-    const save = node('button', 'Apply scale'); save.type = 'submit'; form.append(save);
+    const save = node('button', 'Apply scale'); save.type = 'submit'; save.className = 'primary'; form.append(save);
     form.onsubmit = (event) => {
       event.preventDefault();
       const tokens = notes.value.trim().split(/[\s,]+/);

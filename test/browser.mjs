@@ -184,6 +184,12 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
       assert.equal(await page.locator('body').evaluate((b) => b.classList.contains('cpu-warning')), false);
     };
     const pressed = () => page.locator('#presets [aria-pressed=true]').allTextContents();
+    // A chip asks before replacing a setup that is not a starting point.
+    const usePreset = async (id, asks) => {
+      await page.click(`#preset-${id}`);
+      assert.equal(await page.isVisible('#preset-confirm'), asks);
+      if (asks) await page.click('#preset-replace');
+    };
     phase = 'feature library and templates';
     // Open a feature from the library, as a person would.
     const selectFeature = async (f) => {
@@ -237,7 +243,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     await page.click('#use-template');
     await waitFingerprint(await fingerprint(encodeProfile(templates(release.profile)['Drum grains'], release.profile)));
     assert.equal(await page.isVisible('#template-gallery'), false);
-    await page.click('#preset-drizzlet');
+    await usePreset('drizzlet', false);
     await waitFingerprint(releaseFP);
     // Every feature: a description and a documentation link for the release.
     for (const f of release.profile.features) {
@@ -272,7 +278,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     const emptied = layout.unplace(defaults(release.profile), release.profile, 10, 'page');
     await waitFingerprint(await fingerprint(encodeProfile(emptied, release.profile)));
     assert.equal(await page.getAttribute('#share', 'href'), hashOf(emptied));
-    assert.equal(await page.getAttribute('#cell-2', 'aria-label'), 'Page 1, DRY/WET: empty');
+    assert.equal(await page.getAttribute('#cell-2', 'aria-label'), 'Page 1, DRY/WET: Empty, choose a feature');
     assert.equal(await page.evaluate(() => document.activeElement.id), 'cell-2');
     assert.equal(await page.textContent('#changes'), '1 change from Drizzlet');
     assert.deepEqual(await pressed(), []);
@@ -289,11 +295,23 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     await until(async () => !await page.locator('#library').isVisible());
     const moved = layout.place(emptied, release.profile, 1, 'page', 2);
     await waitFingerprint(await fingerprint(encodeProfile(moved, release.profile)));
-    assert.equal(await page.getAttribute('#cell-1', 'aria-label'), 'Page 1, FEEDBACK: empty');
+    assert.equal(await page.getAttribute('#cell-1', 'aria-label'), 'Page 1, FEEDBACK: Empty, choose a feature');
     assert.equal(await page.evaluate(() => document.activeElement.id), 'cell-2');
-    // Place, swap and replace by pointer from the Drizzlet preset.
+    // An edited setup survives a cancelled chip; Replace then uses the preset.
+    const movedFP = await fingerprint(encodeProfile(moved, release.profile));
+    const movedCount = layout.changes(templates(release.profile).Drizzlet, moved, release.profile).length;
     await page.click('#preset-drizzlet');
+    assert.equal(await page.evaluate(() => document.activeElement.id), 'preset-replace');
+    assert.equal(await page.textContent('#preset-confirm-text'), `Replace your setup with Drizzlet? ${movedCount} setting${movedCount === 1 ? '' : 's'} will change.`);
+    await page.click('#preset-cancel');
+    assert.equal(await page.isVisible('#preset-confirm'), false);
+    assert.equal(await page.evaluate(() => document.activeElement.id), 'preset-drizzlet');
+    await waitFingerprint(movedFP);
+    assert.equal(await page.getAttribute('#cell-1', 'aria-label'), 'Page 1, FEEDBACK: Empty, choose a feature');
+    // Place, swap and replace by pointer from the Drizzlet preset.
+    await usePreset('drizzlet', true);
     await waitFingerprint(releaseFP);
+    assert.equal(await page.evaluate(() => document.activeElement.id), 'preset-drizzlet');
     await page.focus('#cell-10');
     await page.keyboard.press('Delete');
     const withoutBrightness = layout.unplace(defaults(release.profile), release.profile, 18, 'page');
@@ -324,7 +342,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     await waitFingerprint(await fingerprint(encodeProfile(expected, release.profile)));
     assert.equal(await page.getAttribute('#share', 'href'), hashOf(expected));
     assert((await page.textContent('#cell-2')).includes('Limiter'));
-    assert.equal(await page.getAttribute('#cell-12', 'aria-label'), 'Page 4, REVERB: empty');
+    assert.equal(await page.getAttribute('#cell-12', 'aria-label'), 'Page 4, REVERB: Empty, choose a feature');
     assert((await page.textContent('#status')).includes('Random pitch steps goes back to stock behaviour'));
     // The inspector offers the same choice for its position menu.
     await page.selectOption('#where-page', '3');
@@ -341,14 +359,14 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     await page.click('#action-1');
     assert.equal(await page.textContent('#inspector-title'), 'Monophonic grains');
     assert((await page.textContent('#panel-caption')).includes('press SEED'));
-    await page.click('#preset-drizzlet');
+    await usePreset('drizzlet', true);
     await waitFingerprint(releaseFP);
     // Emptying from the inspector keeps keyboard focus on the position.
     await page.click('#cell-9');
     await page.click('#clear-position');
     await waitFingerprint(await fingerprint(encodeProfile(layout.unplace(defaults(release.profile), release.profile, 9, 'page'), release.profile)));
     assert.equal(await page.evaluate(() => document.activeElement.id), 'cell-9');
-    await page.click('#preset-drizzlet');
+    await usePreset('drizzlet', true);
     await waitFingerprint(releaseFP);
     await noCPU();
     for (const f of release.profile.features.filter((f) => !f.values)) {
@@ -372,7 +390,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     await page.emulateMedia({ media: 'screen' });
     phase = 'feature bytes';
     // Every feature returns to byte-identical Off state, including value/slots.
-    await page.click('#preset-stock-plus-fixes');
+    await usePreset('stock-plus-fixes', false);
     const stockFP = await fingerprint(encodeProfile(templates(release.profile)['Stock plus fixes'], release.profile));
     await waitFingerprint(stockFP);
     await noCPU();
@@ -466,7 +484,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     await waitFingerprint(await fingerprint(encodeProfile(roomForExtra, release.profile)));
     await page.click('#extra-23-place');
     await waitFingerprint(await fingerprint(encodeProfile(layout.place(roomForExtra, release.profile, 23, 'page', 10), release.profile)));
-    await page.click('#preset-drizzlet');
+    await usePreset('drizzlet', true);
     await waitFingerprint(releaseFP);
     phase = 'share links';
     // Keep the unknown-cost share-link regression independent of shipped costs.

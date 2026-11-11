@@ -106,7 +106,13 @@ assert.throws(() => decodeSettings(wrongLegacyFlags, profile));
 for (const mobile of [false, true]) {
   const svg = guide(enabled, release, '12345678', mobile, [{ ...full[0], name: '<Scale & test>', notes: [0, 7] }]);
   assert(svg.includes('&lt;Scale &amp; test&gt;'));
-  assert(svg.includes('#00ff00'));
+  assert(svg.includes('>#00ff00; steady<'), 'an unnamed colour keeps its hex value');
+  // Factory scale colours use the release guide's names, also in custom profiles.
+  const named = guide(entries.map((e) => e[0] === 1 ? [1, 2, 3, 1, 0, 0] : e), release, '12345678', mobile, null);
+  for (const text of ['>amber; steady<', '>blue; steady<', '>coral; steady<', '>Major: amber, steady.', '>Raag Shri: pink, double pulse.']) {
+    assert(named.includes(text), text);
+  }
+  assert(!/>[^<]*#[0-9a-f]{6}/.test(named), 'no hex colour in guide text');
   assert(svg.includes('repeat 1200 cents'));
   assert(!svg.includes('<Scale & test>'));
   for (const character of ['\ufffe', '\uffff']) {

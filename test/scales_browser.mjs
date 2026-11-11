@@ -132,6 +132,19 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     await page.getByRole('button', { name: 'Restore factory scales', exact: true }).click();
     assert.equal(await bank(), null);
     assert.equal(await page.locator('.scale-list li').count(), 8);
+    // A chip asks before discarding an edited scale bank; Cancel keeps it.
+    await page.getByRole('button', { name: 'Remove Pelog', exact: true }).click();
+    await until(async () => (await bank())?.length === 7);
+    await page.click('#preset-drizzlet');
+    assert.match(await page.textContent('#preset-confirm-text'), /including your scale bank/);
+    assert.match(await page.textContent('#preset-replace'), /restore factory scales/);
+    await page.click('#preset-cancel');
+    assert.equal(await page.isVisible('#preset-confirm'), false);
+    assert.equal((await bank())?.length, 7);
+    await page.click('#preset-drizzlet');
+    await page.click('#preset-replace');
+    await until(async () => (await bank()) === null);
+    assert.equal(await page.locator('.scale-list li').count(), 8);
     assert.deepEqual(errors, []);
     await context.close();
     console.log(`PASS ${name}: V2 scale edit, stable reorder, import, invalid edits, shares and restore; no firmware built.`);

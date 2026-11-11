@@ -8,15 +8,15 @@
 // check the release's app image against the manifest, encode the update .wav
 // in the browser, check the .wav, offer it for download.
 
-import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, normalise } from './profile.js?v=0413669ba9a13b2b';
-import { effectiveScales, validateScales } from './scales.js?v=0413669ba9a13b2b';
-import { scaleEditor } from './scale_editor.js?v=0413669ba9a13b2b';
-import { guide } from './guide.js?v=0413669ba9a13b2b';
-import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=0413669ba9a13b2b';
-import { featureHelp, actionHelp } from './help.js?v=0413669ba9a13b2b';
+import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, normalise } from './profile.js?v=d0c0228e8b9e63a7';
+import { effectiveScales, validateScales } from './scales.js?v=d0c0228e8b9e63a7';
+import { scaleEditor } from './scale_editor.js?v=d0c0228e8b9e63a7';
+import { guide } from './guide.js?v=d0c0228e8b9e63a7';
+import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=d0c0228e8b9e63a7';
+import { featureHelp, actionHelp } from './help.js?v=d0c0228e8b9e63a7';
 import { KNOBS, KINDS, GROUPS, ACTION_DOES, placeName, pageOf, entryOf, occupant, places, valueLabel, stateLabel,
-  summary, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, fits } from './layout.js?v=0413669ba9a13b2b';
-import { drawPanel, highlight } from './panel.js?v=0413669ba9a13b2b';
+  summary, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, fits } from './layout.js?v=d0c0228e8b9e63a7';
+import { drawPanel, highlight } from './panel.js?v=d0c0228e8b9e63a7';
 
 const $ = (id) => document.getElementById(id);
 const cap = (text) => text.replace(/^./, (c) => c.toUpperCase());
@@ -39,7 +39,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=0413669ba9a13b2b', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=d0c0228e8b9e63a7', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.ready) return;
       if (data.progress !== undefined) {
@@ -69,6 +69,7 @@ let preset = 'Drizzlet';
 let selection = { kind: 'page', slot: 1 };
 let pageTab = 1;
 let pending = null; // An inspector placement waiting for Swap or Replace.
+let presetPending = null; // A starting-point chip waiting for Replace.
 let templatePreview = null;
 const startingPoints = [
   ['Process audio', [
@@ -179,7 +180,7 @@ let busy = false;
 async function run(getApp) {
   if (busy) return;
   busy = true;
-  $('scale-editor').inert = $('workspace').inert = $('presets').inert = $('template-gallery').inert = true;
+  $('scale-editor').inert = $('workspace').inert = $('presets').inert = $('preset-confirm').inert = $('template-gallery').inert = true;
   $('build').disabled = $('release').disabled = $('local').disabled = true;
   $('result').hidden = true;
   try {
@@ -193,7 +194,7 @@ async function run(getApp) {
     $('build').disabled = $('release').disabled = $('local').disabled = false;
     busy = false;
     if (pendingShare) { pendingShare = false; loadSharedProfile(); }
-    $('scale-editor').inert = $('workspace').inert = $('presets').inert = $('template-gallery').inert = false;
+    $('scale-editor').inert = $('workspace').inert = $('presets').inert = $('preset-confirm').inert = $('template-gallery').inert = false;
   }
 }
 
@@ -216,7 +217,7 @@ async function updateGuides(release, chosen, fp, names, chosenScales = scales) {
 
 // Apply an edit; errors leave the profile as it was.
 function commit(change, message = '') {
-  templatePreview = null;
+  templatePreview = presetPending = null;
   try {
     entries = change();
     status(message);
@@ -233,6 +234,7 @@ function matchingTemplate() {
 }
 
 function setupEditor() {
+  presetPending = null;
   $('development').hidden = !selected().development;
   $('expected-hash').textContent = selected().wav_sha256;
   preset = matchingTemplate() || preset;
@@ -254,7 +256,7 @@ function renderPresets() {
     type: 'button', class: 'chip', id: `preset-${templateId(name)}`,
     'aria-pressed': String(name === current), text: name,
     title: selected().profile.version === 2 ? 'Replace this setup and restore factory scales' : 'Replace this setup',
-    onclick: () => useTemplate(name)
+    onclick: () => choosePreset(name)
   })), el('button', {
     type: 'button', class: 'chip', id: 'more-templates', text: 'More starting points…',
     'aria-expanded': String(!$('template-gallery').hidden), 'aria-controls': 'template-gallery',
@@ -265,7 +267,28 @@ function renderPresets() {
       $('template-gallery').querySelector('button').focus();
     }
   }));
+  $('preset-confirm').hidden = !presetPending;
+  $('preset-confirm').replaceChildren(...presetPending ? presetConfirm(presetPending) : []);
   if (!$('template-gallery').hidden) renderTemplates();
+}
+
+// A chip replaces the setup at once only when that loses nothing: the setup is a starting point.
+function choosePreset(name) {
+  if (matchingTemplate()) { useTemplate(name); return; }
+  presetPending = name;
+  renderPresets();
+  $('preset-replace').focus();
+}
+
+function presetConfirm(name) {
+  const count = changes(templates(profile())[name], entries, profile()).length + Number(scales !== null);
+  const restore = selected().profile.version === 2 ? ' and restore factory scales' : '';
+  const back = () => { presetPending = null; renderPresets(); $(`preset-${templateId(name)}`).focus(); };
+  return [el('p', { id: 'preset-confirm-text', text: `Replace your setup with ${name}? ${count} setting${count === 1 ? '' : 's'}${scales !== null ? ', including your scale bank,' : ''} will change.` }),
+    el('div', { class: 'options' },
+      el('button', { type: 'button', id: 'preset-replace', onclick: () => { useTemplate(name); $(`preset-${templateId(name)}`).focus(); } },
+        el('b', { text: 'Replace' }), `Use ${name}${restore}`),
+      el('button', { type: 'button', id: 'preset-cancel', onclick: back }, el('b', { text: 'Cancel' })))];
 }
 
 function closeTemplates() {
@@ -329,13 +352,23 @@ function markTemplateChanges() {
 const leds = (page) => el('span', { class: 'leds', 'aria-hidden': 'true' },
   ...[0, 1, 2].map((i) => el('i', { class: page === 4 || page === i + 1 ? 'lit' : '' })));
 
-function cellLabel(kind, slot) {
+// The two visible lines of a position; its accessible name repeats them (WCAG 2.5.3).
+function cellText(kind, slot) {
   const e = occupant(entries, kind, slot);
-  const where = kind === 'page' ? `Page ${pageOf(slot)}, ${KNOBS[(slot - 1) % 3]}` : placeName(kind, slot);
-  if (!e) return `${where}: empty`;
-  const f = featureById(e[0]);
-  return `${where}: ${f.name}, ${summary(f, e).toLowerCase()}`;
+  const f = e && featureById(e[0]);
+  if (kind === 'page') return [f ? f.name : 'Empty', f ? summary(f, e) : 'Choose a feature'];
+  const does = !f ? 'Nothing' : kind === 'action' ? ACTION_DOES[f.id] || f.name : f.name;
+  const named = kind === 'action' && !does.toLowerCase().includes(f?.name.toLowerCase());
+  return [does, !f ? 'Choose a feature' : named ? `${f.name} · ${summary(f, e)}` : summary(f, e)];
 }
+
+function cellLabel(kind, slot) {
+  const where = kind === 'page' ? `Page ${pageOf(slot)}, ${KNOBS[(slot - 1) % 3]}` : placeName(kind, slot);
+  const [name, value] = cellText(kind, slot);
+  return `${where}: ${name}, ${value.toLowerCase().replace(' · ', ', ')}`;
+}
+// Separate the visible lines' words for speech input; flex layout ignores the space.
+const lines = (...spans) => spans.flatMap((span, i) => i ? [' ', span] : [span]);
 const isSelected = (kind, slot) => selection.kind === kind && selection.slot === slot;
 
 function renderGrid() {
@@ -345,15 +378,15 @@ function renderGrid() {
     ...[0, 1, 2].map((knob) => {
       const slot = (page - 1) * 3 + knob + 1;
       const e = occupant(entries, 'page', slot);
-      const f = e && featureById(e[0]);
+      const [name, value] = cellText('page', slot);
       const cell = el('button', {
         type: 'button', id: `cell-${slot}`, class: `cell${e ? '' : ' empty'}`, 'data-slot': slot,
         'aria-label': cellLabel('page', slot), 'aria-pressed': String(isSelected('page', slot)),
         tabindex: slot === focus ? '0' : '-1', draggable: e ? 'true' : 'false',
         onclick: () => choose('page', slot)
-      }, el('span', { class: 'cell-knob', 'aria-hidden': 'true', text: KNOBS[knob] }),
-      el('span', { class: 'cell-name', 'aria-hidden': 'true', text: f ? f.name : 'Empty' }),
-      el('span', { class: 'cell-value', 'aria-hidden': 'true', text: f ? summary(f, e) : 'Choose a feature' }));
+      }, ...lines(el('span', { class: 'cell-knob', 'aria-hidden': 'true', text: KNOBS[knob] }),
+        el('span', { class: 'cell-name', 'aria-hidden': 'true', text: name }),
+        el('span', { class: 'cell-value', 'aria-hidden': 'true', text: value })));
       return el('td', {}, cell);
     })));
   $('grid').tBodies[0].replaceChildren(...rows);
@@ -433,18 +466,14 @@ function renderSlots() {
   for (const kind of ['amount', 'action']) {
     $(kind === 'amount' ? 'amounts' : 'actions').replaceChildren(...Array.from({ length: KINDS[kind].count }, (_, i) => {
       const slot = i + 1;
-      const e = occupant(entries, kind, slot);
-      const f = e && featureById(e[0]);
-      const does = !f ? 'Nothing' : kind === 'action' ? ACTION_DOES[f.id] || f.name : f.name;
-      const named = kind === 'action' && !does.toLowerCase().includes(f?.name.toLowerCase());
-      const what = !f ? 'Choose a feature' : named ? `${f.name} · ${summary(f, e)}` : summary(f, e);
+      const [does, what] = cellText(kind, slot);
       return el('button', {
-        type: 'button', id: `${kind}-${slot}`, class: `slot${f ? '' : ' empty'}`,
+        type: 'button', id: `${kind}-${slot}`, class: `slot${occupant(entries, kind, slot) ? '' : ' empty'}`,
         'aria-pressed': String(isSelected(kind, slot)), 'aria-label': cellLabel(kind, slot),
         onclick: () => choose(kind, slot)
-      }, el('span', { class: 'gesture', 'aria-hidden': 'true', text: placeName(kind, slot) }),
-      el('span', { class: 'does', 'aria-hidden': 'true', text: does }),
-      el('span', { class: 'what', 'aria-hidden': 'true', text: what }));
+      }, ...lines(el('span', { class: 'gesture', 'aria-hidden': 'true', text: placeName(kind, slot) }),
+        el('span', { class: 'does', 'aria-hidden': 'true', text: does }),
+        el('span', { class: 'what', 'aria-hidden': 'true', text: what })));
     }));
   }
   // Settings with no control, outside Extras: easy to miss otherwise.
@@ -808,7 +837,7 @@ async function checkCapabilities() {
   }
   // A constructor alone does not establish support for module workers.
   await new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=0413669ba9a13b2b', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=d0c0228e8b9e63a7', { type: 'module' });
     const done = (error) => {
       clearTimeout(timer); worker.terminate();
       error ? reject(error) : resolve();
@@ -827,7 +856,7 @@ async function init() {
   }
   $('compatibility').hidden = true;
   try {
-    const response = await fetch('manifest.json?v=0413669ba9a13b2b', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=d0c0228e8b9e63a7', { cache: 'no-cache' });
     manifest = await response.json();
   } catch {
     status('Could not load the release list.', 'error');
