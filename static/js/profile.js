@@ -22,7 +22,7 @@
 //
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
-import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=716413d94d04fbd8';
+import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=d3cdc8ee403b3861';
 
 // Six-byte entries are kept in wire order: id, state, value, page, amount, action.
 const STATES = ['Off', 'Fixed', 'Adjustable'];
@@ -35,7 +35,19 @@ export function crc32(bytes) {
   return (crc ^ 0xffffffff) >>> 0;
 }
 
+// Options page LED masks (FEEDBACK 1, DRY/WET 2, REVERB 4), one per page.
+// Releases without page_leds have Beta 2's four pages, the last lighting all three.
+export const PAGE_LEDS = [[1, 2, 4, 7], [1, 2, 4, 3, 5, 6, 7]];
+export function pageLeds(profile) {
+  const leds = profile.page_leds === undefined ? PAGE_LEDS[0] : profile.page_leds;
+  const known = PAGE_LEDS.find((candidate) => Array.isArray(leds) && equal(candidate, leds));
+  if (!known) throw new Error('Unsupported options page layout.');
+  return known.slice();
+}
+export const pageSlots = (profile) => pageLeds(profile).length * 3;
+
 export function validate(entries, profile) {
+  const slots = pageSlots(profile);
   if (!Array.isArray(entries) || entries.length > 82) throw new Error('Too many features.');
   const seen = new Set();
   const used = [new Set(), new Set(), new Set()];
@@ -49,7 +61,7 @@ export function validate(entries, profile) {
     if (!f || seen.has(id)) throw new Error('Unknown or repeated feature.');
     seen.add(id);
     if (state > 2 || (f.states && !f.states.includes(STATES[state])) || (f.values && value >= f.values.length) ||
-        page > 12 || amount > 2 || action > 3 ||
+        page > slots || amount > 2 || action > 3 ||
         (page && (!f.page || state !== 2)) ||
         (amount && (!f.amount || state !== 2)) ||
         (action && (!f.action || !state || (state === 1 && (!value || !f.stateless)))) ||
