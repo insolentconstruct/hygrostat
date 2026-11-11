@@ -8,7 +8,7 @@
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="light dark">
 <title>Drizzlet Hygrostat</title>
-<script src="js/theme.js?v=716413d94d04fbd8"></script>
+<script src="js/theme.js?v=d3cdc8ee403b3861"></script>
 <style>
   /* Brushed panel greys, with the module's own LED colours as the only accents. */
   :root {
@@ -137,6 +137,8 @@
   .slot .gesture { font-family: var(--heading); font-size: .78rem; letter-spacing: .04em; font-weight: 600; color: var(--muted); }
   .slot .does { font-weight: 600; line-height: 1.25; }
   .slot .what { font-size: .85rem; color: var(--muted); }
+  #page-order { margin: .75rem 0 0; }
+  #page-order > button { min-height: 44px; }
   #unplaced, #bank-warning { margin: 1rem 0 0; }
   #unplaced button { min-height: 44px; padding: 0 .2rem; border: 0; background: none; color: var(--link); text-decoration: underline; }
 
@@ -397,6 +399,7 @@
       <thead><tr><td></td><th scope="col">FEEDBACK</th><th scope="col">DRY/WET</th><th scope="col">REVERB</th></tr></thead>
       <tbody></tbody>
     </table>
+    <div id="page-order" class="note"></div>
   </section>
 
   <div class="slots-area">
@@ -504,6 +507,6 @@
   </div>
   <div id="library-body"></div>
 </dialog>
-<script type="module" src="js/app.js?v=716413d94d04fbd8"></script>
+<script type="module" src="js/app.js?v=d3cdc8ee403b3861"></script>
 </body>
 </html>
