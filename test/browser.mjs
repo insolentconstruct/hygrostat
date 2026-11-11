@@ -1,6 +1,7 @@
 // Copyright 2026 Insolent Construct. MIT licence: see ../static/js/encoder.js.
 // Run with Playwright available, against a local server in an offline container.
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -13,6 +14,7 @@ const { encodeProfile, defaults, share, unshare, fingerprint, templates, profile
 const layout = await import(pathToFileURL(resolve(site, 'js/layout.js')).href);
 const { guide } = await import(pathToFileURL(resolve(site, 'js/guide.js')).href);
 const { factoryScales } = await import(pathToFileURL(resolve(site, 'js/scales.js')).href);
+const { decode } = await import(pathToFileURL(resolve(site, 'js/decoder.js')).href);
 const hashOf = (entries) => '#' + share(release, encodeProfile(entries, release.profile));
 async function checkThemes(browser) {
   const context = await browser.newContext({ colorScheme: 'dark', viewport: { width: 1280, height: 900 } });
@@ -544,6 +546,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
       assert.equal(await page.getAttribute('#status', 'class'), 'ok');
       assert((await page.textContent('#status')).includes('Matches the release'));
       assert.equal(await page.textContent('#wav-hash'), release.wav_sha256);
+      assert.equal(await page.textContent('#app-hash'), release.app_sha256);
       assert.equal(await page.getAttribute('#download', 'download'), `${release.tag}.wav`);
       assert(await page.isVisible('#guide'));
       assert(await page.isVisible('#guide-mobile'));
@@ -578,6 +581,17 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
       assert((await page.textContent('#status')).includes(`Profile ${customFP}; audio checked.`));
       assert.match(await page.textContent('#wav-hash'), /^[0-9a-f]{64}$/);
       assert.notEqual(await page.textContent('#wav-hash'), release.wav_sha256);
+      const downloaded = page.waitForEvent('download');
+      await page.click('#download');
+      const stream = await (await downloaded).createReadStream();
+      assert(stream, 'custom WAV download is readable');
+      const chunks = [];
+      for await (const chunk of stream) chunks.push(chunk);
+      const customApp = decode(new Uint8Array(Buffer.concat(chunks)), release.app_size);
+      const customHash = createHash('sha256').update(customApp).digest('hex');
+      assert.notEqual(customHash, release.app_sha256, 'custom firmware differs from its base');
+      assert.equal(await page.textContent('#app-hash'), customHash, 'shown app checksum matches the downloaded firmware');
+      assert.deepEqual(customApp.subarray(release.profile.offset, release.profile.offset + release.profile.size), customBlock);
       assert((await page.getAttribute('#download', 'download')).includes(customFP));
       assert((await page.getAttribute('#guide', 'download')).includes(customFP));
       assert((await page.getAttribute('#guide-mobile', 'download')).includes(customFP));

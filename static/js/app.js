@@ -8,15 +8,15 @@
 // check the release's app image against the manifest, encode the update .wav
 // in the browser, check the .wav, offer it for download.
 
-import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, normalise } from './profile.js?v=b6b5654a4917d7c6';
-import { effectiveScales, validateScales } from './scales.js?v=b6b5654a4917d7c6';
-import { scaleEditor } from './scale_editor.js?v=b6b5654a4917d7c6';
-import { guide } from './guide.js?v=b6b5654a4917d7c6';
-import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=b6b5654a4917d7c6';
-import { featureHelp, actionHelp } from './help.js?v=b6b5654a4917d7c6';
+import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, normalise } from './profile.js?v=0413669ba9a13b2b';
+import { effectiveScales, validateScales } from './scales.js?v=0413669ba9a13b2b';
+import { scaleEditor } from './scale_editor.js?v=0413669ba9a13b2b';
+import { guide } from './guide.js?v=0413669ba9a13b2b';
+import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=0413669ba9a13b2b';
+import { featureHelp, actionHelp } from './help.js?v=0413669ba9a13b2b';
 import { KNOBS, KINDS, GROUPS, ACTION_DOES, placeName, pageOf, entryOf, occupant, places, valueLabel, stateLabel,
-  summary, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, fits } from './layout.js?v=b6b5654a4917d7c6';
-import { drawPanel, highlight } from './panel.js?v=b6b5654a4917d7c6';
+  summary, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, fits } from './layout.js?v=0413669ba9a13b2b';
+import { drawPanel, highlight } from './panel.js?v=0413669ba9a13b2b';
 
 const $ = (id) => document.getElementById(id);
 const cap = (text) => text.replace(/^./, (c) => c.toUpperCase());
@@ -39,7 +39,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=b6b5654a4917d7c6', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=0413669ba9a13b2b', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.ready) return;
       if (data.progress !== undefined) {
@@ -91,9 +91,9 @@ async function build(release, app) {
   if (app.length !== release.app_size) {
     throw new Error(`the app image must be ${release.app_size} bytes for ${release.tag}`);
   }
-  const appHash = await sha256(app);
-  if (appHash !== release.app_sha256) {
-    throw new Error(`the app image does not match ${release.tag}: ${appHash}`);
+  const baseHash = await sha256(app);
+  if (baseHash !== release.app_sha256) {
+    throw new Error(`the app image does not match ${release.tag}: ${baseHash}`);
   }
   const chosen = entries.map((e) => e.slice());
   const chosenScales = validateScales(scales);
@@ -112,6 +112,7 @@ async function build(release, app) {
       JSON.stringify(decodeSettings(app.subarray(offset, offset + release.profile.size), release.profile)) !== JSON.stringify({ entries: chosen, scales: chosenScales })) {
     throw new Error('Updated firmware check failed.');
   }
+  const appHash = await sha256(app);
   const fp = await fingerprint(block);
   const names = filenames(release, fp, isDefault);
   status('Building and checking…');
@@ -807,7 +808,7 @@ async function checkCapabilities() {
   }
   // A constructor alone does not establish support for module workers.
   await new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=b6b5654a4917d7c6', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=0413669ba9a13b2b', { type: 'module' });
     const done = (error) => {
       clearTimeout(timer); worker.terminate();
       error ? reject(error) : resolve();
@@ -826,7 +827,7 @@ async function init() {
   }
   $('compatibility').hidden = true;
   try {
-    const response = await fetch('manifest.json?v=b6b5654a4917d7c6', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=0413669ba9a13b2b', { cache: 'no-cache' });
     manifest = await response.json();
   } catch {
     status('Could not load the release list.', 'error');
