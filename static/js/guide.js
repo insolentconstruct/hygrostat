@@ -23,9 +23,9 @@
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
 // Knob cards port options_guide.py: 270-degree arcs and the same LED ladder.
-import { effectiveScales, PULSE_NAMES } from './scales.js?v=c4ebed6113dccf19';
-import { defaults, equal, encodeProfile } from './profile.js?v=c4ebed6113dccf19';
-import { RELEASE_GUIDES, RELEASE_GUIDE_TAG } from './release_guides.js?v=c4ebed6113dccf19';
+import { effectiveScales, PULSE_NAMES } from './scales.js?v=ad34c4b83044d106';
+import { defaults, equal, encodeProfile } from './profile.js?v=ad34c4b83044d106';
+import { RELEASE_GUIDES, RELEASE_GUIDE_TAG } from './release_guides.js?v=ad34c4b83044d106';
 
 const KNOBS = ['FEEDBACK', 'DRY/WET', 'REVERB'];
 export const ACTIONS = ['None', '[A]+SEED', '[A]+FREEZE', '[A] hold'];
@@ -140,6 +140,7 @@ export function guide(entries, release, fp, mobile = false, scales = null) {
     { ...f, scales: effectiveScales(scales), values: Array.from({ length: 16 }, (_, id) => id < 2 ? f.values[id] :
       effectiveScales(scales).find((s) => s.id === id)?.name || 'Off (scale removed)') });
   const feature = (e) => features.find((f) => f.id === e[0]);
+  const idle = entries.find((e) => e[0] === 25 && e[1] === 1 && e[2]);
   d.text(margin, 35, 'Drizzlet Hidden Options', 24, 'bold');
   d.text(margin, 61, `Profile ${fp} · ${release.tag}`, 15);
   let y = 90;
@@ -147,7 +148,7 @@ export function guide(entries, release, fp, mobile = false, scales = null) {
     'Open: hold [M] 3 seconds; all three mix LEDs pulse. Release.',
     'Change page: tap [M]; empty pages skip. LEDs: FEEDBACK, DRY/WET, REVERB, then all three.',
     '[A] shows stored values. Turn knobs to change; changes save automatically.',
-    'Close: hold [M] 3 seconds or press another button; release before normal use. On the Pitch scale page with Scale selected, tap SEED to step.',
+    `Close: hold [M] 3 seconds or press another button${idle ? `, or leave all buttons and knobs for ${feature(idle).values[idle[2]]}` : ''}; release before normal use. On the Pitch scale page with Scale selected, tap SEED to step.`,
     'Move knobs more than a tenth of their travel to engage. Wait before powering off.'
   ] : ['This profile has no options pages. Hold [M] does nothing.'])) y = d.lines(margin, y, line, mobile ? 43 : 140) + 3;
   // Share the release's to-scale control sketch and LED legend.

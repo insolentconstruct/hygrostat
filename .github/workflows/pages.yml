@@ -59,6 +59,7 @@ jobs:
           node test/help.js
           node test/layout.js
           node test/readiness.js
+          node test/idle_timeout.js
           node --input-type=module -e '
             import { readFileSync } from "node:fs";
             import { fileURLToPath } from "node:url";
