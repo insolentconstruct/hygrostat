@@ -20,7 +20,7 @@ The page checks the pinned base `app.bin` against its SHA-256 and patches only t
 
 ## Editor
 
-- The page shows the module's destinations: options pages 1–4 (rows) by FEEDBACK, DRY/WET and REVERB (columns), two [A] amounts and three [A] gestures. Off, Fixed and Adjustable are shown as "Use stock behaviour", "Always use this value" and "Change on the module".
+- The page shows the module's destinations: options pages (rows) by FEEDBACK, DRY/WET and REVERB (columns), two [A] amounts and three [A] gestures. Off, Fixed and Adjustable are shown as "Use stock behaviour", "Always use this value" and "Change on the module".
 - `static/js/layout.js` holds the editor rules. State, value and slot edits use the previous editor's rule unchanged; `test/layout.js` checks it against a verbatim copy and checks every placement, swap and removal.
 - Placing a feature on a taken destination offers Swap (the occupant takes the feature's old place) or Replace (the occupant leaves). A feature taken off its last control keeps its value as Fixed, or goes Off at value 0; a Fixed gesture-only setting goes Off without its gesture.
 - `static/js/panel.js` draws the whole front panel to scale from the guide's geometry (`panel_geometry.tsv` in the firmware) and highlights the selected destination's controls.
@@ -30,6 +30,7 @@ The page checks the pinned base `app.bin` against its SHA-256 and patches only t
 - Each release pins its app image and WAV by SHA-256 and carries its profile offset, size, version, format and feature table.
 - `profile.format` is the firmware's assigned `kProfileFormat`, written little endian to profile bytes 8–11 (Beta 2: 1). It changes only when existing profile bytes change meaning, so it may stay the same across releases; nothing is derived from the tag or its date. A block with another number, including the former date ID `0x20261101`, is refused even with a valid checksum, as the firmware refuses it. Development entries pin `source_commit` instead of a tag; they establish no release tag or module qualification. Format 3 replaced format 2's dated `release_id`.
 - The current feature catalogue (24 features) must match the firmware's `beads/build/profile-features.json` at the release, byte for byte. `FIRMWARE_CATALOGUE_REF` adds a check against a second firmware revision.
+- A release's optional `profile.page_leds` lists each options page's mix LEDs (FEEDBACK 1, DRY/WET 2, REVERB 4). Absent means Beta 2's four pages, `[1, 2, 4, 7]`; the only other accepted value is the proposed seven-page `[1, 2, 4, 3, 5, 6, 7]`. It sets the page positions the editor offers and validates, the grid, the panel LEDs and guide wording, and must match the firmware's `kNumPageSlots`. The editor shows the pages [M] cycles through and offers compaction only as a previewed action.
 - `default_in_block: false` leaves a feature out of the default profile while its default stays available in the editor. `values: null` means a full byte. `page`, `amount`, `action` and `stateless` mirror the firmware table.
 
 ## Firmware checks

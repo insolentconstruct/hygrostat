@@ -7,11 +7,13 @@
 // Editor rules for the layout view: where each feature sits on the module and
 // how a placement, swap or removal changes the six-byte entries. Every result
 // goes through normalise(), so the validator stays the final gate.
-import { normalise, initialEntry } from './profile.js?v=716413d94d04fbd8';
+import { normalise, initialEntry, pageLeds, pageSlots } from './profile.js?v=d3cdc8ee403b3861';
 
 export const KNOBS = ['FEEDBACK', 'DRY/WET', 'REVERB'];
-// Entry byte for each kind of destination, and how many there are.
+// Entry byte for each kind of destination, and how many there are; a
+// release's page positions come from slotCount.
 export const KINDS = { page: { index: 3, count: 12 }, amount: { index: 4, count: 2 }, action: { index: 5, count: 3 } };
+export const slotCount = (kind, profile) => kind === 'page' ? pageSlots(profile) : KINDS[kind].count;
 export const pageOf = (slot) => Math.ceil(slot / 3);
 export const knobOf = (slot) => KNOBS[(slot - 1) % 3];
 export function placeName(kind, slot) {
@@ -102,7 +104,7 @@ export function afterUnplace(entries, profile, id, kind) {
 export function place(entries, profile, id, kind, slot, mode = 'replace') {
   const f = feature(profile, id);
   const index = KINDS[kind].index;
-  if (!fits(f, kind) || slot < 1 || slot > KINDS[kind].count) throw new Error(`${f.name} cannot go on ${placeName(kind, slot)}.`);
+  if (!fits(f, kind) || slot < 1 || slot > slotCount(kind, profile)) throw new Error(`${f.name} cannot go on ${placeName(kind, slot)}.`);
   let next = entries.map((e) => e.slice());
   const own = entryOf(next, f);
   if (own[index] === slot) return normalise(next, profile);
@@ -123,9 +125,29 @@ export const canSwap = (entries, profile, id, kind, slot) => {
   return Boolean(own[KINDS[kind].index]) && own[KINDS[kind].index] !== slot && Boolean(occupant(entries, kind, slot));
 };
 // First free destination of a kind, or 0.
-export function freeSlot(entries, kind) {
-  for (let slot = 1; slot <= KINDS[kind].count; ++slot) if (!occupant(entries, kind, slot)) return slot;
+export function freeSlot(entries, kind, profile) {
+  for (let slot = 1; slot <= slotCount(kind, profile); ++slot) if (!occupant(entries, kind, slot)) return slot;
   return 0;
+}
+
+// Options pages: LED names, the pages [M] cycles through and explicit compaction.
+export function pageLedName(profile, page) {
+  const mask = pageLeds(profile)[page - 1];
+  if (mask === 7) return 'all three LEDs';
+  const lit = KNOBS.filter((_, i) => mask & (1 << i));
+  return lit.length > 1 ? `${lit.join(' and ')} LEDs` : `${lit[0]} LED`;
+}
+export const usedPages = (entries, profile) => pageLeds(profile).map((_, i) => i + 1)
+  .filter((page) => entries.some((e) => e[3] && pageOf(e[3]) === page));
+// Whole pages move down in order, keeping their knobs: [[from, to], ...].
+export const compaction = (entries, profile) => usedPages(entries, profile)
+  .map((page, i) => [page, i + 1]).filter(([from, to]) => from !== to);
+export function compact(entries, profile) {
+  const moves = new Map(compaction(entries, profile));
+  return normalise(entries.map((e) => {
+    const to = e[3] && moves.get(pageOf(e[3]));
+    return to ? [...e.slice(0, 3), e[3] - (pageOf(e[3]) - to) * 3, ...e.slice(4)] : e.slice();
+  }), profile);
 }
 // Features that differ from a starting point; omitted entries are Off.
 export function changes(entries, start, profile) {

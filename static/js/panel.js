@@ -8,7 +8,8 @@
 // highlighted. Centres and sizes in mm are the printable guide's geometry
 // (Mutable Instruments Beads panel file, geometry only, CC BY-SA 3.0); the
 // drawing is plain SVG with no artwork.
-import { pageOf, KNOBS } from './layout.js?v=716413d94d04fbd8';
+import { pageOf, pageLedName, KNOBS } from './layout.js?v=d3cdc8ee403b3861';
+import { pageLeds } from './profile.js?v=d3cdc8ee403b3861';
 
 const SVG = 'http://www.w3.org/2000/svg';
 const WIDTH = 70.8, HEIGHT = 128.52;
@@ -116,15 +117,17 @@ export function drawPanel(svg) {
 }
 
 // Highlight a destination and return its gesture in words.
-export function highlight(svg, kind, slot) {
+export function highlight(svg, kind, slot, profile) {
   const on = new Set();
   const lit = new Set();
   let text = 'Not on a control.';
   if (kind === 'page' && slot) {
     const page = pageOf(slot), knob = (slot - 1) % 3;
     on.add('m'); on.add(`knob-${knob}`); lit.add('a-led');
-    for (const led of page === 4 ? [0, 1, 2] : [page - 1]) lit.add(`led-${led}`);
-    text = `Hold [M] 3 s, tap to page ${page} (${page === 4 ? 'all three LEDs' : KNOBS[page - 1] + ' LED'} pulses), turn ${KNOBS[knob]}. [A] shows the value.`;
+    const mask = pageLeds(profile)[page - 1];
+    for (const led of [0, 1, 2]) if (mask & (1 << led)) lit.add(`led-${led}`);
+    const leds = pageLedName(profile, page);
+    text = `Hold [M] 3 s, tap to page ${page} (${leds} ${leds.endsWith('LEDs') ? 'pulse' : 'pulses'}), turn ${KNOBS[knob]}. [A] shows the value.`;
   } else if (kind === 'amount' && slot) {
     on.add('a'); on.add(`knob-${slot}`);
     text = `Hold [A] and turn ${KNOBS[slot]}.`;

@@ -58,6 +58,7 @@ jobs:
           node test/downloads.js
           node test/help.js
           node test/layout.js
+          node test/option_pages.js
           node test/readiness.js
           node test/idle_timeout.js
           node test/recent_notes.js
@@ -117,6 +118,7 @@ jobs:
           SITE=static BASE=http://127.0.0.1:8080/ node test/scales_browser.mjs
           SITE=static BASE=http://127.0.0.1:8080/ node test/draft_browser.mjs
           SITE=static BASE=http://127.0.0.1:8080/ node test/beta3_browser.mjs
+          SITE=static BASE=http://127.0.0.1:8080/ node test/pages_browser.mjs
           BASE=http://127.0.0.1:8080/ node test/security_browser.mjs
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: failure()
