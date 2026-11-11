@@ -93,7 +93,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     container:
-      image: mcr.microsoft.com/playwright:v1.48.2-noble
+      image: mcr.microsoft.com/playwright:v1.65.0-noble@sha256:6e3fb709361521eb27161606e6da6d2674e5e89fa16516cb37d6fdd91372273d
       options: --user root
     env:
       HOME: /root
@@ -103,7 +103,7 @@ jobs:
         with:
           node-version: '22'
       - name: Install the Playwright matching the image
-        run: npm install --omit=dev --no-save --no-package-lock --no-audit --no-fund playwright@1.48.2
+        run: npm install --omit=dev --no-save --no-package-lock --no-audit --no-fund playwright@1.65.0
       - name: The page works in three browsers
         run: |
           mkdir -p test-artifacts
