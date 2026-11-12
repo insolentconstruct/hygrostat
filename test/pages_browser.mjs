@@ -56,7 +56,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
         assert.deepEqual(await lit(page, 5), [true, false, true]);
         assert.deepEqual(await lit(page, 6), [false, true, true]);
         assert.deepEqual(await lit(page, 7), [true, true, true]);
-        assert.equal(await page.getAttribute('#cell-21', 'aria-label'), 'Page 7, REVERB: empty');
+        assert.equal(await page.getAttribute('#cell-21', 'aria-label'), 'Page 7, REVERB: Empty, choose a feature');
         // Keyboard stays inside the seven pages.
         await page.focus('#cell-21');
         await page.keyboard.press('ArrowDown');
