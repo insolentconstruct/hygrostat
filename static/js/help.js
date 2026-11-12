@@ -27,7 +27,12 @@ const descriptions = {
   22: ['Show PITCH unison/octaves, ignoring CV and random pitch.', 'small-beta-2-profile-options'],
   23: ['Scan the granular buffer when TIME CV is unplugged.', 'small-beta-2-profile-options'],
   24: ['Keep the synth reverb tail as stock does, or clear it when synth playback stops.', 'synth-reverb-tail'],
-  25: ['Close the options pages after a time without button presses or knob turns; Off keeps them open until closed.', 'options-page-idle-timeout']
+  25: ['Close the options pages after a time without button presses or knob turns; Off keeps them open until closed.', 'options-page-idle-timeout'],
+  26: ['In delay mode, switch timing at once when SEED latches, as stock (it can pop), or fade the delay out and back in over about 10 ms instead.', 'delay-seed-latch-fade'],
+  27: ['Start in manual gain at unity when no gain is saved; a saved gain wins.', 'input-gain-at-power-on'],
+  28: ['How strong a hit Attacks needs: Low ignores softer notes, High catches them.', 'attack-sensitivity'],
+  29: ['Power on with SEED unlatched, so grains wait for SEED presses or gates.', 'seed-at-power-on'],
+  30: ['Turn PITCH smoothly between its intervals, without notches; PITCH CV unchanged.', 'pitch-knob']
 };
 
 export function featureHelp(feature, release) {

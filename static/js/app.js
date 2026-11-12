@@ -8,16 +8,16 @@
 // check the release's app image against the manifest, encode the update .wav
 // in the browser, check the .wav, offer it for download.
 
-import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, normalise } from './profile.js?v=0a3471a17df706ac';
-import { effectiveScales, validateScales } from './scales.js?v=0a3471a17df706ac';
-import { scaleEditor } from './scale_editor.js?v=0a3471a17df706ac';
-import { guide } from './guide.js?v=0a3471a17df706ac';
-import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=0a3471a17df706ac';
-import { featureHelp, actionHelp } from './help.js?v=0a3471a17df706ac';
+import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, normalise } from './profile.js?v=3b4f142f8e977b22';
+import { effectiveScales, validateScales } from './scales.js?v=3b4f142f8e977b22';
+import { scaleEditor } from './scale_editor.js?v=3b4f142f8e977b22';
+import { guide } from './guide.js?v=3b4f142f8e977b22';
+import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=3b4f142f8e977b22';
+import { featureHelp, actionHelp } from './help.js?v=3b4f142f8e977b22';
 import { KNOBS, KINDS, GROUPS, ACTION_DOES, placeName, pageOf, entryOf, occupant, places, valueLabel, stateLabel,
-  summary, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, fits } from './layout.js?v=0a3471a17df706ac';
-import { drawPanel, highlight } from './panel.js?v=0a3471a17df706ac';
-import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=0a3471a17df706ac';
+  summary, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, fits } from './layout.js?v=3b4f142f8e977b22';
+import { drawPanel, highlight } from './panel.js?v=3b4f142f8e977b22';
+import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=3b4f142f8e977b22';
 
 const $ = (id) => document.getElementById(id);
 const cap = (text) => text.replace(/^./, (c) => c.toUpperCase());
@@ -40,7 +40,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=0a3471a17df706ac', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=3b4f142f8e977b22', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.ready) return;
       if (data.progress !== undefined) {
@@ -512,7 +512,7 @@ function renderExtras() {
         el('label', { class: 'switch' }, input, el('span')), el('small', { id: `extra-${f.id}-about`, text: help.description }));
     }
     const select = el('select', { id: `extra-${f.id}`, 'aria-labelledby': `extra-${f.id}-name`, 'aria-describedby': `extra-${f.id}-about` });
-    f.values.forEach((v, i) => select.add(new Option(i === 0 && e[1] !== 2 && !/\bstock\b/i.test(valueLabel(f, i)) ? `${valueLabel(f, i)} (stock)` : valueLabel(f, i), i)));
+    f.values.forEach((v, i) => select.add(new Option(i === 0 && e[1] !== 2 && !/\b(stock|default)\b/i.test(valueLabel(f, i)) ? `${valueLabel(f, i)} (stock)` : valueLabel(f, i), i)));
     select.value = e[1] ? e[2] : 0;
     select.onchange = () => {
       const v = Number(select.value);
@@ -1018,7 +1018,7 @@ async function checkCapabilities() {
   }
   // A constructor alone does not establish support for module workers.
   await new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=0a3471a17df706ac', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=3b4f142f8e977b22', { type: 'module' });
     const done = (error) => {
       clearTimeout(timer); worker.terminate();
       error ? reject(error) : resolve();
@@ -1037,7 +1037,7 @@ async function init() {
   }
   $('compatibility').hidden = true;
   try {
-    const response = await fetch('manifest.json?v=0a3471a17df706ac', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=3b4f142f8e977b22', { cache: 'no-cache' });
     manifest = await response.json();
   } catch {
     status('Could not load the release list.', 'error');
