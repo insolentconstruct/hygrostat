@@ -32,13 +32,15 @@ const descriptions = {
   27: ['Start in manual gain at unity when no gain is saved; a saved gain wins.', 'input-gain-at-power-on'],
   28: ['How strong a hit Attacks needs: Low ignores softer notes, High catches them.', 'attack-sensitivity'],
   29: ['Power on with SEED unlatched, so grains wait for SEED presses or gates.', 'seed-at-power-on'],
-  30: ['Turn PITCH smoothly between its intervals, without notches; PITCH CV unchanged.', 'pitch-knob']
+  30: ['Turn PITCH smoothly between its intervals, without notches; PITCH CV unchanged.', 'pitch-knob'],
+  31: ['Which eight Plaits models the synth starts with: green, red or yellow. FEEDBACK picks a model in the bank.', 'plaits-bank']
 };
 
 export function featureHelp(feature, release) {
   const [description, section] = descriptions[feature.id];
   const recent = feature.values?.includes('Recent notes') ? ' Recent notes: with PITCH patched, each CCW grain plays one of the last 1-8 notes sent to PITCH (more as you turn further CCW); unpatched it plays as Free.' : '';
-  const details = feature.id === 10 ? 'Around C, the steps are C and G across octaves, including G below C (a fourth down). Pitch scale applies afterwards and can change these intervals. Works on granular and Beads wavetable grains, not the continuous oscillator, Plaits or Spectral.' + recent : '';
+  const details = feature.id === 10 ? 'Around C, the steps are C and G across octaves, including G below C (a fourth down). Pitch scale applies afterwards and can change these intervals. Works on granular and Beads wavetable grains, not the continuous oscillator, Plaits or Spectral.' + recent :
+    feature.id === 31 ? 'While the Plaits synth plays, hold [A] and press FREEZE to step green, red, yellow; the bank is saved. Other modes keep that gesture.' : '';
   return { description, details, url: docs.replace('{TAG}', encodeURIComponent(release.development ? release.source_commit : release.tag)) + '#' + section };
 }
 
