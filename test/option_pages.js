@@ -92,14 +92,14 @@ assert.deepEqual(compact(beta2Sparse, p2), [[1, 2, 0, 1, 0, 0], [5, 2, 0, 6, 0, 
 // releases name every cue and the profile's own page order.
 const BETA2_GUIDES = {
   'Drizzlet/false': 'f3fed34c133232ff', 'Drizzlet/true': 'c5e2e6c61629c8f4',
-  'Stock plus fixes/false': '76dfc29efb2910ae', 'Stock plus fixes/true': '7edbcece376a94e8',
-  'Cloud textures/false': '58ec02e3cbe457a7', 'Cloud textures/true': '93cbd207c4ded996',
-  'Pitched grains/false': '0b80c3a045896999', 'Pitched grains/true': '2b0b5512dcd21a0c',
-  'Drum grains/false': 'c4dee31b65d15ad1', 'Drum grains/true': '838781a1da428d51',
-  'Delay & freeze/false': 'b0c312ccf142ddb5', 'Delay & freeze/true': '35faf2f742cc4ad5',
-  'Spectral/false': '39fe85cf6f0ea0e0', 'Spectral/true': 'e571694048091595',
-  'Plaits voice/false': '4e6a7ff331e7f4d0', 'Plaits voice/true': '78f4916b9503cbde',
-  'Live essentials/false': 'bc5746b7f8c27a9b', 'Live essentials/true': 'b4a8da913ba83a76'
+  'Stock plus fixes/false': '34707a42a6378e50', 'Stock plus fixes/true': 'dfb821524fc96ad5',
+  'Cloud textures/false': '638febdf6b423aca', 'Cloud textures/true': '6a09b8eed7c723c7',
+  'Pitched grains/false': '1d6d6be34e217d87', 'Pitched grains/true': '5b8b4dd78b0f5bd4',
+  'Drum grains/false': '44568fccf65cf6f1', 'Drum grains/true': '7f3bf7b41e5e23f7',
+  'Delay & freeze/false': 'c7e19fb6983554a6', 'Delay & freeze/true': '9f18f20061921254',
+  'Spectral/false': 'f94cd9611174c202', 'Spectral/true': '20714f0e37fd9dc8',
+  'Plaits voice/false': 'e8f45b63472f6e22', 'Plaits voice/true': 'bf5d0efd14c32bfc',
+  'Live essentials/false': 'feb911de7681ead1', 'Live essentials/true': 'bdb80f97990a8abe'
 };
 for (const [name, entries] of Object.entries(templates(p2))) {
   for (const mobile of [false, true]) {
