@@ -3,7 +3,7 @@
   "default_in_block": false,
   "default": [25, 0, 0, 0, 0, 0],
   "name": "Options page idle timeout",
-  "values": ["Off (stay open)", "15 s", "30 s", "60 s", "120 s"],
+  "values": ["Off (stay open)", "5 s", "10 s", "20 s", "30 s"],
   "states": ["Off", "Fixed"],
   "field": null,
   "page": false,

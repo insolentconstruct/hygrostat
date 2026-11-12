@@ -44,8 +44,8 @@ assert.throws(() => decodeProfile(block, beta2.profile), /Unknown/);
 // Guides state the chosen time; Off adds nothing.
 for (const mobile of [false, true]) {
   const svg = text(guide(entries, release, 'abcd1234', mobile));
-  assert.match(svg, /leave all buttons and knobs for 30 s/);
-  assert.match(svg, /Options page idle timeout: Fixed · 30 s/);
+  assert.match(svg, /leave all buttons and knobs for 10 s/);
+  assert.match(svg, /Options page idle timeout: Fixed · 10 s/);
   for (const off of [timeout(0, 0), timeout(0, 2), timeout(1, 0)]) {
     const plain = text(guide([...base, off], release, 'abcd1234', mobile));
     assert(!plain.includes('leave all buttons'), 'Off keeps the usual close line');
