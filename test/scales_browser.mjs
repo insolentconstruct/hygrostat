@@ -57,6 +57,10 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     assert(!unshare(await page.getAttribute('#share', 'href'), [release]).entries.some((e) => e[0] === 24));
     assert.equal(await bank(), null);
     assert.equal(await page.locator('.scale-list li').count(), 8);
+    // Up, Down and Remove line up across rows whatever the pattern name (#25).
+    const columns = await page.$$eval('.scale-list li', (rows) => rows.map((row) =>
+      [...row.querySelectorAll('button')].slice(1).map((b) => Math.round(b.getBoundingClientRect().left))));
+    assert(new Set(columns.map((x) => x.join())).size === 1, `${name}: scale row buttons misaligned ${JSON.stringify(columns)}`);
     await page.getByRole('button', { name: 'Move Major up', exact: true }).click();
     await until(async () => await page.locator('.scale-list button').first().textContent() === 'Major' && (await bank())?.[0]?.id === 3);
     assert.deepEqual((await bank()).map((s) => s.id).slice(0, 2), [3, 2]);
@@ -145,6 +149,16 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     await page.click('#preset-replace');
     await until(async () => (await bank()) === null);
     assert.equal(await page.locator('.scale-list li').count(), 8);
+    // A longest-allowed name wraps instead of pushing the buttons off a narrow desktop (#25).
+    await page.setViewportSize({ width: 761, height: 1000 });
+    await page.getByRole('button', { name: 'Add scale', exact: true }).click();
+    await page.fill('#scale-name', 'W'.repeat(31));
+    await page.getByRole('button', { name: 'Apply scale', exact: true }).click();
+    await until(async () => (await bank())?.some((s) => s.name === 'W'.repeat(31)));
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `${name}: scale list overflows at 761px`);
+    const narrow = await page.$$eval('.scale-list li', (rows) => rows.map((row) =>
+      [...row.querySelectorAll('button')].slice(1).map((b) => Math.round(b.getBoundingClientRect().left))));
+    assert(new Set(narrow.map((x) => x.join())).size === 1, `${name}: rows misaligned at 761px ${JSON.stringify(narrow)}`);
     assert.deepEqual(errors, []);
     await context.close();
     console.log(`PASS ${name}: V2 scale edit, stable reorder, import, invalid edits, shares and restore; no firmware built.`);

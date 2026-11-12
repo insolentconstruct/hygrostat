@@ -231,6 +231,14 @@
   .scale-list { padding-left: 1.5rem; }
   .scale-list li { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; margin: .5rem 0; }
   .scale-list li > button:first-child { min-width: 12rem; text-align: left; }
+  /* Columns line up across rows; narrow screens keep the wrapping row. */
+  @supports (grid-template-columns: subgrid) {
+    @media (min-width: 761px) {
+      .scale-list { display: grid; grid-template-columns: fit-content(20rem) repeat(4, max-content); column-gap: .5rem; }
+      .scale-list li > button:first-child { min-width: 0; overflow-wrap: anywhere; }
+      .scale-list li { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; }
+    }
+  }
   .scale-list [aria-pressed=true] { outline: 2px solid var(--link); }
   .scale-swatch { display: inline-block; width: .8rem; height: .8rem; border: 1px solid #777; border-radius: 50%; margin-right: .5rem; }
   .scale-form { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); padding: 1rem 0; }
