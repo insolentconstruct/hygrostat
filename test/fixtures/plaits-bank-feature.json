@@ -1,0 +1,24 @@
+{
+  "id": 31,
+  "default_in_block": true,
+  "default": [31, 2, 0, 0, 0, 0],
+  "name": "Plaits bank",
+  "values": ["Green", "Red", "Yellow"],
+  "states": ["Adjustable"],
+  "field": 14,
+  "page": false,
+  "amount": false,
+  "action": false,
+  "stateless": false,
+  "synth_path": true,
+  "cpu": {
+    "kind": "zero",
+    "source": "synthetic fixture: no per-block work (code inspection)",
+    "engines": {
+      "synth": { "off": 0, "fixed": [0, 0, 0], "adjustable": [0, 0, 0] },
+      "granular": { "off": 0, "fixed": [0, 0, 0], "adjustable": [0, 0, 0] }
+    },
+    "uncertainty": { "points": 0 },
+    "note": "starting bank only: every bank stays reachable on [A]+FREEZE, so it adds no DSP; not a release measurement"
+  }
+}
