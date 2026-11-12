@@ -7,7 +7,7 @@
 // Editor rules for the layout view: where each feature sits on the module and
 // how a placement, swap or removal changes the six-byte entries. Every result
 // goes through normalise(), so the validator stays the final gate.
-import { normalise, initialEntry } from './profile.js?v=0a3471a17df706ac';
+import { normalise, initialEntry } from './profile.js?v=3b4f142f8e977b22';
 
 export const KNOBS = ['FEEDBACK', 'DRY/WET', 'REVERB'];
 // Entry byte for each kind of destination, and how many there are.
@@ -23,8 +23,8 @@ export function placeName(kind, slot) {
 export const ACTION_DOES = { 9: 'Start the synth', 13: 'Switch monophonic grains', 14: 'Trim the buffer' };
 export const GROUPS = [
   ['Sound', [2, 4, 5, 6, 7, 11, 12, 24]],
-  ['Playback', [1, 3, 8, 10, 13, 14, 23]],
-  ['Controls', [9, 16, 21]],
+  ['Playback', [1, 3, 8, 10, 13, 14, 23, 26, 28]],
+  ['Controls', [9, 16, 21, 25, 27, 29, 30]],
   ['Indicators', [15, 17, 18, 19, 20, 22]]
 ];
 export const fits = (f, kind) => Boolean(f[kind]);

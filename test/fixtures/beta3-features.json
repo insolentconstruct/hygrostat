@@ -1,0 +1,95 @@
+[
+  {
+    "id": 26,
+    "default_in_block": false,
+    "default": [26, 0, 0, 0, 0, 0],
+    "name": "Delay SEED latch fade",
+    "values": ["Switch at once (stock)", "Fade"],
+    "states": ["Off", "Fixed"],
+    "field": null,
+    "page": false,
+    "amount": false,
+    "action": false,
+    "stateless": false,
+    "synth_path": false,
+    "cpu": null
+  },
+  {
+    "id": 27,
+    "default_in_block": false,
+    "default": [27, 0, 0, 0, 0, 0],
+    "name": "Input gain at power-on",
+    "values": ["Automatic (stock)", "Manual"],
+    "states": ["Off", "Fixed"],
+    "field": null,
+    "page": false,
+    "amount": false,
+    "action": false,
+    "stateless": false,
+    "synth_path": true,
+    "cpu": {
+      "kind": "zero",
+      "source": "synthetic fixture: no per-block work (code inspection)",
+      "engines": {
+        "synth": { "off": 0, "fixed": [0, 0], "adjustable": [0, 0] },
+        "granular": { "off": 0, "fixed": [0, 0], "adjustable": [0, 0] }
+      },
+      "uncertainty": { "points": 0 },
+      "note": "power-on gain default only; not a release measurement"
+    }
+  },
+  {
+    "id": 28,
+    "default_in_block": false,
+    "default": [28, 0, 0, 0, 0, 0],
+    "name": "Attack sensitivity",
+    "values": ["Normal (default)", "Low", "High"],
+    "states": ["Off", "Fixed"],
+    "field": null,
+    "page": false,
+    "amount": false,
+    "action": false,
+    "stateless": false,
+    "synth_path": true,
+    "cpu": null
+  },
+  {
+    "id": 29,
+    "default_in_block": false,
+    "default": [29, 0, 0, 0, 0, 0],
+    "name": "SEED at power-on",
+    "values": ["Latched (stock)", "Unlatched"],
+    "states": ["Off", "Fixed"],
+    "field": null,
+    "page": false,
+    "amount": false,
+    "action": false,
+    "stateless": false,
+    "synth_path": true,
+    "cpu": {
+      "kind": "zero",
+      "source": "synthetic fixture: no per-block work (code inspection)",
+      "engines": {
+        "synth": { "off": 0, "fixed": [0, 0], "adjustable": [0, 0] },
+        "granular": { "off": 0, "fixed": [0, 0], "adjustable": [0, 0] }
+      },
+      "uncertainty": { "points": 0 },
+      "note": "power-on SEED latch state only; not a release measurement"
+    }
+  },
+  {
+    "id": 30,
+    "default_in_block": false,
+    "default": [30, 0, 0, 0, 0, 0],
+    "name": "PITCH knob",
+    "values": ["Notches (stock)", "Smooth"],
+    "states": ["Off", "Fixed"],
+    "field": null,
+    "page": false,
+    "amount": false,
+    "action": false,
+    "stateless": false,
+    "synth_path": true,
+    "cpu": null
+  }
+]
