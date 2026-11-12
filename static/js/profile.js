@@ -22,9 +22,10 @@
 //
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
-import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=3b4f142f8e977b22';
+import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=16167360dbd8375b';
 
 // Six-byte entries are kept in wire order: id, state, value, page, amount, action.
+const STATES = ['Off', 'Fixed', 'Adjustable'];
 export function crc32(bytes) {
   let crc = 0xffffffff;
   for (const byte of bytes) {
@@ -47,7 +48,7 @@ export function validate(entries, profile) {
     const f = profile.features.find((f) => f.id === id);
     if (!f || seen.has(id)) throw new Error('Unknown or repeated feature.');
     seen.add(id);
-    if (state > 2 || (state === 2 && f.states && !f.states.includes('Adjustable')) || (f.values && value >= f.values.length) ||
+    if (state > 2 || (f.states && !f.states.includes(STATES[state])) || (f.values && value >= f.values.length) ||
         page > 12 || amount > 2 || action > 3 ||
         (page && (!f.page || state !== 2)) ||
         (amount && (!f.amount || state !== 2)) ||
@@ -181,7 +182,8 @@ export function unshare(text, releases) {
 // Focused templates start from every feature Off and add only their own
 // settings: { id: [state, value, page, amount, action] }.
 export function templates(profile) {
-  const stock = defaults(profile).map((e) => [e[0], 0, 0, 0, 0, 0]);
+  // A setting that cannot be Off, such as the Plaits bank, keeps its default.
+  const stock = defaults(profile).map((e) => canBeOff(profile.features.find((f) => f.id === e[0])) ? [e[0], 0, 0, 0, 0, 0] : e);
   const focused = (changes) => [...stock.map((e) => changes[e[0]] ? [e[0], ...changes[e[0]]] : e),
     ...Object.keys(changes).map(Number).filter((id) => !stock.some((e) => e[0] === id))
       .map((id) => [id, ...changes[id]])];
@@ -284,9 +286,10 @@ export function cpuUsage(entries, release, scales = null) {
 }
 
 // State choices are catalogue capabilities; Fixed Off means disabled.
-export const modes = (feature) => (feature.states || ['Off', 'Fixed', 'Adjustable'])
-  .map((name) => [['Off', 'Fixed', 'Adjustable'].indexOf(name), name]);
-export const initialEntry = (feature) => feature.default_in_block === false ?
+export const modes = (feature) => (feature.states || STATES).map((name) => [STATES.indexOf(name), name]);
+const canBeOff = (feature) => modes(feature).some(([state]) => state === 0);
+// An omitted entry is Off, or the default when the setting cannot be Off.
+export const initialEntry = (feature) => feature.default_in_block === false || !canBeOff(feature) ?
   feature.default.slice() : [feature.id, 0, 0, 0, 0, 0];
 
 // Bytes 8-11 carry the firmware's assigned kProfileFormat, never a date.
