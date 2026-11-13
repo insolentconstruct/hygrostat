@@ -8,15 +8,16 @@
 // check the release's app image against the manifest, encode the update .wav
 // in the browser, check the .wav, offer it for download.
 
-import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, normalise } from './profile.js?v=d0c0228e8b9e63a7';
-import { effectiveScales, validateScales } from './scales.js?v=d0c0228e8b9e63a7';
-import { scaleEditor } from './scale_editor.js?v=d0c0228e8b9e63a7';
-import { guide } from './guide.js?v=d0c0228e8b9e63a7';
-import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=d0c0228e8b9e63a7';
-import { featureHelp, actionHelp } from './help.js?v=d0c0228e8b9e63a7';
+import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, normalise } from './profile.js?v=aa8af5ad2bbf2a27';
+import { effectiveScales, validateScales } from './scales.js?v=aa8af5ad2bbf2a27';
+import { scaleEditor } from './scale_editor.js?v=aa8af5ad2bbf2a27';
+import { guide } from './guide.js?v=aa8af5ad2bbf2a27';
+import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=aa8af5ad2bbf2a27';
+import { featureHelp, actionHelp } from './help.js?v=aa8af5ad2bbf2a27';
 import { KNOBS, KINDS, GROUPS, ACTION_DOES, placeName, pageOf, entryOf, occupant, places, valueLabel, stateLabel,
-  summary, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, fits } from './layout.js?v=d0c0228e8b9e63a7';
-import { drawPanel, highlight } from './panel.js?v=d0c0228e8b9e63a7';
+  summary, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, fits } from './layout.js?v=aa8af5ad2bbf2a27';
+import { drawPanel, highlight } from './panel.js?v=aa8af5ad2bbf2a27';
+import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=aa8af5ad2bbf2a27';
 
 const $ = (id) => document.getElementById(id);
 const cap = (text) => text.replace(/^./, (c) => c.toUpperCase());
@@ -39,7 +40,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=d0c0228e8b9e63a7', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=aa8af5ad2bbf2a27', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.ready) return;
       if (data.progress !== undefined) {
@@ -83,6 +84,13 @@ const startingPoints = [
   ['Perform', [['Live essentials', 'Keep useful choices close on stage.']]]
 ];
 const templateId = (name) => name.toLowerCase().replace(/\W+/g, '-');
+
+// Blocked storage (private modes, site settings) leaves the page working without persistence.
+const storage = (() => {
+  try { return localStorage; } catch { return null; }
+})();
+const drafts = keeper(storage);
+const notice = { restored: null, linked: false, undo: null, failed: false, dismissed: false };
 
 async function build(release, app) {
   if (download) URL.revokeObjectURL(download);
@@ -180,7 +188,7 @@ let busy = false;
 async function run(getApp) {
   if (busy) return;
   busy = true;
-  $('scale-editor').inert = $('workspace').inert = $('presets').inert = $('preset-confirm').inert = $('template-gallery').inert = true;
+  $('scale-editor').inert = $('workspace').inert = $('presets').inert = $('preset-confirm').inert = $('template-gallery').inert = $('draft-notice').inert = true;
   $('build').disabled = $('release').disabled = $('local').disabled = true;
   $('result').hidden = true;
   try {
@@ -194,7 +202,7 @@ async function run(getApp) {
     $('build').disabled = $('release').disabled = $('local').disabled = false;
     busy = false;
     if (pendingShare) { pendingShare = false; loadSharedProfile(); }
-    $('scale-editor').inert = $('workspace').inert = $('presets').inert = $('preset-confirm').inert = $('template-gallery').inert = false;
+    $('scale-editor').inert = $('workspace').inert = $('presets').inert = $('preset-confirm').inert = $('template-gallery').inert = $('draft-notice').inert = false;
   }
 }
 
@@ -220,6 +228,7 @@ function commit(change, message = '') {
   templatePreview = presetPending = null;
   try {
     entries = change();
+    edited();
     status(message);
   } catch (error) {
     status(error.message, 'error');
@@ -801,12 +810,17 @@ async function refresh() {
   const token = ++revision;
   $('result').hidden = true;
   const release = selected();
+  const block = encodeProfile(entries, release.profile, scales);
+  if (drafts.save(release, block, preset, Date.now(), manifest.releases.at(-1)) === 'failed' && !notice.failed) {
+    notice.failed = true;
+    notice.dismissed = false;
+    renderNotice();
+  }
   $('build').disabled = $('local').disabled = busy;
   const changed = changes(entries, templates(release.profile)[preset] || defaults(release.profile), release.profile).length + Number(scales !== null);
   $('changes').textContent = changed ? `${changed} change${changed === 1 ? '' : 's'} from ${preset}` : `${preset}, unchanged`;
   const used = Array.from({ length: 12 }, (_, i) => occupant(entries, 'page', i + 1)).filter(Boolean).length;
   $('positions').textContent = `${used} of 12 page positions used`;
-  const block = encodeProfile(entries, release.profile, scales);
   const fp = await fingerprint(block);
   if (token !== revision) return;
   $('fingerprint').textContent = fp;
@@ -827,8 +841,167 @@ function loadSharedProfile() {
     entries = chosen;
     scales = shared.scales ?? null;
     status('');
+    linkOpened();
     setupEditor();
-  } catch (error) { status(error.message, 'error'); }
+  } catch (error) {
+    linkOpened();
+    status(error.message, 'error');
+  }
+}
+
+// Saved setups: the draft this browser keeps, the one from before a shared link, refused ones.
+const saved = (key) => {
+  try { return storage?.getItem(key) ?? null; } catch { return null; }
+};
+const day = (time) => new Date(time).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+const clearFragment = () => {
+  if (location.hash) history.replaceState(null, '', location.pathname + location.search);
+};
+
+function edited() {
+  drafts.edited();
+  clearFragment();
+  if (notice.undo) { notice.undo = null; renderNotice(); }
+}
+
+// A shared setup replaced the screen: the draft stays as it is until the next edit.
+function linkOpened() {
+  drafts.linked();
+  const own = saved(DRAFT);
+  const params = (text) => new URLSearchParams(text.replace(/^#/, '')).toString();
+  notice.linked = own !== null && describe(own).fragment !== null && params(describe(own).fragment) !== params(location.hash);
+  notice.restored = notice.undo = null;
+  notice.dismissed = false;
+  renderNotice();
+}
+
+function show(draft) {
+  $('release').value = draft.release.tag;
+  entries = draft.entries;
+  scales = draft.scales;
+  preset = draft.preset;
+  notice.restored = draft;
+}
+
+// A draft this page cannot open is kept aside, never deleted; if it cannot be, saving pauses.
+function refuse(key, raw) {
+  if (!setAside(storage, key, raw)) drafts.pause();
+}
+
+function restoreDraft() {
+  const draft = storage && readDraft(storage, manifest.releases);
+  if (draft?.refused) refuse(DRAFT, draft.raw);
+  else if (draft) show(draft);
+}
+
+const focusStart = () => $('presets').querySelector('button')?.focus();
+
+function startFresh() {
+  notice.undo = { tag: selected().tag, entries, scales, preset, raw: saved(DRAFT) };
+  notice.restored = null;
+  notice.linked = false;
+  $('release').selectedIndex = manifest.releases.length - 1;
+  entries = defaults(selected().profile);
+  scales = null;
+  preset = 'Drizzlet';
+  put(storage, DRAFT, null);
+  drafts.settled();
+  clearFragment();
+  status('Started from Drizzlet defaults.');
+  setupEditor();
+  renderNotice();
+  focusStart();
+}
+
+function undoFresh() {
+  const { tag, raw, ...previous } = notice.undo;
+  notice.undo = null;
+  $('release').value = tag;
+  ({ entries, scales, preset } = previous);
+  if (raw !== null) put(storage, DRAFT, raw);
+  drafts.settled();
+  status('Previous setup back.');
+  setupEditor();
+  renderNotice();
+  focusStart();
+}
+
+// Opens the person's own setup: the draft while a link is unedited, otherwise the one kept
+// from before a link, swapping it with the draft so neither is lost.
+function openSaved() {
+  const key = drafts.linking ? DRAFT : BEFORE_LINK;
+  const draft = storage && readDraft(storage, manifest.releases, key);
+  if (!draft) { status('That setup is no longer saved in this browser.', 'error'); renderNotice(); return; }
+  if (draft.refused) { refuse(key, draft.raw); notice.linked = false; renderNotice(); return; }
+  if (key === BEFORE_LINK) {
+    const current = saved(DRAFT);
+    if (!put(storage, DRAFT, draft.raw)) { status('Could not switch saved setups in this browser.', 'error'); return; }
+    if (!put(storage, BEFORE_LINK, current)) {
+      put(storage, DRAFT, current);
+      status('Could not switch saved setups in this browser.', 'error');
+      return;
+    }
+  }
+  templatePreview = presetPending = null;
+  $('template-gallery').hidden = true;
+  show(draft);
+  notice.linked = false;
+  notice.undo = null;
+  drafts.settled();
+  clearFragment();
+  status('');
+  setupEditor();
+  renderNotice();
+  focusStart();
+}
+
+function forgetSaved() {
+  forgetDraft(storage);
+  drafts.settled();
+  drafts.pause(false);
+  Object.assign(notice, { restored: null, linked: false, undo: null, failed: false });
+  renderNotice();
+  status('Saved setup forgotten. Your next edit is kept again.');
+}
+
+function copyRefused(fragment) {
+  navigator.clipboard.writeText(`${location.origin}${location.pathname}#${fragment}`)
+    .then(() => status('Link copied.'), () => status('Could not copy. Your browser blocked the clipboard.', 'error'));
+}
+
+function renderNotice() {
+  const button = (id, text, onclick) => el('button', { type: 'button', class: 'quiet', id, text, onclick });
+  const lines = [];
+  const { restored } = notice;
+  if (restored) {
+    lines.push([restored.moved ? `Restored your last setup from ${restored.from} on ${restored.release.name} (saved ${day(restored.saved)}); check the new options.` :
+      `Restored your last setup (saved ${day(restored.saved)}). It is kept in this browser only; Share link keeps a copy.`,
+    button('draft-fresh', 'Start fresh', startFresh)]);
+  }
+  if (notice.linked) {
+    lines.push([`${location.hash ? 'Opened a shared setup. ' : ''}Your last setup is still saved.`, button('draft-open', 'Open it', openSaved)]);
+  } else if (saved(BEFORE_LINK) !== null) {
+    lines.push(['Your setup from before a shared link is also saved.', button('draft-open', 'Open it', openSaved),
+      button('draft-before-discard', 'Discard', () => { put(storage, BEFORE_LINK, null); renderNotice(); focusStart(); })]);
+  }
+  if (notice.undo) lines.push(['Started fresh.', button('draft-undo', 'Undo', undoFresh)]);
+  const refused = [[REFUSED, saved(REFUSED)], [DRAFT, drafts.paused ? saved(DRAFT) : null]].filter(([, raw]) => raw !== null);
+  refused.forEach(([key, raw], i) => {
+    const { name, saved: time, fragment } = describe(raw);
+    const about = [name, time !== null ? `saved ${day(time)}` : ''].filter(Boolean).join(', ');
+    lines.push([`Your last setup${about ? ` (${about})` : ''} can’t be opened by this page.${key === DRAFT ? ' Saving is paused until you discard it.' : ''}`,
+      fragment ? button(`draft-copy-${i}`, 'Copy it', () => copyRefused(fragment)) : null,
+      button(`draft-discard-${i}`, 'Discard', () => {
+        put(storage, key, null);
+        if (key === DRAFT) drafts.pause(false);
+        renderNotice();
+        focusStart();
+      })]);
+  });
+  if (notice.failed) lines.push(['This browser is not keeping your setup; Share link keeps a copy.']);
+  $('draft-notice').hidden = notice.dismissed || !lines.length;
+  $('draft-notice').replaceChildren(...lines.map(([text, ...actions]) => el('p', {}, text, ...actions)),
+    el('p', {}, button('draft-dismiss', 'Dismiss', () => { notice.dismissed = true; renderNotice(); focusStart(); })));
 }
 
 async function checkCapabilities() {
@@ -837,7 +1010,7 @@ async function checkCapabilities() {
   }
   // A constructor alone does not establish support for module workers.
   await new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=d0c0228e8b9e63a7', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=aa8af5ad2bbf2a27', { type: 'module' });
     const done = (error) => {
       clearTimeout(timer); worker.terminate();
       error ? reject(error) : resolve();
@@ -856,7 +1029,7 @@ async function init() {
   }
   $('compatibility').hidden = true;
   try {
-    const response = await fetch('manifest.json?v=d0c0228e8b9e63a7', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=aa8af5ad2bbf2a27', { cache: 'no-cache' });
     manifest = await response.json();
   } catch {
     status('Could not load the release list.', 'error');
@@ -897,12 +1070,15 @@ async function init() {
   });
   $('library').addEventListener('click', (event) => { if (event.target === $('library')) $('library').close(); });
   if (location.hash) loadSharedProfile();
+  else restoreDraft();
   window.addEventListener('hashchange', () => {
     if (busy) pendingShare = true;
     else loadSharedProfile();
   });
-  $('release').onchange = () => { templatePreview = null; $('template-gallery').hidden = true; entries = defaults(selected().profile); scales = null; preset = 'Drizzlet'; setupEditor(); };
+  $('release').onchange = () => { templatePreview = null; $('template-gallery').hidden = true; entries = defaults(selected().profile); scales = null; preset = 'Drizzlet'; edited(); setupEditor(); };
+  $('forget-draft').onclick = forgetSaved;
   setupEditor();
+  renderNotice();
   $('build').onclick = () => run(fetchApp);
   $('local').onchange = () => {
     const file = $('local').files[0];

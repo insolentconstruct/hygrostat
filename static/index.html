@@ -8,7 +8,7 @@
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="light dark">
 <title>Drizzlet Hygrostat</title>
-<script src="js/theme.js?v=d0c0228e8b9e63a7"></script>
+<script src="js/theme.js?v=aa8af5ad2bbf2a27"></script>
 <style>
   /* Brushed panel greys, with the module's own LED colours as the only accents. */
   :root {
@@ -74,6 +74,8 @@
   .presets > span { font-weight: 600; margin-right: .25rem; }
   #presets { display: flex; flex-wrap: wrap; gap: .5rem; }
   #preset-confirm { max-width: 40rem; margin: 0 0 .75rem; }
+  #draft-notice { max-width: 40rem; margin: 0 0 .75rem; padding: .4rem .75rem; border-radius: 6px; background: var(--sunk); }
+  #draft-notice p { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .6rem; margin: .35rem 0; }
   .chip { min-height: 44px; padding: .4rem .95rem; border: 1px solid var(--rule); border-radius: 999px; background: var(--plate); }
   .chip[aria-pressed=true] { border-color: var(--ink); background: var(--ink); color: var(--paper); }
   .how { color: var(--muted); max-width: 70ch; }
@@ -324,7 +326,7 @@
   @media print {
     #template-gallery { display: none; }
     :root { --paper: #fff; --plate: #fff; --ink: #000; --muted: #333; --rule: #888; --link: #000; }
-    .masthead, #workspace, .buildbar, #result, #advanced, dialog, noscript, .privacy { display: none !important; }
+    .masthead, #draft-notice, #workspace, .buildbar, #result, #advanced, dialog, noscript, .privacy { display: none !important; }
     .print-note { display: block !important; }
     section, li { break-inside: avoid; }
     a { color: #000; text-decoration: underline; }
@@ -354,6 +356,7 @@
   <p class="lead">Choose Beads features and where you control them.</p>
   <p class="steps">Select a position, choose a feature and its starting value, then build the update.</p>
   <p id="starting-point-note" class="note" hidden>Starting points replace your setup and restore factory scales.</p>
+  <div id="draft-notice" role="status" hidden></div>
   <div class="presets" role="group" aria-labelledby="presets-label">
     <span id="presets-label">Start from</span>
     <div id="presets"></div>
@@ -469,6 +472,7 @@
 
   <section class="privacy" aria-label="Privacy">
     <p class="note"><a href="https://www.goatcounter.com">GoatCounter</a> counts visits, builds and downloads without cookies or profile data; do-not-track is respected, and requests reveal your IP and browser. Download totals are read from GoatCounter and GitHub after your first interaction.</p>
+    <p class="note">Your current setup is kept in this browser so a reload reopens it; it is never sent anywhere. <button id="forget-draft" class="quiet" type="button">Forget saved setup</button></p>
   </section>
 
   <footer>
@@ -499,6 +503,6 @@
   </div>
   <div id="library-body"></div>
 </dialog>
-<script type="module" src="js/app.js?v=d0c0228e8b9e63a7"></script>
+<script type="module" src="js/app.js?v=aa8af5ad2bbf2a27"></script>
 </body>
 </html>

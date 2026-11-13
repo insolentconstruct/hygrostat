@@ -44,6 +44,15 @@ Reverb character on REVERB. Publish that layout only with its matching app,
 catalogue and guides: changing default slots changes the profile block and CRC.
 Do not rewrite an existing custom profile's explicit slots when defaults change.
 
+## Kept setup
+
+`static/js/draft.js` keeps the setup in `localStorage` so a reload reopens it. A draft is JSON with a schema `v` (1), the save time, the exact share fragment, and the release name, profile version and format; a starting-point name is kept only if it is a template. Nothing is sent anywhere.
+
+- Only edits save: `commit()` and a release change mark the draft, and `refresh()` writes it from the block it already encodes. Selection, dialogs and opening a link never save. The page's fresh state (Drizzlet defaults, factory scales, newest release) removes the draft.
+- On load a share link wins and leaves the draft alone. The first edit to a shared setup first copies the person's draft to `hygrostat-draft-before-link`; **Open it** swaps the two, so neither is lost. The first edit after a link or **Share** also removes the fragment from the address.
+- Restore uses `unshare()` and must re-encode to the stored bytes. A draft whose tag is gone moves to the newest release with the same profile version and format. Anything else is refused: the text goes to `hygrostat-draft-refused` (one slot, never overwritten) or, if that is taken, stays in place and saving pauses. Only the person discards it.
+- **Start fresh** (with Undo) and **Forget saved setup** are the only other ways a draft goes, apart from clearing site data. One second slot means a later link edit replaces the setup kept from before an earlier link.
+
 ## Historical CPU estimates
 
 The launch editor does not display CPU estimates or use them to block builds.

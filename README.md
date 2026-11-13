@@ -14,6 +14,8 @@ For firmware with scale-bank support, the scale editor chooses which scales are 
 
 The page counts visits, builds and downloads with [GoatCounter](https://www.goatcounter.com): no cookies, no profile data, and "do not track" is respected. After your first click it also reads public download totals from GoatCounter and GitHub. Like any web request, these reveal your IP address and browser.
 
+Your current setup is kept in this browser (local storage), so a reload reopens it. It is never sent anywhere; **Forget saved setup** at the bottom of the page removes it. It is a convenience, not a backup: a share link keeps a copy.
+
 ## Run it locally
 
 ```sh
@@ -45,10 +47,10 @@ The tests check the page against the firmware it offers. They need a supported N
 ```sh
 git clone --branch drizzlet https://github.com/insolentconstruct/eurorack.git firmware
 git -C firmware submodule update --init stmlib
-for t in manifest profile scales scales_firmware event_costs downloads help layout readiness costs; do node test/$t.js; done
+for t in manifest profile draft scales scales_firmware event_costs downloads help layout readiness costs; do node test/$t.js; done
 ```
 
-`test/browser.mjs` and `test/scales_browser.mjs` run the page in Chromium, Firefox and WebKit (CI runs it in the Playwright 1.65.0 image). It needs Playwright with its browsers and the page served locally: `SITE=static BASE=http://localhost:8000/ node test/browser.mjs` (and the same command with `test/scales_browser.mjs`). The scale browser test uses a synthetic release list and never builds or offers a synthetic firmware image. `test/scales_firmware.js` checks the V2 codec against the current firmware parser; it needs firmware with scale-bank support.
+`test/browser.mjs` and `test/scales_browser.mjs` run the page in Chromium, Firefox and WebKit (CI runs it in the Playwright 1.65.0 image). It needs Playwright with its browsers and the page served locally: `SITE=static BASE=http://localhost:8000/ node test/browser.mjs` (and the same command with `test/scales_browser.mjs` and `test/draft_browser.mjs`). The scale browser test uses a synthetic release list and never builds or offers a synthetic firmware image. `test/scales_firmware.js` checks the V2 codec against the current firmware parser; it needs firmware with scale-bank support.
 
 `BASE=http://localhost:8000/ node test/security_browser.mjs` checks actual CSP blocking and referrer behaviour in all three engines without re-encoding a WAV.
 

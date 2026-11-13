@@ -141,6 +141,10 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
   try {
     await checkThemes(browser);
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    // Reloads here start fresh; test/draft_browser.mjs covers the kept setup.
+    await context.addInitScript(() => {
+      for (const key of ['hygrostat-draft', 'hygrostat-draft-before-link', 'hygrostat-draft-refused']) localStorage.removeItem(key);
+    });
     traceContext = context;
     await context.tracing.start({ snapshots: true });
     context.on('requestfailed', (request) => {
