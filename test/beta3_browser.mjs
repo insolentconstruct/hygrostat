@@ -1,5 +1,5 @@
 // Copyright 2026 Insolent Construct. MIT licence: see ../static/js/encoder.js.
-// Beta 3 profile-only options (25-30) and the Plaits bank (31) on a synthetic release; no firmware image is built or offered.
+// Beta 3 profile-only options (25-30, 32 and 33) and the Plaits bank (31) on a synthetic release; no firmware image is built or offered.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -50,13 +50,17 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
       await until(async () => await page.textContent('#fingerprint') === startingFP);
       assert(!(await entries()).some((e) => e[0] === f.id), 'Off leaves the entry out');
       await page.click('#browse');
+      if (f.id >= 32) assert.equal(await page.locator(`section[aria-label="Sound"] #lib-${f.id}`).count(), 1, 'listed under Sound');
       await page.click(`#lib-${f.id}`);
       assert.equal(await page.textContent('#inspector-title'), f.name);
       assert.equal(await page.locator('#state-2').count(), 0);
+      if (featureHelp(f, release).details) assert.equal(await page.textContent('#feature-details'), featureHelp(f, release).details);
       assert.equal(await page.locator('#where-page').count(), 0);
       assert((await page.getAttribute('#inspector a', 'href')).endsWith('#' + new URL(featureHelp(f, release).url).hash.slice(1)));
     }
     assert.deepEqual(await page.locator('#extra-28 option').allTextContents(), ['Normal (default)', 'Low', 'High']);
+    assert.deepEqual(await page.locator('#extra-32 option').allTextContents(), ['Stock', 'Gentle']);
+    assert.deepEqual(await page.locator('#extra-33 option').allTextContents(), ['Mix (stock)', 'Grains']);
     assert.equal(await page.isDisabled('#build'), false);
 
     // Plaits bank: Adjustable only, starts green, chosen in Extras with no placement.
@@ -99,6 +103,6 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     assert.equal(await page.locator('#inspector-bank-warning').count(), 0);
     assert.deepEqual(errors, []);
     await context.close();
-    console.log(`PASS ${name}: Beta 3 options 25-30 render, encode Fixed values, return to Off and link their documentation; Plaits bank starts and warns; no firmware built.`);
+    console.log(`PASS ${name}: Beta 3 options 25-30, 32 and 33 render, encode Fixed values, return to Off and link their documentation; Plaits bank starts and warns; no firmware built.`);
   } finally { await browser.close(); }
 }
