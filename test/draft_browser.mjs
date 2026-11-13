@@ -192,6 +192,19 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     await page.click('#extra-15');
     await until(async () => (await stored(page))[1] !== null);
     assert.deepEqual((await stored(page)).filter((_, i) => i), [kept, refused]);
+    // Likewise a refused draft when the page opens on a link: it never reaches the second slot.
+    await page.evaluate(([good, bad]) => {
+      localStorage.clear();
+      localStorage.setItem('hygrostat-draft', bad);
+      localStorage.setItem('hygrostat-draft-before-link', good);
+    }, [kept, refused]);
+    await page.goto(base + '#' + spectral);
+    await page.reload();
+    await until(async () => await shareHref() === '#' + spectral);
+    assert.deepEqual(await stored(page), [null, kept, refused]);
+    await page.click('#extra-15');
+    await until(async () => (await stored(page))[0] !== null);
+    assert.deepEqual((await stored(page)).filter((_, i) => i), [kept, refused]);
     await page.evaluate(() => localStorage.clear());
 
     // Nothing persisted leaves the browser.

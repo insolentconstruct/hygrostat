@@ -8,16 +8,16 @@
 // check the release's app image against the manifest, encode the update .wav
 // in the browser, check the .wav, offer it for download.
 
-import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, normalise } from './profile.js?v=b27ab5245981fbc3';
-import { effectiveScales, validateScales } from './scales.js?v=b27ab5245981fbc3';
-import { scaleEditor } from './scale_editor.js?v=b27ab5245981fbc3';
-import { guide } from './guide.js?v=b27ab5245981fbc3';
-import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=b27ab5245981fbc3';
-import { featureHelp, actionHelp } from './help.js?v=b27ab5245981fbc3';
+import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, normalise } from './profile.js?v=c4ebed6113dccf19';
+import { effectiveScales, validateScales } from './scales.js?v=c4ebed6113dccf19';
+import { scaleEditor } from './scale_editor.js?v=c4ebed6113dccf19';
+import { guide } from './guide.js?v=c4ebed6113dccf19';
+import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=c4ebed6113dccf19';
+import { featureHelp, actionHelp } from './help.js?v=c4ebed6113dccf19';
 import { KNOBS, KINDS, GROUPS, ACTION_DOES, placeName, pageOf, entryOf, occupant, places, valueLabel, stateLabel,
-  summary, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, fits } from './layout.js?v=b27ab5245981fbc3';
-import { drawPanel, highlight } from './panel.js?v=b27ab5245981fbc3';
-import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=b27ab5245981fbc3';
+  summary, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, fits } from './layout.js?v=c4ebed6113dccf19';
+import { drawPanel, highlight } from './panel.js?v=c4ebed6113dccf19';
+import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=c4ebed6113dccf19';
 
 const $ = (id) => document.getElementById(id);
 const cap = (text) => text.replace(/^./, (c) => c.toUpperCase());
@@ -40,7 +40,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=b27ab5245981fbc3', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=c4ebed6113dccf19', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.ready) return;
       if (data.progress !== undefined) {
@@ -1018,7 +1018,7 @@ async function checkCapabilities() {
   }
   // A constructor alone does not establish support for module workers.
   await new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=b27ab5245981fbc3', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=c4ebed6113dccf19', { type: 'module' });
     const done = (error) => {
       clearTimeout(timer); worker.terminate();
       error ? reject(error) : resolve();
@@ -1037,7 +1037,7 @@ async function init() {
   }
   $('compatibility').hidden = true;
   try {
-    const response = await fetch('manifest.json?v=b27ab5245981fbc3', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=c4ebed6113dccf19', { cache: 'no-cache' });
     manifest = await response.json();
   } catch {
     status('Could not load the release list.', 'error');
@@ -1077,11 +1077,13 @@ async function init() {
     (items[at + step] || (step < 0 ? $('library-search') : items[at]))?.focus();
   });
   $('library').addEventListener('click', (event) => { if (event.target === $('library')) $('library').close(); });
+  // Check both slots first, so a later link edit never copies or replaces text this page cannot open.
+  for (const key of [DRAFT, BEFORE_LINK]) {
+    const draft = storage && readDraft(storage, manifest.releases, key);
+    if (draft?.refused) refuse(key, draft.raw);
+  }
   if (location.hash) loadSharedProfile();
   else restoreDraft();
-  // Check the second slot too, so a later link edit never replaces text it cannot open.
-  const aside = storage && readDraft(storage, manifest.releases, BEFORE_LINK);
-  if (aside?.refused) refuse(BEFORE_LINK, aside.raw);
   window.addEventListener('hashchange', () => {
     if (busy) pendingShare = true;
     else loadSharedProfile();
