@@ -3,7 +3,7 @@
 // The setup kept in this browser so a reload reopens it. No DOM; storage is passed in.
 // A draft is the share fragment plus a little context; see docs/DESIGN.md.
 
-import { defaults, encodeProfile, equal, normalise, share, templates, unshare } from './profile.js?v=aa8af5ad2bbf2a27';
+import { defaults, encodeProfile, equal, normalise, share, templates, unshare } from './profile.js?v=797e1b555f9939f4';
 
 export const DRAFT = 'hygrostat-draft';
 export const BEFORE_LINK = 'hygrostat-draft-before-link';
@@ -14,11 +14,16 @@ const SCHEMA = 1;
 export const isFresh = (release, block, newest) => release === newest &&
   equal(block, encodeProfile(defaults(release.profile), release.profile));
 
-export function draftText(release, block, preset, now) {
+// link marks a setup that started from a shared link rather than the person's own.
+export function draftText(release, block, preset, now, link = false) {
   return JSON.stringify({ v: SCHEMA, saved: now, share: share(release, block), name: release.name,
     version: release.profile.version, format: release.profile.format,
-    ...Object.hasOwn(templates(release.profile), preset) ? { preset } : {} });
+    ...Object.hasOwn(templates(release.profile), preset) ? { preset } : {}, ...link ? { link } : {} });
 }
+
+const fromLink = (raw) => {
+  try { return JSON.parse(raw)?.link === true; } catch { return false; }
+};
 
 // What a refused draft can still tell the person, from text this page could not open.
 export function describe(raw) {
@@ -57,7 +62,7 @@ export function readDraft(storage, releases, key = DRAFT) {
       params.get('profile').match(/../g), (v) => parseInt(v, 16)))) throw new Error('Draft bytes differ.');
     return { release, entries: normalise(shared.entries, release.profile), scales,
       preset: Object.hasOwn(templates(release.profile), draft.preset) ? draft.preset : 'Drizzlet',
-      saved: draft.saved, moved, from: draft.name, raw };
+      saved: draft.saved, moved, from: draft.name, link: draft.link === true, raw };
   } catch (error) {
     return { refused: true, raw, error };
   }
@@ -92,15 +97,15 @@ export function forgetDraft(storage) {
 }
 
 // When to save: after an edit only, never a shared setup that was merely opened.
-// The first save after a link keeps the person's own draft in BEFORE_LINK first.
+// The first save after a link moves the person's own draft (not one from a link) to BEFORE_LINK.
 export function keeper(storage) {
-  let dirty = false, stash = false, paused = false;
+  let dirty = false, stash = false, paused = false, link = false;
   return {
     get paused() { return paused; },
-    get linking() { return stash; },
     edited() { dirty = true; },
-    linked() { dirty = false; stash = true; },
-    settled() { dirty = false; stash = false; },
+    linked() { dirty = false; stash = true; link = true; },
+    settled(fromLink = false) { dirty = false; stash = false; link = fromLink; },
+    clean() { dirty = false; },
     pause(on = true) { paused = on; },
     // Returns null (nothing to do), 'saved', 'removed' or 'failed'.
     save(release, block, preset, now, newest) {
@@ -109,11 +114,11 @@ export function keeper(storage) {
       if (stash) {
         let own;
         try { own = storage.getItem(DRAFT); } catch { return 'failed'; }
-        if (own !== null && !put(storage, BEFORE_LINK, own)) return 'failed';
+        if (own !== null && !fromLink(own) && !put(storage, BEFORE_LINK, own)) return 'failed';
         stash = false;
       }
       const fresh = isFresh(release, block, newest);
-      return put(storage, DRAFT, fresh ? null : draftText(release, block, preset, now)) ? (fresh ? 'removed' : 'saved') : 'failed';
+      return put(storage, DRAFT, fresh ? null : draftText(release, block, preset, now, link)) ? (fresh ? 'removed' : 'saved') : 'failed';
     }
   };
 }

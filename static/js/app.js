@@ -8,16 +8,16 @@
 // check the release's app image against the manifest, encode the update .wav
 // in the browser, check the .wav, offer it for download.
 
-import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, normalise } from './profile.js?v=aa8af5ad2bbf2a27';
-import { effectiveScales, validateScales } from './scales.js?v=aa8af5ad2bbf2a27';
-import { scaleEditor } from './scale_editor.js?v=aa8af5ad2bbf2a27';
-import { guide } from './guide.js?v=aa8af5ad2bbf2a27';
-import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=aa8af5ad2bbf2a27';
-import { featureHelp, actionHelp } from './help.js?v=aa8af5ad2bbf2a27';
+import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, normalise } from './profile.js?v=797e1b555f9939f4';
+import { effectiveScales, validateScales } from './scales.js?v=797e1b555f9939f4';
+import { scaleEditor } from './scale_editor.js?v=797e1b555f9939f4';
+import { guide } from './guide.js?v=797e1b555f9939f4';
+import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=797e1b555f9939f4';
+import { featureHelp, actionHelp } from './help.js?v=797e1b555f9939f4';
 import { KNOBS, KINDS, GROUPS, ACTION_DOES, placeName, pageOf, entryOf, occupant, places, valueLabel, stateLabel,
-  summary, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, fits } from './layout.js?v=aa8af5ad2bbf2a27';
-import { drawPanel, highlight } from './panel.js?v=aa8af5ad2bbf2a27';
-import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=aa8af5ad2bbf2a27';
+  summary, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, fits } from './layout.js?v=797e1b555f9939f4';
+import { drawPanel, highlight } from './panel.js?v=797e1b555f9939f4';
+import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=797e1b555f9939f4';
 
 const $ = (id) => document.getElementById(id);
 const cap = (text) => text.replace(/^./, (c) => c.toUpperCase());
@@ -40,7 +40,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=aa8af5ad2bbf2a27', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=797e1b555f9939f4', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.ready) return;
       if (data.progress !== undefined) {
@@ -91,6 +91,7 @@ const storage = (() => {
 })();
 const drafts = keeper(storage);
 const notice = { restored: null, linked: false, undo: null, failed: false, dismissed: false };
+let held = null; // The key of a refused draft that could not be set aside; saving pauses meanwhile.
 
 async function build(release, app) {
   if (download) URL.revokeObjectURL(download);
@@ -881,11 +882,14 @@ function show(draft) {
   scales = draft.scales;
   preset = draft.preset;
   notice.restored = draft;
+  drafts.settled(draft.link);
 }
 
 // A draft this page cannot open is kept aside, never deleted; if it cannot be, saving pauses.
 function refuse(key, raw) {
-  if (!setAside(storage, key, raw)) drafts.pause();
+  if (setAside(storage, key, raw) || held) return;
+  held = key;
+  drafts.pause();
 }
 
 function restoreDraft() {
@@ -897,7 +901,7 @@ function restoreDraft() {
 const focusStart = () => $('presets').querySelector('button')?.focus();
 
 function startFresh() {
-  notice.undo = { tag: selected().tag, entries, scales, preset, raw: saved(DRAFT) };
+  notice.undo = { tag: selected().tag, entries, scales, preset, raw: saved(DRAFT), link: notice.restored?.link ?? false };
   notice.restored = null;
   notice.linked = false;
   $('release').selectedIndex = manifest.releases.length - 1;
@@ -914,22 +918,21 @@ function startFresh() {
 }
 
 function undoFresh() {
-  const { tag, raw, ...previous } = notice.undo;
+  const { tag, raw, link, ...previous } = notice.undo;
   notice.undo = null;
   $('release').value = tag;
   ({ entries, scales, preset } = previous);
   if (raw !== null) put(storage, DRAFT, raw);
-  drafts.settled();
+  drafts.settled(link);
   status('Previous setup back.');
   setupEditor();
   renderNotice();
   focusStart();
 }
 
-// Opens the person's own setup: the draft while a link is unedited, otherwise the one kept
-// from before a link, swapping it with the draft so neither is lost.
-function openSaved() {
-  const key = drafts.linking ? DRAFT : BEFORE_LINK;
+// Opens a saved setup: the draft while a link is unedited, or the second slot, swapped
+// with the draft so neither is lost.
+function openSaved(key) {
   const draft = storage && readDraft(storage, manifest.releases, key);
   if (!draft) { status('That setup is no longer saved in this browser.', 'error'); renderNotice(); return; }
   if (draft.refused) { refuse(key, draft.raw); notice.linked = false; renderNotice(); return; }
@@ -947,7 +950,6 @@ function openSaved() {
   show(draft);
   notice.linked = false;
   notice.undo = null;
-  drafts.settled();
   clearFragment();
   status('');
   setupEditor();
@@ -957,8 +959,9 @@ function openSaved() {
 
 function forgetSaved() {
   forgetDraft(storage);
-  drafts.settled();
+  drafts.clean();
   drafts.pause(false);
+  held = null;
   Object.assign(notice, { restored: null, linked: false, undo: null, failed: false });
   renderNotice();
   status('Saved setup forgotten. Your next edit is kept again.');
@@ -979,21 +982,23 @@ function renderNotice() {
     button('draft-fresh', 'Start fresh', startFresh)]);
   }
   if (notice.linked) {
-    lines.push([`${location.hash ? 'Opened a shared setup. ' : ''}Your last setup is still saved.`, button('draft-open', 'Open it', openSaved)]);
-  } else if (saved(BEFORE_LINK) !== null) {
-    lines.push(['Your setup from before a shared link is also saved.', button('draft-open', 'Open it', openSaved),
+    lines.push([`${location.hash ? 'Opened a shared setup. ' : ''}Your last setup is still saved.`, button('draft-open', 'Open it', () => openSaved(DRAFT))]);
+  } else if (saved(BEFORE_LINK) !== null && held !== BEFORE_LINK) {
+    lines.push(['Another saved setup is also kept.', button('draft-open', 'Open it', () => openSaved(BEFORE_LINK)),
       button('draft-before-discard', 'Discard', () => { put(storage, BEFORE_LINK, null); renderNotice(); focusStart(); })]);
   }
   if (notice.undo) lines.push(['Started fresh.', button('draft-undo', 'Undo', undoFresh)]);
-  const refused = [[REFUSED, saved(REFUSED)], [DRAFT, drafts.paused ? saved(DRAFT) : null]].filter(([, raw]) => raw !== null);
+  const refused = [[REFUSED, saved(REFUSED)], [held, held && saved(held)]].filter(([, raw]) => raw);
   refused.forEach(([key, raw], i) => {
     const { name, saved: time, fragment } = describe(raw);
     const about = [name, time !== null ? `saved ${day(time)}` : ''].filter(Boolean).join(', ');
-    lines.push([`Your last setup${about ? ` (${about})` : ''} can’t be opened by this page.${key === DRAFT ? ' Saving is paused until you discard it.' : ''}`,
+    lines.push([`Your last setup${about ? ` (${about})` : ''} can’t be opened by this page.${key === held ? ' Saving is paused until you discard it.' : ''}`,
       fragment ? button(`draft-copy-${i}`, 'Copy it', () => copyRefused(fragment)) : null,
       button(`draft-discard-${i}`, 'Discard', () => {
         put(storage, key, null);
-        if (key === DRAFT) drafts.pause(false);
+        if (key === held) { held = null; drafts.pause(false); }
+        drafts.clean();
+        notice.undo = null;
         renderNotice();
         focusStart();
       })]);
@@ -1010,7 +1015,7 @@ async function checkCapabilities() {
   }
   // A constructor alone does not establish support for module workers.
   await new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=aa8af5ad2bbf2a27', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=797e1b555f9939f4', { type: 'module' });
     const done = (error) => {
       clearTimeout(timer); worker.terminate();
       error ? reject(error) : resolve();
@@ -1029,7 +1034,7 @@ async function init() {
   }
   $('compatibility').hidden = true;
   try {
-    const response = await fetch('manifest.json?v=aa8af5ad2bbf2a27', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=797e1b555f9939f4', { cache: 'no-cache' });
     manifest = await response.json();
   } catch {
     status('Could not load the release list.', 'error');

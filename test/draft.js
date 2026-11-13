@@ -81,12 +81,11 @@ assert(!isFresh(release, encodeProfile(defaults(profile), profile, factoryScales
   const link = encodeProfile(templates(profile).Spectral, profile);
   assert.equal(k.save(release, link, 'Drizzlet', now, release), null, 'the pending edit does not save the link');
   assert.equal(s.getItem(DRAFT), own);
-  assert(k.linking);
   k.edited();
   assert.equal(k.save(release, link, 'Drizzlet', now + 1, release), 'saved');
   assert.equal(s.getItem(BEFORE_LINK), own);
   assert.equal(JSON.parse(s.getItem(DRAFT)).share, share(release, link));
-  assert(!k.linking);
+  assert.equal(JSON.parse(s.getItem(DRAFT)).link, true, 'marked as from a link');
   // Later edits replace only the draft.
   k.edited();
   assert.equal(k.save(release, encodeProfile(pitched, profile), 'Drizzlet', now + 2, release), 'saved');
@@ -106,6 +105,35 @@ assert(!isFresh(release, encodeProfile(defaults(profile), profile, factoryScales
   ku.edited();
   assert.equal(ku.save(release, link, 'Drizzlet', now, release), 'failed');
   assert.equal(u.getItem(DRAFT), own);
+}
+
+// Two link cycles: the own draft stays in the second slot; an edited link never replaces it.
+{
+  const own = saveText(pitched, custom, 'Pitched grains');
+  const s = store({ [DRAFT]: own });
+  const k = keeper(s);
+  for (const name of ['Spectral', 'Drum grains']) {
+    k.linked();
+    k.edited();
+    assert.equal(k.save(release, encodeProfile(templates(profile)[name], profile), 'Drizzlet', now, release), 'saved');
+    assert.equal(s.getItem(BEFORE_LINK), own, name);
+    assert.equal(readDraft(s, releases).link, true);
+  }
+  // A restored link draft keeps its mark; an own one does not.
+  k.settled(readDraft(s, releases).link);
+  k.edited();
+  k.save(release, encodeProfile(pitched, profile), 'Drizzlet', now, release);
+  assert.equal(readDraft(s, releases).link, true);
+  k.settled(false);
+  k.edited();
+  k.save(release, encodeProfile(pitched, profile), 'Drizzlet', now, release);
+  assert.equal(readDraft(s, releases).link, false);
+  assert.equal(JSON.parse(s.getItem(DRAFT)).link, undefined);
+  // clean() drops a pending save but keeps the link context.
+  k.linked();
+  k.edited();
+  k.clean();
+  assert.equal(k.save(release, encodeProfile(pitched, profile), 'Drizzlet', now, release), null);
 }
 
 // Forget during a pending refresh stays forgotten.
