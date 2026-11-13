@@ -11,6 +11,7 @@ import { validate, encodeProfile, decodeProfile, defaults, share, unshare, cpuUs
 import { edit, GROUPS, place, entryOf, placeable, bankWarning } from '../static/js/layout.js';
 import { guide } from '../static/js/guide.js';
 import { featureHelp } from '../static/js/help.js';
+import { DRAFT, draftText, readDraft } from '../static/js/draft.js';
 const text = (svg) => [...svg.matchAll(/<text\b[^>]*>(.*?)<\/text>/g)].map((m) => m[1]).join(' ');
 const read = (file) => readFileSync(new URL(file, import.meta.url));
 const manifest = JSON.parse(read('../static/manifest.json'));
@@ -264,6 +265,25 @@ for (const id of [32, 33]) {
   for (let state = 0; state <= 3; ++state) for (let value = 0; value <= 2; ++value) cases.push(single([id, state, value, 0, 0, 0]));
   for (const k of [3, 4, 5]) { const e = [id, 1, 1, 0, 0, 0]; e[k] = 1; cases.push(single(e)); }
 }
+// Saved setups: a Beta 2 draft opens unchanged on Beta 3 once Beta 2 is gone, adding no
+// new option; a draft using options 25-33 is refused, not truncated, where only Beta 2 is offered.
+const kept = (raw) => ({ getItem: (key) => key === DRAFT ? raw : null });
+const pitched = templates(beta2.profile)['Pitched grains'];
+const beta2Draft = draftText(beta2, encodeProfile(pitched, beta2.profile), 'Pitched grains', 1);
+for (const next of [release, bank]) {
+  const moved = readDraft(kept(beta2Draft), [next]);
+  assert.equal(moved.release, next);
+  assert(moved.moved);
+  assert.equal(moved.preset, 'Pitched grains');
+  assert.deepEqual(moved.entries, pitched);
+}
+const everyOption = [...pitched, ...additions.map((f) => entry(f.id, 1, 1)), [31, 2, 2, 0, 0, 0]];
+const beta3Draft = draftText(bank, encodeProfile(everyOption, bank.profile), 'Pitched grains', 1);
+assert.deepEqual(readDraft(kept(beta3Draft), [beta2, bank]).entries, everyOption);
+const refused = readDraft(kept(beta3Draft), [beta2]);
+assert(refused.refused);
+assert.equal(refused.raw, beta3Draft);
+
 const scratch = mkdtempSync(join(tmpdir(), 'hygrostat-bank-oracle-'));
 try {
   mkdirSync(join(scratch, 'beads/dsp'), { recursive: true });
@@ -291,4 +311,4 @@ try {
 } finally {
   rmSync(scratch, { recursive: true, force: true });
 }
-console.log(`PASS Plaits bank: catalogue and factory block at ${ref.slice(0, 7)}, Adjustable-only codec, firmware parser, share links, guides and the Synth start warning`);
+console.log(`PASS Plaits bank: catalogue and factory block at ${ref.slice(0, 7)}, Adjustable-only codec, firmware parser, share links, guides, saved setups and the Synth start warning`);
