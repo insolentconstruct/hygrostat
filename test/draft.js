@@ -119,6 +119,17 @@ assert(!isFresh(release, encodeProfile(defaults(profile), profile, factoryScales
     assert.equal(s.getItem(BEFORE_LINK), own, name);
     assert.equal(readDraft(s, releases).link, true);
   }
+  // With the second slot empty, even a draft from a link is kept there.
+  const e = store();
+  const ke = keeper(e);
+  ke.linked();
+  ke.edited();
+  ke.save(release, encodeProfile(templates(profile).Spectral, profile), 'Drizzlet', now, release);
+  const first = e.getItem(DRAFT);
+  ke.linked();
+  ke.edited();
+  ke.save(release, encodeProfile(templates(profile)['Drum grains'], profile), 'Drizzlet', now, release);
+  assert.equal(e.getItem(BEFORE_LINK), first);
   // A restored link draft keeps its mark; an own one does not.
   k.settled(readDraft(s, releases).link);
   k.edited();

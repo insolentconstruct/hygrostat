@@ -165,6 +165,19 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     assert.deepEqual(await stored(page), [kept, null, '{x']);
     await page.click('#draft-discard-0');
     assert.deepEqual(await stored(page), [kept, null, null]);
+    // The reverse: a held draft swapped into the second slot stays the one offered for Discard.
+    await page.evaluate(([good, bad]) => {
+      localStorage.setItem('hygrostat-draft', bad);
+      localStorage.setItem('hygrostat-draft-before-link', good);
+      localStorage.setItem('hygrostat-draft-refused', '{x');
+    }, [kept, refused]);
+    await page.reload();
+    await ready();
+    await page.click('#draft-open');
+    await until(async () => await shareHref() === own);
+    assert.deepEqual(await stored(page), [kept, refused, '{x']);
+    await page.click('#draft-discard-1');
+    assert.deepEqual(await stored(page), [kept, null, '{x']);
     await page.evaluate(() => localStorage.clear());
 
     // Nothing persisted leaves the browser.

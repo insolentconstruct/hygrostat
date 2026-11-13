@@ -3,7 +3,7 @@
 // The setup kept in this browser so a reload reopens it. No DOM; storage is passed in.
 // A draft is the share fragment plus a little context; see docs/DESIGN.md.
 
-import { defaults, encodeProfile, equal, normalise, share, templates, unshare } from './profile.js?v=797e1b555f9939f4';
+import { defaults, encodeProfile, equal, normalise, share, templates, unshare } from './profile.js?v=90f5f7a3110f60ee';
 
 export const DRAFT = 'hygrostat-draft';
 export const BEFORE_LINK = 'hygrostat-draft-before-link';
@@ -97,7 +97,8 @@ export function forgetDraft(storage) {
 }
 
 // When to save: after an edit only, never a shared setup that was merely opened.
-// The first save after a link moves the person's own draft (not one from a link) to BEFORE_LINK.
+// The first save after a link copies the draft to BEFORE_LINK, unless that slot already
+// holds work and the draft itself came from a link.
 export function keeper(storage) {
   let dirty = false, stash = false, paused = false, link = false;
   return {
@@ -112,9 +113,9 @@ export function keeper(storage) {
       if (!dirty || paused || !storage) return null;
       dirty = false;
       if (stash) {
-        let own;
-        try { own = storage.getItem(DRAFT); } catch { return 'failed'; }
-        if (own !== null && !fromLink(own) && !put(storage, BEFORE_LINK, own)) return 'failed';
+        let own, aside;
+        try { own = storage.getItem(DRAFT); aside = storage.getItem(BEFORE_LINK); } catch { return 'failed'; }
+        if (own !== null && (!fromLink(own) || aside === null) && !put(storage, BEFORE_LINK, own)) return 'failed';
         stash = false;
       }
       const fresh = isFresh(release, block, newest);
