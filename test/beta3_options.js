@@ -1,5 +1,5 @@
 // Copyright 2026 Insolent Construct. MIT licence: see ../static/js/encoder.js.
-// Beta 3 profile-only options (features 25-30) on a synthetic release; no offered release has them yet.
+// Beta 3 profile-only options (features 25-30, 32 and 33) on a synthetic release; no offered release has them yet.
 import assert from 'node:assert/strict';
 import { readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { firmwareRepo, firmwareShow } from './firmware.js';
-import { validate, encodeProfile, decodeProfile, defaults, share, unshare, cpuUsage, crc32, templates, initialEntry } from '../static/js/profile.js';
+import { validate, encodeProfile, decodeProfile, defaults, share, unshare, cpuUsage, crc32, templates, initialEntry, featureDelta } from '../static/js/profile.js';
 import { edit, GROUPS, place, entryOf, placeable, bankWarning } from '../static/js/layout.js';
 import { guide } from '../static/js/guide.js';
 import { featureHelp } from '../static/js/help.js';
@@ -16,17 +16,17 @@ const read = (file) => readFileSync(new URL(file, import.meta.url));
 const manifest = JSON.parse(read('../static/manifest.json'));
 const additions = [JSON.parse(read('fixtures/idle-timeout-feature.json')), ...JSON.parse(read('fixtures/beta3-features.json'))];
 const ids = additions.map((f) => f.id);
-assert.deepEqual(ids, [25, 26, 27, 28, 29, 30]);
+assert.deepEqual(ids, [25, 26, 27, 28, 29, 30, 32, 33]);
 const shipped = manifest.releases;
-assert(shipped.every((r) => !r.profile.features.some((f) => ids.includes(f.id))), 'no offered release lists features 25-30');
+assert(shipped.every((r) => !r.profile.features.some((f) => ids.includes(f.id))), 'no offered release lists features 25-30, 32 or 33');
 
 // The catalogue copy matches the prepared firmware byte for byte.
-const ref = process.env.BETA3_FIRMWARE_REF || '818eee5560f30a6d85284cd7db44a0664a140c28';
+const ref = process.env.BETA3_FIRMWARE_REF || 'b446452596415aea0a7672ff272245c901551ae5';
 const catalogueBytes = read('fixtures/beta3-profile-features.json');
 assert.deepEqual(catalogueBytes, firmwareShow(ref, 'beads/build/profile-features.json'),
   'copy the prepared firmware catalogue verbatim');
 const catalogue = JSON.parse(catalogueBytes);
-assert.deepEqual(catalogue.features.map((c) => c.id), Array.from({ length: 31 }, (_, i) => i + 1));
+assert.deepEqual(catalogue.features.map((c) => c.id), Array.from({ length: 33 }, (_, i) => i + 1));
 // Features 1-24 change only their page range (seven pages in Beta 3).
 const current = JSON.parse(read('../static/profile-features.json'));
 for (const [i, c] of current.features.entries()) {
@@ -53,7 +53,7 @@ for (const f of additions) {
   assert.deepEqual(f.default, [f.id, f.states.indexOf(c.default_state), c.default, 0, 0, 0]);
   assert.deepEqual(f.default, [f.id, 0, 0, 0, 0, 0]);
   if (f.cpu) {
-    assert.equal(f.cpu.kind, 'zero');
+    assert.equal(f.cpu.kind, [32, 33].includes(f.id) ? 'measured' : 'zero');
     assert.match(f.cpu.source, /^synthetic fixture/);
     for (const engine of Object.values(f.cpu.engines)) assert.equal(engine.fixed.length, f.values.length);
   }
@@ -67,6 +67,13 @@ for (const id of ids) assert.equal(grouped.filter((g) => g === id).length, 1, `f
 assert.deepEqual(additions.find((f) => f.id === 28).values, ['Normal (default)', 'Low', 'High']);
 assert.equal(featureHelp({ id: 26 }, shipped[0]).url.split('#')[1], 'delay-seed-latch-fade');
 assert.equal(featureHelp({ id: 30 }, shipped[0]).url.split('#')[1], 'pitch-knob');
+assert.deepEqual([32, 33].map((id) => featureHelp({ id }, shipped[0]).url.split('#')[1]), ['mix-law', 'reverb-input']);
+assert.deepEqual(GROUPS.find(([name]) => name === 'Sound')[1].slice(-2), [32, 33], 'mix law and reverb input are Sound');
+assert.deepEqual(additions.filter((f) => f.id >= 32).map((f) => f.values), [['Stock', 'Gentle'], ['Mix (stock)', 'Grains']]);
+assert.match(featureHelp({ id: 32 }, shipped[0]).description, /9 o’clock.*2\.5 dB.*7\.6 dB.*Clouds 8\.8 dB/);
+assert.match(featureHelp({ id: 33 }, shipped[0]).description, /grains before DRY\/WET.*fully dry has no reverb/);
+assert.match(featureHelp({ id: 33 }, shipped[0]).details, /Scorched cassette the wow and flutter comes after the reverb.*synths keep/);
+assert.match(featureHelp({ id: 32 }, shipped[0]).details, /synths keep their own DRY\/WET/);
 
 const beta2 = shipped[0];
 const release = structuredClone(beta2);
@@ -114,7 +121,7 @@ for (const f of additions) {
   }
 }
 
-// All six together, including each Attack sensitivity value.
+// All eight together, including each Attack sensitivity value.
 for (const sensitivity of [1, 2]) {
   const all = [...base, ...additions.map((f) => entry(f.id, 1, f.id === 28 ? sensitivity : 1))];
   const block = encodeProfile(all, release.profile);
@@ -135,7 +142,23 @@ for (const id of [26, 28, 30]) {
   assert.equal(usage.kind, 'not yet measured');
   assert.deepEqual(usage.unknown, [additions.find((f) => f.id === id).name]);
 }
-console.log(`PASS Beta 3 options 25-30: catalogue bytes at ${ref.slice(0, 7)}, manifest fields, help anchors, Off/Fixed codec, share links and guides`);
+// Mix law and Reverb input: measured small granular costs (under 0.1 points), none on the synths.
+const engines = (entries) => Object.fromEntries(cpuUsage(entries, release).engines.map((e) => [e.engine, e.percent]));
+const stock = engines(base);
+for (const [id, points] of [[32, 0.071], [33, 0.079]]) {
+  const f = additions.find((f) => f.id === id);
+  assert.deepEqual([Object.keys(f.cpu.engines), f.cpu.engines.granular.fixed], [['granular'], [0, points]]);
+  assert(points > 0 && points < 0.1 && f.cpu.uncertainty.points < 0.1);
+  assert.match(f.cpu.note, /synth: 0 by construction/);
+  assert.equal(featureDelta(entry(id, 1, 1), f, 'granular'), points);
+  assert.equal(featureDelta(entry(id, 1, 1), f, 'synth'), 0);
+  assert.equal(featureDelta(entry(id, 1, 0), f, 'granular'), 0, 'Fixed Stock costs nothing');
+  const usage = cpuUsage([...base, entry(id, 1, 1)], release);
+  assert.notEqual(usage.kind, 'not yet measured');
+  assert.deepEqual(usage.names.split(', ').filter((name) => !cpuUsage(base, release).names.split(', ').includes(name)), [f.name]);
+  assert.deepEqual(engines([...base, entry(id, 1, 1)]), { ...stock, granular: Math.round((stock.granular + points) * 10) / 10 });
+}
+console.log(`PASS Beta 3 options 25-30, 32 and 33: catalogue bytes at ${ref.slice(0, 7)}, manifest fields, help anchors, Off/Fixed codec, share links and guides`);
 
 // Plaits bank (31): Adjustable only, no destination, in the factory block; its gesture is fixed by the firmware.
 const bankFeature = JSON.parse(read('fixtures/plaits-bank-feature.json'));
@@ -235,6 +258,12 @@ for (let state = 0; state <= 3; ++state) for (let value = 0; value <= 3; ++value
 for (const [k, count] of [[3, 12], [4, 2], [5, 3]]) {
   for (let slot = 1; slot <= count; ++slot) { const e = [31, 2, 0, 0, 0, 0]; e[k] = slot; cases.push(single(e)); }
 }
+// Mix law and Reverb input: every state and value, and every kind of destination.
+const bankCases = cases.length;
+for (const id of [32, 33]) {
+  for (let state = 0; state <= 3; ++state) for (let value = 0; value <= 2; ++value) cases.push(single([id, state, value, 0, 0, 0]));
+  for (const k of [3, 4, 5]) { const e = [id, 1, 1, 0, 0, 0]; e[k] = 1; cases.push(single(e)); }
+}
 const scratch = mkdtempSync(join(tmpdir(), 'hygrostat-bank-oracle-'));
 try {
   mkdirSync(join(scratch, 'beads/dsp'), { recursive: true });
@@ -246,16 +275,19 @@ try {
   const stride = 493;
   assert.equal(answers.length, cases.length * stride);
   let accepted = 0;
+  let mixAccepted = 0;
   cases.forEach((b, i) => {
     let decoded = null;
     try { decoded = decodeProfile(b, bank.profile); } catch { /* compared with the firmware below */ }
     assert.equal(Boolean(decoded), answers[i * stride] === 1, `bank firmware case ${i}: ${Array.from(b.subarray(16, 22))}`);
     if (decoded) {
-      ++accepted;
+      if (i < bankCases) ++accepted;
+      else ++mixAccepted;
       assert.deepEqual(decoded.flat(), Array.from(answers.subarray(i * stride + 1, i * stride + 1 + decoded.length * 6)));
     }
   });
   assert.equal(accepted, 6, 'factory, empty, Synth start on FREEZE and the three banks');
+  assert.equal(mixAccepted, 2 * 4, 'Off or Fixed with a listed value, no destination');
 } finally {
   rmSync(scratch, { recursive: true, force: true });
 }
