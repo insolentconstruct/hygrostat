@@ -8,16 +8,16 @@
 // check the release's app image against the manifest, encode the update .wav
 // in the browser, check the .wav, offer it for download.
 
-import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, normalise } from './profile.js?v=90f5f7a3110f60ee';
-import { effectiveScales, validateScales } from './scales.js?v=90f5f7a3110f60ee';
-import { scaleEditor } from './scale_editor.js?v=90f5f7a3110f60ee';
-import { guide } from './guide.js?v=90f5f7a3110f60ee';
-import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=90f5f7a3110f60ee';
-import { featureHelp, actionHelp } from './help.js?v=90f5f7a3110f60ee';
+import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, normalise } from './profile.js?v=b27ab5245981fbc3';
+import { effectiveScales, validateScales } from './scales.js?v=b27ab5245981fbc3';
+import { scaleEditor } from './scale_editor.js?v=b27ab5245981fbc3';
+import { guide } from './guide.js?v=b27ab5245981fbc3';
+import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=b27ab5245981fbc3';
+import { featureHelp, actionHelp } from './help.js?v=b27ab5245981fbc3';
 import { KNOBS, KINDS, GROUPS, ACTION_DOES, placeName, pageOf, entryOf, occupant, places, valueLabel, stateLabel,
-  summary, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, fits } from './layout.js?v=90f5f7a3110f60ee';
-import { drawPanel, highlight } from './panel.js?v=90f5f7a3110f60ee';
-import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=90f5f7a3110f60ee';
+  summary, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, fits } from './layout.js?v=b27ab5245981fbc3';
+import { drawPanel, highlight } from './panel.js?v=b27ab5245981fbc3';
+import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=b27ab5245981fbc3';
 
 const $ = (id) => document.getElementById(id);
 const cap = (text) => text.replace(/^./, (c) => c.toUpperCase());
@@ -40,7 +40,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=90f5f7a3110f60ee', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=b27ab5245981fbc3', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.ready) return;
       if (data.progress !== undefined) {
@@ -91,7 +91,7 @@ const storage = (() => {
 })();
 const drafts = keeper(storage);
 const notice = { restored: null, linked: false, undo: null, failed: false, dismissed: false };
-let held = null; // The key of a refused draft that could not be set aside; saving pauses meanwhile.
+const held = new Set(); // Keys of refused drafts that could not be set aside; saving pauses meanwhile.
 
 async function build(release, app) {
   if (download) URL.revokeObjectURL(download);
@@ -887,8 +887,8 @@ function show(draft) {
 
 // A draft this page cannot open is kept aside, never deleted; if it cannot be, saving pauses.
 function refuse(key, raw) {
-  if (setAside(storage, key, raw) || held) return;
-  held = key;
+  if (setAside(storage, key, raw)) return;
+  held.add(key);
   drafts.pause();
 }
 
@@ -943,7 +943,9 @@ function openSaved(key) {
       put(storage, DRAFT, current);
       status('Could not switch saved setups in this browser.', 'error');
       return;
-    }    if (held === DRAFT) held = BEFORE_LINK;
+    }
+    // The refused text moved with the swap.
+    if (held.delete(DRAFT)) held.add(BEFORE_LINK);
   }
   templatePreview = presetPending = null;
   $('template-gallery').hidden = true;
@@ -961,7 +963,7 @@ function forgetSaved() {
   forgetDraft(storage);
   drafts.clean();
   drafts.pause(false);
-  held = null;
+  held.clear();
   Object.assign(notice, { restored: null, linked: false, undo: null, failed: false });
   renderNotice();
   status('Saved setup forgotten. Your next edit is kept again.');
@@ -983,20 +985,21 @@ function renderNotice() {
   }
   if (notice.linked) {
     lines.push([`${location.hash ? 'Opened a shared setup. ' : ''}Your last setup is still saved.`, button('draft-open', 'Open it', () => openSaved(DRAFT))]);
-  } else if (saved(BEFORE_LINK) !== null && held !== BEFORE_LINK) {
+  } else if (saved(BEFORE_LINK) !== null && !held.has(BEFORE_LINK)) {
     lines.push(['Another saved setup is also kept.', button('draft-open', 'Open it', () => openSaved(BEFORE_LINK)),
       button('draft-before-discard', 'Discard', () => { put(storage, BEFORE_LINK, null); renderNotice(); focusStart(); })]);
   }
   if (notice.undo) lines.push(['Started fresh.', button('draft-undo', 'Undo', undoFresh)]);
-  const refused = [[REFUSED, saved(REFUSED)], [held, held && saved(held)]].filter(([, raw]) => raw);
+  const refused = [[REFUSED, saved(REFUSED)], ...[...held].map((key) => [key, saved(key)])].filter(([, raw]) => raw);
   refused.forEach(([key, raw], i) => {
     const { name, saved: time, fragment } = describe(raw);
     const about = [name, time !== null ? `saved ${day(time)}` : ''].filter(Boolean).join(', ');
-    lines.push([`Your last setup${about ? ` (${about})` : ''} can’t be opened by this page.${key === held ? ' Saving is paused until you discard it.' : ''}`,
+    lines.push([`Your last setup${about ? ` (${about})` : ''} can’t be opened by this page.${held.has(key) ? ' Saving is paused until you discard it.' : ''}`,
       fragment ? button(`draft-copy-${i}`, 'Copy it', () => copyRefused(fragment)) : null,
       button(`draft-discard-${i}`, 'Discard', () => {
         put(storage, key, null);
-        if (key === held) { held = null; drafts.pause(false); }
+        held.delete(key);
+        drafts.pause(held.size > 0);
         drafts.clean();
         notice.undo = null;
         renderNotice();
@@ -1015,7 +1018,7 @@ async function checkCapabilities() {
   }
   // A constructor alone does not establish support for module workers.
   await new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=90f5f7a3110f60ee', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=b27ab5245981fbc3', { type: 'module' });
     const done = (error) => {
       clearTimeout(timer); worker.terminate();
       error ? reject(error) : resolve();
@@ -1034,7 +1037,7 @@ async function init() {
   }
   $('compatibility').hidden = true;
   try {
-    const response = await fetch('manifest.json?v=90f5f7a3110f60ee', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=b27ab5245981fbc3', { cache: 'no-cache' });
     manifest = await response.json();
   } catch {
     status('Could not load the release list.', 'error');
@@ -1076,6 +1079,9 @@ async function init() {
   $('library').addEventListener('click', (event) => { if (event.target === $('library')) $('library').close(); });
   if (location.hash) loadSharedProfile();
   else restoreDraft();
+  // Check the second slot too, so a later link edit never replaces text it cannot open.
+  const aside = storage && readDraft(storage, manifest.releases, BEFORE_LINK);
+  if (aside?.refused) refuse(BEFORE_LINK, aside.raw);
   window.addEventListener('hashchange', () => {
     if (busy) pendingShare = true;
     else loadSharedProfile();

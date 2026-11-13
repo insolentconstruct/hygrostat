@@ -158,8 +158,8 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     }, [kept, refused]);
     await page.reload();
     await ready();
-    await page.click('#draft-open');
     assert.match(await noticeText(), /Restored your last setup/);
+    assert.equal(await page.locator('#draft-open').count(), 0, 'a refused second slot is not offered');
     assert.equal(await page.locator('#draft-notice p', { hasText: 'can’t be opened' }).count(), 2);
     await page.click('#draft-discard-1');
     assert.deepEqual(await stored(page), [kept, null, '{x']);
@@ -178,6 +178,20 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     assert.deepEqual(await stored(page), [kept, refused, '{x']);
     await page.click('#draft-discard-1');
     assert.deepEqual(await stored(page), [kept, null, '{x']);
+    // A refused second slot is set aside on load, so a link edit cannot replace it unseen.
+    await page.evaluate(([good, bad]) => {
+      localStorage.clear();
+      localStorage.setItem('hygrostat-draft', good);
+      localStorage.setItem('hygrostat-draft-before-link', bad);
+    }, [kept, refused]);
+    await page.reload();
+    await ready();
+    assert.deepEqual(await stored(page), [kept, null, refused]);
+    await page.goto(base + '#' + spectral);
+    await until(async () => await shareHref() === '#' + spectral);
+    await page.click('#extra-15');
+    await until(async () => (await stored(page))[1] !== null);
+    assert.deepEqual((await stored(page)).filter((_, i) => i), [kept, refused]);
     await page.evaluate(() => localStorage.clear());
 
     // Nothing persisted leaves the browser.

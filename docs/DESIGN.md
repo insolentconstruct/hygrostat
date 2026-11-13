@@ -50,7 +50,7 @@ Do not rewrite an existing custom profile's explicit slots when defaults change.
 
 - Only edits save: `commit()` and a release change mark the draft, and `refresh()` writes it from the block it already encodes. Selection, dialogs and opening a link never save. The page's fresh state (Drizzlet defaults, factory scales, newest release) removes the draft.
 - On load a share link wins and leaves the draft alone. The first edit to a shared setup first copies the person’s own draft to `hygrostat-draft-before-link`; a draft that started from a link is marked and copied there only when the slot is empty, so later links never replace the own setup. **Open it** swaps the two slots. The first edit after a link or **Share** also removes the fragment from the address.
-- Restore uses `unshare()` and must re-encode to the stored bytes. A draft whose tag is gone moves to the newest release with the same profile version and format. Anything else is refused: the text goes to `hygrostat-draft-refused` (one slot, never overwritten) or, if that is taken, stays in place and saving pauses. Only the person discards it.
+- Restore uses `unshare()` and must re-encode to the stored bytes. A draft whose tag is gone moves to the newest release with the same profile version and format. Anything else, in either slot, is refused on load: the text goes to `hygrostat-draft-refused` (one slot, never overwritten) or, if that is taken, stays in place and saving pauses. Only the person discards it.
 - **Start fresh** (with Undo) and **Forget saved setup** are the only other ways a draft goes, apart from clearing site data.
 
 ## Historical CPU estimates
