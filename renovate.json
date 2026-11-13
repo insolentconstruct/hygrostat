@@ -1,0 +1,67 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", "helpers:pinGitHubActionDigests"],
+  "enabledManagers": ["npm", "github-actions", "custom.regex"],
+  "timezone": "Etc/UTC",
+  "schedule": ["before 6am on monday"],
+  "automerge": false,
+  "platformAutomerge": false,
+  "ignorePaths": ["static/**", "docs/**", "test/**", "tools/**"],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^\\.github/workflows/pages\\.yml$/"],
+      "matchStrings": ["playwright@(?<currentValue>\\d+\\.\\d+\\.\\d+)(?:\\s|$)"],
+      "depNameTemplate": "playwright",
+      "packageNameTemplate": "mcr.microsoft.com/playwright",
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "semver",
+      "extractVersionTemplate": "^v(?<version>\\d+\\.\\d+\\.\\d+)-noble$"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^README\\.md$/"],
+      "matchStrings": ["Playwright (?<currentValue>\\d+\\.\\d+\\.\\d+) image"],
+      "depNameTemplate": "playwright",
+      "packageNameTemplate": "mcr.microsoft.com/playwright",
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "semver",
+      "extractVersionTemplate": "^v(?<version>\\d+\\.\\d+\\.\\d+)-noble$"
+    }
+  ],
+  "packageRules": [
+    {
+      "matchManagers": ["npm", "custom.regex"],
+      "rangeStrategy": "pin"
+    },
+    {
+      "description": "Keep the supported Node release ranges manual.",
+      "matchManagers": ["npm"],
+      "matchDepTypes": ["engines"],
+      "enabled": false
+    },
+    {
+      "description": "CI stays on Node 22 (docs/STYLE.md).",
+      "matchManagers": ["github-actions"],
+      "matchDepNames": ["node"],
+      "enabled": false
+    },
+    {
+      "description": "Update the Playwright image, the npm client pinned to an existing image tag and the README note together.",
+      "matchPackageNames": ["mcr.microsoft.com/playwright"],
+      "groupName": "Playwright",
+      "groupSlug": "playwright"
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "matchPackageNames": ["mcr.microsoft.com/playwright"],
+      "versioning": "docker",
+      "allowedVersions": "/^v\\d+\\.\\d+\\.\\d+-noble$/"
+    },
+    {
+      "description": "Firmware references and the paired Hugo version/checksum stay manual.",
+      "matchPackageNames": ["insolentconstruct/eurorack", "gohugoio/hugo"],
+      "enabled": false
+    }
+  ]
+}
