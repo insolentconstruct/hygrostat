@@ -13,6 +13,7 @@ import { PAGE_LEDS, pageLeds, pageSlots, validate, encodeProfile, decodeProfile,
   share, unshare, crc32 } from '../static/js/profile.js';
 import { place, freeSlot, slotCount, usedPages, compaction, compact, pageLedName, entryOf } from '../static/js/layout.js';
 import { guide } from '../static/js/guide.js';
+import { DRAFT, draftText, readDraft } from '../static/js/draft.js';
 const manifest = JSON.parse(readFileSync(new URL('../static/manifest.json', import.meta.url)));
 const beta2 = manifest.releases[0];
 const seven = structuredClone(beta2);
@@ -87,6 +88,19 @@ assert.deepEqual(compaction([], p7), []);
 const beta2Sparse = [[1, 2, 0, 1, 0, 0], [5, 2, 0, 12, 0, 0]];
 assert.deepEqual(compaction(beta2Sparse, p2), [[4, 2]]);
 assert.deepEqual(compact(beta2Sparse, p2), [[1, 2, 0, 1, 0, 0], [5, 2, 0, 6, 0, 0]]);
+
+// Saved setups: a Beta 2 draft moves to the seven-page release when Beta 2 is gone;
+// a draft using pages 5-7 is refused, not truncated, where only Beta 2 is offered.
+const kept = (raw) => ({ getItem: (key) => key === DRAFT ? raw : null });
+const beta2Draft = readDraft(kept(draftText(beta2, encodeProfile(beta2Sparse, p2), 'Drizzlet', 1)), [seven]);
+assert.equal(beta2Draft.release, seven);
+assert(beta2Draft.moved);
+assert.deepEqual(encodeProfile(beta2Draft.entries, p7, beta2Draft.scales), encodeProfile(beta2Sparse, p2));
+const sevenDraft = draftText(seven, block, 'Drizzlet', 1);
+assert.deepEqual(readDraft(kept(sevenDraft), [beta2, seven]).entries, sparse);
+const refusedDraft = readDraft(kept(sevenDraft), [beta2]);
+assert(refusedDraft.refused);
+assert.equal(refusedDraft.raw, sevenDraft);
 
 // Guides: Beta 2 output is byte-identical to the previous editor; seven-page
 // releases name every cue and the profile's own page order.
@@ -163,4 +177,4 @@ if (process.env.FIRMWARE_PAGES_REF) {
   const count = firmwareAgrees(process.env.FIRMWARE_PAGES_REF, p7, process.env.FIRMWARE_PAGES_REF);
   sevenNote = `${count} seven-page cases agree with firmware ${process.env.FIRMWARE_PAGES_REF}`;
 }
-console.log(`PASS option pages: release gate, synthetic seven-page fixture, compaction, guides; ${checked} Beta 2 firmware cases agree; ${sevenNote}`);
+console.log(`PASS option pages: release gate, synthetic seven-page fixture, compaction, guides, saved setups; ${checked} Beta 2 firmware cases agree; ${sevenNote}`);
