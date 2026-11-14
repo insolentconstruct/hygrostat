@@ -6,7 +6,7 @@ import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { firmwareRepo, firmwareShow } from './firmware.js';
+import { beta3Ref as ref, firmwareRepo, firmwareShow } from './firmware.js';
 import { validate, encodeProfile, decodeProfile, defaults, share, unshare, cpuUsage, crc32 } from '../static/js/profile.js';
 import { edit } from '../static/js/layout.js';
 import { guide } from '../static/js/guide.js';
@@ -21,7 +21,6 @@ assert(manifest.releases.every((r) => r.profile.features.find((f) => f.id === 10
   'no offered release lists Recent notes');
 
 // The firmware catalogue lists the third value; nothing else about ID 10 changes but the page range.
-const ref = process.env.RECENT_NOTES_FIRMWARE_REF || 'faee6bd898a835422a6c048846e84e9f48b47686';
 const catalogue = JSON.parse(firmwareShow(ref, 'beads/build/profile-features.json'));
 const current = JSON.parse(read('../static/profile-features.json'));
 const next = catalogue.features.find((c) => c.id === 10);
