@@ -6,7 +6,7 @@ import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { firmwareRepo, firmwareShow } from './firmware.js';
+import { beta3Ref as ref, firmwareRepo, firmwareShow } from './firmware.js';
 import { validate, encodeProfile, decodeProfile, defaults, share, unshare, cpuUsage, crc32, templates, initialEntry, featureDelta } from '../static/js/profile.js';
 import { edit, GROUPS, place, entryOf, placeable, bankWarning } from '../static/js/layout.js';
 import { guide } from '../static/js/guide.js';
@@ -21,19 +21,20 @@ assert.deepEqual(ids, [25, 26, 27, 28, 29, 30, 32, 33]);
 const shipped = manifest.releases;
 assert(shipped.every((r) => !r.profile.features.some((f) => ids.includes(f.id))), 'no offered release lists features 25-30, 32 or 33');
 
-// The catalogue copy matches the prepared firmware byte for byte.
-const ref = process.env.BETA3_FIRMWARE_REF || 'b446452596415aea0a7672ff272245c901551ae5';
+// The catalogue copy matches the final Beta 3 firmware byte for byte.
 const catalogueBytes = read('fixtures/beta3-profile-features.json');
 assert.deepEqual(catalogueBytes, firmwareShow(ref, 'beads/build/profile-features.json'),
   'copy the prepared firmware catalogue verbatim');
 const catalogue = JSON.parse(catalogueBytes);
 assert.deepEqual(catalogue.features.map((c) => c.id), Array.from({ length: 33 }, (_, i) => i + 1));
-// Features 1-24 change only their page range (seven pages in Beta 3).
+// Features 1-24 change only their page range (seven pages in Beta 3), and 10 gains Recent notes (test/recent_notes.js).
 const current = JSON.parse(read('../static/profile-features.json'));
+const recentNotes = JSON.parse(read('fixtures/recent-notes-feature.json'));
 for (const [i, c] of current.features.entries()) {
   const next = catalogue.features[i];
   for (const key of Object.keys(c)) {
     if (key === 'page_slots') assert.deepEqual(next[key], c[key].length ? Array.from({ length: 21 }, (_, n) => n + 1) : []);
+    else if (c.id === 10 && key === 'values') assert.deepEqual(next[key], recentNotes.values);
     else assert.deepEqual(next[key], c[key], `${c.name}: ${key}`);
   }
 }
