@@ -8,7 +8,7 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { firmwareRepo, firmwareRef, firmwareShow } from './firmware.js';
+import { beta3Ref, firmwareRepo, firmwareRef, firmwareShow } from './firmware.js';
 import { PAGE_LEDS, pageLeds, pageSlots, validate, encodeProfile, decodeProfile, defaults, templates,
   share, unshare, crc32 } from '../static/js/profile.js';
 import { place, freeSlot, slotCount, usedPages, compaction, compact, pageLedName, entryOf } from '../static/js/layout.js';
@@ -134,8 +134,8 @@ for (const mobile of [false, true]) {
   assert(text(guide([], seven, 'abcdef12', mobile, null)).includes('This profile has no options pages. Hold [M] does nothing.'));
 }
 
-// Firmware agreement: Beta 2's parser refuses slots 13 and up; a seven-page
-// firmware revision, when given, accepts exactly slots 1-21.
+// Firmware agreement: Beta 2's parser refuses slots 13 and up; the final Beta 3
+// firmware accepts exactly slots 1-21.
 const reseal = (b) => {
   const end = 16 + b[5] * 6;
   new DataView(b.buffer).setUint32(end, crc32(b.subarray(0, end)), true);
@@ -172,9 +172,5 @@ function firmwareAgrees(ref, profile, label) {
   return cases.length;
 }
 const checked = firmwareAgrees(firmwareRef(beta2), p2, beta2.tag);
-let sevenNote = 'seven-page firmware agreement skipped (set FIRMWARE_PAGES_REF)';
-if (process.env.FIRMWARE_PAGES_REF) {
-  const count = firmwareAgrees(process.env.FIRMWARE_PAGES_REF, p7, process.env.FIRMWARE_PAGES_REF);
-  sevenNote = `${count} seven-page cases agree with firmware ${process.env.FIRMWARE_PAGES_REF}`;
-}
-console.log(`PASS option pages: release gate, synthetic seven-page fixture, compaction, guides, saved setups; ${checked} Beta 2 firmware cases agree; ${sevenNote}`);
+const sevenChecked = firmwareAgrees(beta3Ref, p7, beta3Ref.slice(0, 7));
+console.log(`PASS option pages: release gate, synthetic seven-page fixture, compaction, guides, saved setups; ${checked} Beta 2 and ${sevenChecked} seven-page cases agree with firmware ${firmwareRef(beta2).replace('refs/tags/', '')} and ${beta3Ref.slice(0, 7)}`);
