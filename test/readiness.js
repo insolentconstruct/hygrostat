@@ -7,7 +7,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync } from 'node:fs';
 import { firmwareShow } from './firmware.js';
 import { defaults, encodeProfile, equal, cpuUsage, profileKey, modes,
-  validateProfileFormat, initialEntry } from '../static/js/profile.js';
+  validateProfileFormat, initialEntry, pageSlots } from '../static/js/profile.js';
 import { importedCost, tableBytes, tableSha256, importCosts } from '../tools/import-costs.js';
 import './costs.js';
 import './help.js';
@@ -61,7 +61,7 @@ for (const [i, definition] of definitions.entries()) {
   for (const [key, index, slots] of [['page', 3, 'page_slots'], ['amount', 4, 'amount_slots'], ['action', 5, 'actions']]) {
     assert.equal(f[key], definition[index] === 'true', `${f.name}: firmware ${key}`);
     assert.equal(f[key], c[slots].length > 0, `${f.name}: catalogue ${key}`);
-    const count = key === 'page' ? 12 : key === 'amount' ? 2 : 3;
+    const count = key === 'page' ? pageSlots(profile) : key === 'amount' ? 2 : 3;
     assert.deepEqual(c[slots], f[key] ? Array.from({ length: count }, (_, n) => n + 1) : []);
   }
   assert.equal(f.stateless, definition[6] === 'true');

@@ -14,7 +14,7 @@ import { createHash } from 'node:crypto';
 import { firmwareShow, firmwareRepo } from './firmware.js';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { decodeProfile, defaults, encodeProfile, equal, validateProfileFormat } from '../static/js/profile.js';
+import { decodeProfile, defaults, encodeProfile, equal, validateProfileFormat, pageSlots } from '../static/js/profile.js';
 import { decode } from '../static/js/decoder.js';
 import { encode, MAX_APP_SIZE } from '../static/js/encoder.js';
 
@@ -42,6 +42,11 @@ for (const release of manifest.releases) {
   const header = firmwareShow(ref, 'beads/profile.h', { encoding: 'utf8' });
   try { validateProfileFormat(release, header); check(true, `${release.tag}: firmware profile format`); }
   catch { check(false, `${release.tag}: firmware profile format`); }
+  // Options page capacity (page_leds) must match the firmware's slot bound.
+  const pageBound = /\bkNumPageSlots\s*=\s*(\d+)\s*;/.exec(header);
+  let pagesMatch;
+  try { pagesMatch = Boolean(pageBound) && pageSlots(release.profile) === Number(pageBound[1]) - 1; } catch { pagesMatch = false; }
+  check(pagesMatch, `${release.tag}: options page capacity matches the firmware`);
   if (release.development) {
     check(/^drizzlet-dev-[0-9a-f]+$/.test(release.tag) && release.app.includes('-dev-') &&
         /unreleased/i.test(release.name), `${release.tag}: explicitly unreleased development entry`);

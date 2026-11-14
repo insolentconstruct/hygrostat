@@ -8,16 +8,18 @@
 // check the release's app image against the manifest, encode the update .wav
 // in the browser, check the .wav, offer it for download.
 
-import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, normalise } from './profile.js?v=716413d94d04fbd8';
-import { effectiveScales, validateScales } from './scales.js?v=716413d94d04fbd8';
-import { scaleEditor } from './scale_editor.js?v=716413d94d04fbd8';
-import { guide } from './guide.js?v=716413d94d04fbd8';
-import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=716413d94d04fbd8';
-import { featureHelp, actionHelp } from './help.js?v=716413d94d04fbd8';
+import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, normalise,
+  pageLeds } from './profile.js?v=d3cdc8ee403b3861';
+import { effectiveScales, validateScales } from './scales.js?v=d3cdc8ee403b3861';
+import { scaleEditor } from './scale_editor.js?v=d3cdc8ee403b3861';
+import { guide } from './guide.js?v=d3cdc8ee403b3861';
+import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=d3cdc8ee403b3861';
+import { featureHelp, actionHelp } from './help.js?v=d3cdc8ee403b3861';
 import { KNOBS, KINDS, GROUPS, ACTION_DOES, placeName, pageOf, entryOf, occupant, places, valueLabel, stateLabel,
-  summary, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, fits, placeable, bankWarning } from './layout.js?v=716413d94d04fbd8';
-import { drawPanel, highlight } from './panel.js?v=716413d94d04fbd8';
-import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=716413d94d04fbd8';
+  summary, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, fits, placeable, bankWarning, slotCount,
+  usedPages, compaction, compact } from './layout.js?v=d3cdc8ee403b3861';
+import { drawPanel, highlight } from './panel.js?v=d3cdc8ee403b3861';
+import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=d3cdc8ee403b3861';
 
 const $ = (id) => document.getElementById(id);
 const cap = (text) => text.replace(/^./, (c) => c.toUpperCase());
@@ -40,7 +42,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=716413d94d04fbd8', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=d3cdc8ee403b3861', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.ready) return;
       if (data.progress !== undefined) {
@@ -72,6 +74,7 @@ let pageTab = 1;
 let pending = null; // An inspector placement waiting for Swap or Replace.
 let presetPending = null; // A starting-point chip waiting for Replace.
 let templatePreview = null;
+let compactPreview = false;
 const startingPoints = [
   ['Process audio', [
     ['Cloud textures', 'Slow, evolving frozen textures.'],
@@ -227,6 +230,7 @@ async function updateGuides(release, chosen, fp, names, chosenScales = scales) {
 // Apply an edit; errors leave the profile as it was.
 function commit(change, message = '') {
   templatePreview = presetPending = null;
+  compactPreview = false;
   try {
     entries = change();
     edited();
@@ -244,7 +248,11 @@ function matchingTemplate() {
 }
 
 function setupEditor() {
-  presetPending = null;
+  // A new release or shared profile drops pending prompts and previews, and
+  // keeps the selection and phone tab within its pages.
+  pending = null; templatePreview = presetPending = null; compactPreview = false;
+  if (selection.kind === 'page' && selection.slot > slotCount('page', profile())) selection = { kind: 'page', slot: 1 };
+  if (pageTab > pageNumbers().length) pageTab = 1;
   $('development').hidden = !selected().development;
   $('expected-hash').textContent = selected().wav_sha256;
   preset = matchingTemplate() || preset;
@@ -349,8 +357,8 @@ function renderTemplates() {
 // the downloaded guide, or the firmware that Build will make.
 function markTemplateChanges() {
   const candidate = templatePreview && templates(profile())[templatePreview];
-  for (const [kind, { count }] of Object.entries(KINDS)) {
-    for (let slot = 1; slot <= count; ++slot) {
+  for (const kind of Object.keys(KINDS)) {
+    for (let slot = 1; slot <= slotCount(kind, profile()); ++slot) {
       const before = occupant(entries, kind, slot);
       const after = candidate && occupant(candidate, kind, slot);
       const changed = Boolean(candidate && before?.join() !== after?.join());
@@ -359,8 +367,9 @@ function markTemplateChanges() {
   }
 }
 
+const pageNumbers = () => pageLeds(profile()).map((_, i) => i + 1);
 const leds = (page) => el('span', { class: 'leds', 'aria-hidden': 'true' },
-  ...[0, 1, 2].map((i) => el('i', { class: page === 4 || page === i + 1 ? 'lit' : '' })));
+  ...[0, 1, 2].map((i) => el('i', { class: pageLeds(profile())[page - 1] & (1 << i) ? 'lit' : '' })));
 
 // The two visible lines of a position; its accessible name repeats them (WCAG 2.5.3).
 function cellText(kind, slot) {
@@ -383,7 +392,7 @@ const isSelected = (kind, slot) => selection.kind === kind && selection.slot ===
 
 function renderGrid() {
   const focus = selection.kind === 'page' && pageOf(selection.slot) === pageTab ? selection.slot : (pageTab - 1) * 3 + 1;
-  const rows = [1, 2, 3, 4].map((page) => el('tr', { class: page === pageTab ? 'current' : '', 'data-page': page },
+  const rows = pageNumbers().map((page) => el('tr', { class: page === pageTab ? 'current' : '', 'data-page': page },
     el('th', { scope: 'row' }, el('span', { class: 'page-name', text: `Page ${page}` }), leds(page)),
     ...[0, 1, 2].map((knob) => {
       const slot = (page - 1) * 3 + knob + 1;
@@ -400,12 +409,46 @@ function renderGrid() {
       return el('td', {}, cell);
     })));
   $('grid').tBodies[0].replaceChildren(...rows);
+  $('grid').caption.textContent = `Options pages 1 to ${rows.length} by knob. Arrow keys move, Enter selects, Delete empties a position.`;
   markTemplateChanges();
-  document.querySelector('.page-tabs').replaceChildren(...[1, 2, 3, 4].map((page) => el('button', {
+  const tabs = document.querySelector('.page-tabs');
+  tabs.style.gridTemplateColumns = `repeat(${rows.length}, 1fr)`;
+  tabs.replaceChildren(...pageNumbers().map((page) => el('button', {
     type: 'button', role: 'tab', id: `tab-${page}`, 'aria-selected': String(page === pageTab),
     'aria-controls': 'grid', tabindex: page === pageTab ? '0' : '-1',
     onclick: () => { pageTab = page; renderGrid(); markTemplateChanges(); $(`tab-${page}`).focus(); }
   }, `Page ${page}`, leds(page))));
+}
+
+// The pages [M] cycles through, and compaction only after a preview.
+function renderPages() {
+  const used = usedPages(entries, profile());
+  const moves = compaction(entries, profile());
+  const parts = [used.length ?
+    `${used.length} of ${pageNumbers().length} pages used. After power-on, holding [M] opens page ${used[0]}; ` +
+      `taps go ${[...used, used[0]].join(' → ')}, skipping empty pages. Reopening returns to the last page shown.` :
+    'Holding [M] opens nothing: no feature is on an options page.'];
+  if (moves.length && !compactPreview) {
+    parts.push(' ', el('button', { type: 'button', class: 'quiet', id: 'compact-pages',
+      onclick: () => { compactPreview = true; renderPages(); $('compact-apply').focus(); } }, 'Compact pages…'));
+  }
+  if (moves.length && compactPreview) {
+    parts.push(el('div', { class: 'confirm', role: 'group', 'aria-labelledby': 'compact-text' },
+      el('p', { id: 'compact-text', text: `Move ${moves.map(([from, to]) => `page ${from} to page ${to}`).join(', ')}. ` +
+        'Knob positions on each page stay; the page LEDs change with the page number.' }),
+      el('div', { class: 'options' },
+        el('button', { type: 'button', id: 'compact-apply', onclick: () => {
+          const to = selection.kind === 'page' && new Map(moves).get(pageOf(selection.slot));
+          if (to) selection = { kind: 'page', slot: selection.slot - (pageOf(selection.slot) - to) * 3 };
+          if (selection.kind === 'page') pageTab = pageOf(selection.slot);
+          commit(() => compact(entries, profile()), `Pages compacted: ${moves.map(([from, to]) => `${from} → ${to}`).join(', ')}.`);
+          focusSelection();
+        } }, el('b', { text: 'Compact' })),
+        el('button', { type: 'button', id: 'compact-cancel', onclick: () => {
+          compactPreview = false; renderPages(); $('compact-pages').focus();
+        } }, el('b', { text: 'Cancel' })))));
+  }
+  $('page-order').replaceChildren(...parts);
 }
 
 // Arrow keys move between positions, Enter selects, Delete empties one.
@@ -414,7 +457,7 @@ function gridKeys(event) {
   if (!cell) return;
   const slot = Number(cell.dataset.slot);
   const col = (slot - 1) % 3;
-  const step = { ArrowRight: col < 2 ? 1 : 0, ArrowLeft: col > 0 ? -1 : 0, ArrowDown: slot <= 9 ? 3 : 0,
+  const step = { ArrowRight: col < 2 ? 1 : 0, ArrowLeft: col > 0 ? -1 : 0, ArrowDown: slot <= slotCount('page', profile()) - 3 ? 3 : 0,
     ArrowUp: slot > 3 ? -3 : 0, Home: -col, End: 2 - col }[event.key];
   if (step !== undefined) {
     event.preventDefault();
@@ -434,7 +477,8 @@ function tabKeys(event) {
   const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
   if (!step || !event.target.matches('[role=tab]')) return;
   event.preventDefault();
-  pageTab = (pageTab + step + 3) % 4 + 1;
+  const count = pageNumbers().length;
+  pageTab = (pageTab + step + count - 1) % count + 1;
   renderGrid();
   $(`tab-${pageTab}`).focus();
 }
@@ -535,7 +579,7 @@ function renderExtras() {
 function putOnPage(f) {
   const on = places(entryOf(entries, f)).find((p) => p.kind === 'page');
   if (on) { selection = on; pageTab = pageOf(on.slot); render(); $(`cell-${on.slot}`).focus(); return; }
-  const slot = freeSlot(entries, 'page');
+  const slot = freeSlot(entries, 'page', profile());
   if (!slot) {
     selection = { id: f.id };
     render();
@@ -606,7 +650,7 @@ function renderInspector() {
   const e0 = kind ? occupant(entries, kind, slot) : null;
   const id = kind ? e0?.[0] : selection.id;
   $('panel-caption').textContent = highlight($('panel'), kind || places(entryOf(entries, featureById(id))).find(() => true)?.kind,
-    kind ? slot : places(entryOf(entries, featureById(id))).find(() => true)?.slot);
+    kind ? slot : places(entryOf(entries, featureById(id))).find(() => true)?.slot, profile());
   const body = [];
   if (kind) body.push(el('p', { class: 'where', text: cap(placeName(kind, slot)) }));
   if (!id) {
@@ -665,7 +709,7 @@ function renderInspector() {
     const index = KINDS[where].index;
     const select = el('select', { id: `where-${where}`, 'aria-label': `${f.name}: ${title}` });
     select.add(new Option(e[1] === 2 && where !== 'action' ? 'Not placed' : 'None', 0));
-    for (let s = 1; s <= KINDS[where].count; ++s) {
+    for (let s = 1; s <= slotCount(where, profile()); ++s) {
       const other = occupant(entries, where, s);
       select.add(new Option(cap(placeName(where, s)) + (other && other[0] !== f.id ? ` (${featureById(other[0]).name})` : ''), s));
     }
@@ -706,8 +750,8 @@ function setState(f, state) {
     let next = edit(entries, profile(), f, 1, state);
     const e = entryOf(next, f);
     if (state === 2 && !places(e).length) {
-      const kind = ['page', 'amount', 'action'].find((k) => fits(f, k) && freeSlot(next, k));
-      if (kind) next = edit(next, profile(), f, KINDS[kind].index, freeSlot(next, kind));
+      const kind = ['page', 'amount', 'action'].find((k) => fits(f, k) && freeSlot(next, k, profile()));
+      if (kind) next = edit(next, profile(), f, KINDS[kind].index, freeSlot(next, kind, profile()));
     }
     return next;
   });
@@ -804,7 +848,7 @@ function render() {
   if (key !== shown && selection.kind === 'page') pageTab = pageOf(selection.slot);
   shown = key;
   const focused = document.activeElement?.id;
-  renderPresets(); renderGrid(); renderSlots(); renderExtras(); renderInspector(); markTemplateChanges();
+  renderPresets(); renderGrid(); renderPages(); renderSlots(); renderExtras(); renderInspector(); markTemplateChanges();
   renderScales(selected().profile.version === 2);
   if (focused && document.activeElement === document.body) $(focused)?.focus({ preventScroll: true });
   refresh();
@@ -823,8 +867,9 @@ async function refresh() {
   $('build').disabled = $('local').disabled = busy;
   const changed = changes(entries, templates(release.profile)[preset] || defaults(release.profile), release.profile).length + Number(scales !== null);
   $('changes').textContent = changed ? `${changed} change${changed === 1 ? '' : 's'} from ${preset}` : `${preset}, unchanged`;
-  const used = Array.from({ length: 12 }, (_, i) => occupant(entries, 'page', i + 1)).filter(Boolean).length;
-  $('positions').textContent = `${used} of 12 page positions used`;
+  const slots = slotCount('page', release.profile);
+  const used = Array.from({ length: slots }, (_, i) => occupant(entries, 'page', i + 1)).filter(Boolean).length;
+  $('positions').textContent = `${used} of ${slots} page positions used`;
   const fp = await fingerprint(block);
   if (token !== revision) return;
   $('fingerprint').textContent = fp;
@@ -1021,7 +1066,7 @@ async function checkCapabilities() {
   }
   // A constructor alone does not establish support for module workers.
   await new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=716413d94d04fbd8', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=d3cdc8ee403b3861', { type: 'module' });
     const done = (error) => {
       clearTimeout(timer); worker.terminate();
       error ? reject(error) : resolve();
@@ -1032,6 +1077,16 @@ async function checkCapabilities() {
   });
 }
 
+// A release must declare an options page layout this page knows.
+function knownPages(releaseProfile) {
+  try {
+    pageLeds(releaseProfile);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function init() {
   try {
     await checkCapabilities();
@@ -1040,7 +1095,7 @@ async function init() {
   }
   $('compatibility').hidden = true;
   try {
-    const response = await fetch('manifest.json?v=716413d94d04fbd8', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=d3cdc8ee403b3861', { cache: 'no-cache' });
     manifest = await response.json();
   } catch {
     status('Could not load the release list.', 'error');
@@ -1048,7 +1103,7 @@ async function init() {
   }
   if (manifest.format !== 3 || !manifest.releases.length ||
       manifest.releases.some((r) => !r.profile || ![1, 2].includes(r.profile.version) || r.profile.offset !== 1024 || r.profile.size !== (r.profile.version === 2 ? 4096 : 512) ||
-        !Number.isInteger(r.profile.format) || r.profile.format < 1 || r.profile.format > 0xffffffff)) {
+        !Number.isInteger(r.profile.format) || r.profile.format < 1 || r.profile.format > 0xffffffff || !knownPages(r.profile))) {
     status('Unsupported release list.', 'error'); return;
   }
   for (const release of manifest.releases) $('release').add(new Option(release.name, release.tag));
@@ -1091,7 +1146,7 @@ async function init() {
     if (busy) pendingShare = true;
     else loadSharedProfile();
   });
-  $('release').onchange = () => { templatePreview = null; $('template-gallery').hidden = true; entries = defaults(selected().profile); scales = null; preset = 'Drizzlet'; edited(); setupEditor(); };
+  $('release').onchange = () => { templatePreview = null; compactPreview = false; $('template-gallery').hidden = true; entries = defaults(selected().profile); scales = null; preset = 'Drizzlet'; edited(); setupEditor(); };
   $('forget-draft').onclick = forgetSaved;
   setupEditor();
   renderNotice();

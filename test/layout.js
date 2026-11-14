@@ -148,8 +148,8 @@ assert.deepEqual(entryOf(place(drizzlet, profile, 14, 'action', 1, 'swap'), feat
 assert.equal(entryOf(place(drizzlet, profile, 14, 'action', 1, 'swap'), features[12])[5], 2);
 assert.throws(() => place(drizzlet, profile, 15, 'page', 1));
 assert.throws(() => place(drizzlet, profile, 1, 'page', 13));
-assert.equal(freeSlot(drizzlet, 'page'), 0);
-assert.equal(freeSlot(drizzlet, 'amount'), 0);
+assert.equal(freeSlot(drizzlet, 'page', profile), 0);
+assert.equal(freeSlot(drizzlet, 'amount', profile), 0);
 assert.equal(changes(drizzlet, drizzlet, profile).length, 0);
 assert.deepEqual(changes(stock, drizzlet, profile).length, 16);
 

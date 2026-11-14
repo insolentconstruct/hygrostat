@@ -47,10 +47,10 @@ The tests check the page against the firmware it offers. They need a supported N
 ```sh
 git clone --branch drizzlet https://github.com/insolentconstruct/eurorack.git firmware
 git -C firmware submodule update --init stmlib
-for t in manifest profile draft scales scales_firmware event_costs downloads help layout readiness costs idle_timeout recent_notes beta3_options; do node test/$t.js; done
+for t in manifest profile draft scales scales_firmware event_costs downloads help layout option_pages readiness costs idle_timeout recent_notes beta3_options; do node test/$t.js; done
 ```
 
-`test/browser.mjs` and `test/scales_browser.mjs` run the page in Chromium, Firefox and WebKit (CI runs it in the Playwright 1.65.0 image). It needs Playwright with its browsers and the page served locally: `SITE=static BASE=http://localhost:8000/ node test/browser.mjs` (and the same command with `test/scales_browser.mjs`, `test/draft_browser.mjs` and `test/beta3_browser.mjs`). The scale and Beta 3 browser tests use a synthetic release list and never build or offer a synthetic firmware image. `test/idle_timeout.js`, `test/recent_notes.js` and `test/beta3_options.js` check against the final Beta 3 firmware commit (override with `BETA3_FIRMWARE_REF`); the firmware clone needs its branches. `test/scales_firmware.js` checks the V2 codec against the current firmware parser; it needs firmware with scale-bank support.
+`test/browser.mjs` and `test/scales_browser.mjs` run the page in Chromium, Firefox and WebKit (CI runs it in the Playwright 1.65.0 image). It needs Playwright with its browsers and the page served locally: `SITE=static BASE=http://localhost:8000/ node test/browser.mjs` (and the same command with `test/scales_browser.mjs`, `test/draft_browser.mjs`, `test/beta3_browser.mjs` and `test/pages_browser.mjs`). The scale, Beta 3 and page browser tests use synthetic release lists and never build or offer a synthetic firmware image. `test/option_pages.js` checks options pages 5–7 with a synthetic seven-page release. `test/idle_timeout.js`, `test/recent_notes.js`, `test/beta3_options.js` and `test/option_pages.js` check against the final Beta 3 firmware commit (override with `BETA3_FIRMWARE_REF`); the firmware clone needs its branches. `test/scales_firmware.js` checks the V2 codec against the current firmware parser; it needs firmware with scale-bank support.
 
 `BASE=http://localhost:8000/ node test/security_browser.mjs` checks actual CSP blocking and referrer behaviour in all three engines without re-encoding a WAV.
 
