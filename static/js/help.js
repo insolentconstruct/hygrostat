@@ -32,7 +32,8 @@ const descriptions = {
 
 export function featureHelp(feature, release) {
   const [description, section] = descriptions[feature.id];
-  const details = feature.id === 10 ? 'Around C, the steps are C and G across octaves, including G below C (a fourth down). Pitch scale applies afterwards and can change these intervals. Works on granular and Beads wavetable grains, not the continuous oscillator, Plaits or Spectral.' : '';
+  const recent = feature.values?.includes('Recent notes') ? ' Recent notes: with PITCH patched, each CCW grain plays one of the last 1-8 notes sent to PITCH (more as you turn further CCW); unpatched it plays as Free.' : '';
+  const details = feature.id === 10 ? 'Around C, the steps are C and G across octaves, including G below C (a fourth down). Pitch scale applies afterwards and can change these intervals. Works on granular and Beads wavetable grains, not the continuous oscillator, Plaits or Spectral.' + recent : '';
   return { description, details, url: docs.replace('{TAG}', encodeURIComponent(release.development ? release.source_commit : release.tag)) + '#' + section };
 }
 

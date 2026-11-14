@@ -8,16 +8,16 @@
 // check the release's app image against the manifest, encode the update .wav
 // in the browser, check the .wav, offer it for download.
 
-import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, normalise } from './profile.js?v=ad34c4b83044d106';
-import { effectiveScales, validateScales } from './scales.js?v=ad34c4b83044d106';
-import { scaleEditor } from './scale_editor.js?v=ad34c4b83044d106';
-import { guide } from './guide.js?v=ad34c4b83044d106';
-import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=ad34c4b83044d106';
-import { featureHelp, actionHelp } from './help.js?v=ad34c4b83044d106';
+import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, normalise } from './profile.js?v=0a3471a17df706ac';
+import { effectiveScales, validateScales } from './scales.js?v=0a3471a17df706ac';
+import { scaleEditor } from './scale_editor.js?v=0a3471a17df706ac';
+import { guide } from './guide.js?v=0a3471a17df706ac';
+import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=0a3471a17df706ac';
+import { featureHelp, actionHelp } from './help.js?v=0a3471a17df706ac';
 import { KNOBS, KINDS, GROUPS, ACTION_DOES, placeName, pageOf, entryOf, occupant, places, valueLabel, stateLabel,
-  summary, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, fits } from './layout.js?v=ad34c4b83044d106';
-import { drawPanel, highlight } from './panel.js?v=ad34c4b83044d106';
-import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=ad34c4b83044d106';
+  summary, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, fits } from './layout.js?v=0a3471a17df706ac';
+import { drawPanel, highlight } from './panel.js?v=0a3471a17df706ac';
+import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=0a3471a17df706ac';
 
 const $ = (id) => document.getElementById(id);
 const cap = (text) => text.replace(/^./, (c) => c.toUpperCase());
@@ -40,7 +40,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=ad34c4b83044d106', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=0a3471a17df706ac', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.ready) return;
       if (data.progress !== undefined) {
@@ -1018,7 +1018,7 @@ async function checkCapabilities() {
   }
   // A constructor alone does not establish support for module workers.
   await new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=ad34c4b83044d106', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=0a3471a17df706ac', { type: 'module' });
     const done = (error) => {
       clearTimeout(timer); worker.terminate();
       error ? reject(error) : resolve();
@@ -1037,7 +1037,7 @@ async function init() {
   }
   $('compatibility').hidden = true;
   try {
-    const response = await fetch('manifest.json?v=ad34c4b83044d106', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=0a3471a17df706ac', { cache: 'no-cache' });
     manifest = await response.json();
   } catch {
     status('Could not load the release list.', 'error');
