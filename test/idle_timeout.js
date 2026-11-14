@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 import { validate, encodeProfile, decodeProfile, defaults, share, unshare } from '../static/js/profile.js';
 import { guide } from '../static/js/guide.js';
 import { featureHelp } from '../static/js/help.js';
+import { beta3Ref, firmwareShow } from './firmware.js';
 const text = (svg) => [...svg.matchAll(/<text\b[^>]*>(.*?)<\/text>/g)].map((m) => m[1]).join(' ');
 const read = (file) => readFileSync(new URL(file, import.meta.url), 'utf8');
 const manifest = JSON.parse(read('../static/manifest.json'));
@@ -57,19 +58,15 @@ assert(help.description.length > 15 && help.description.length < 180);
 assert.match(help.description, /Off keeps them open/);
 assert.equal(new URL(help.url).hash, '#options-page-idle-timeout');
 
-// With a prepared firmware revision, check its catalogue entry and documentation heading.
-if (process.env.IDLE_TIMEOUT_FIRMWARE_REF) {
-  const { firmwareShow } = await import('./firmware.js');
-  const ref = process.env.IDLE_TIMEOUT_FIRMWARE_REF;
-  const catalogue = JSON.parse(firmwareShow(ref, 'beads/build/profile-features.json', { encoding: 'utf8' }));
-  const c = catalogue.features.find((f) => f.id === 25);
-  assert.equal(c.name, feature.name);
-  assert.deepEqual(c.values, feature.values);
-  assert.deepEqual(c.states, feature.states);
-  assert.equal(c.field, feature.field);
-  assert.deepEqual([c.page_slots, c.amount_slots, c.actions], [[], [], []]);
-  assert.equal(c.touches_synth, feature.synth_path);
-  const docs = firmwareShow(ref, 'beads/build/docs/FEATURES.md', { encoding: 'utf8' });
-  assert.match(docs, /^### Options page idle timeout$/m);
-}
-console.log(`PASS idle timeout on a synthetic release${process.env.IDLE_TIMEOUT_FIRMWARE_REF ? ' and the prepared firmware catalogue' : ''}`);
+// The final Beta 3 firmware's catalogue entry and documentation heading.
+const catalogue = JSON.parse(firmwareShow(beta3Ref, 'beads/build/profile-features.json', { encoding: 'utf8' }));
+const c = catalogue.features.find((f) => f.id === 25);
+assert.equal(c.name, feature.name);
+assert.deepEqual(c.values, feature.values);
+assert.deepEqual(c.states, feature.states);
+assert.equal(c.field, feature.field);
+assert.deepEqual([c.page_slots, c.amount_slots, c.actions], [[], [], []]);
+assert.equal(c.touches_synth, feature.synth_path);
+const docs = firmwareShow(beta3Ref, 'beads/build/docs/FEATURES.md', { encoding: 'utf8' });
+assert.match(docs, /^### Options page idle timeout$/m);
+console.log(`PASS idle timeout on a synthetic release and the firmware catalogue at ${beta3Ref.slice(0, 7)}`);
