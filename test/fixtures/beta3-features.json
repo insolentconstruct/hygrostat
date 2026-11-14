@@ -1,0 +1,141 @@
+[
+  {
+    "id": 26,
+    "default_in_block": false,
+    "default": [26, 0, 0, 0, 0, 0],
+    "name": "Delay SEED latch fade",
+    "values": ["Switch at once (stock)", "Fade"],
+    "states": ["Off", "Fixed"],
+    "field": null,
+    "page": false,
+    "amount": false,
+    "action": false,
+    "stateless": false,
+    "synth_path": false,
+    "cpu": null
+  },
+  {
+    "id": 27,
+    "default_in_block": false,
+    "default": [27, 0, 0, 0, 0, 0],
+    "name": "Input gain at power-on",
+    "values": ["Automatic (stock)", "Manual"],
+    "states": ["Off", "Fixed"],
+    "field": null,
+    "page": false,
+    "amount": false,
+    "action": false,
+    "stateless": false,
+    "synth_path": true,
+    "cpu": {
+      "kind": "zero",
+      "source": "synthetic fixture: no per-block work (code inspection)",
+      "engines": {
+        "synth": { "off": 0, "fixed": [0, 0], "adjustable": [0, 0] },
+        "granular": { "off": 0, "fixed": [0, 0], "adjustable": [0, 0] }
+      },
+      "uncertainty": { "points": 0 },
+      "note": "power-on gain default only; not a release measurement"
+    }
+  },
+  {
+    "id": 28,
+    "default_in_block": false,
+    "default": [28, 0, 0, 0, 0, 0],
+    "name": "Attack sensitivity",
+    "values": ["Normal (default)", "Low", "High"],
+    "states": ["Off", "Fixed"],
+    "field": null,
+    "page": false,
+    "amount": false,
+    "action": false,
+    "stateless": false,
+    "synth_path": true,
+    "cpu": null
+  },
+  {
+    "id": 29,
+    "default_in_block": false,
+    "default": [29, 0, 0, 0, 0, 0],
+    "name": "SEED at power-on",
+    "values": ["Latched (stock)", "Unlatched"],
+    "states": ["Off", "Fixed"],
+    "field": null,
+    "page": false,
+    "amount": false,
+    "action": false,
+    "stateless": false,
+    "synth_path": true,
+    "cpu": {
+      "kind": "zero",
+      "source": "synthetic fixture: no per-block work (code inspection)",
+      "engines": {
+        "synth": { "off": 0, "fixed": [0, 0], "adjustable": [0, 0] },
+        "granular": { "off": 0, "fixed": [0, 0], "adjustable": [0, 0] }
+      },
+      "uncertainty": { "points": 0 },
+      "note": "power-on SEED latch state only; not a release measurement"
+    }
+  },
+  {
+    "id": 30,
+    "default_in_block": false,
+    "default": [30, 0, 0, 0, 0, 0],
+    "name": "PITCH knob",
+    "values": ["Notches (stock)", "Smooth"],
+    "states": ["Off", "Fixed"],
+    "field": null,
+    "page": false,
+    "amount": false,
+    "action": false,
+    "stateless": false,
+    "synth_path": true,
+    "cpu": null
+  },
+  {
+    "id": 32,
+    "default_in_block": false,
+    "default": [32, 0, 0, 0, 0, 0],
+    "name": "Mix law",
+    "values": ["Stock", "Gentle"],
+    "states": ["Off", "Fixed"],
+    "field": null,
+    "page": false,
+    "amount": false,
+    "action": false,
+    "stateless": false,
+    "synth_path": false,
+    "cpu": {
+      "kind": "measured",
+      "source": "synthetic fixture: emulator instruction counts at b446452, not module cycles or a release measurement",
+      "engines": {
+        "granular": { "off": 0, "fixed": [0, 0.071], "adjustable": [0.071, 0.071], "measured_values": [0, 1] }
+      },
+      "uncertainty": { "points": 0.08 },
+      "note": "granular value=1: +85 to +86 instructions per block (granular q3 and heavy q3 Clouds, about 52k per block), counted as one cycle each against the 120000-cycle block; the uncertainty allows twice that; synth: 0 by construction (the synths keep their own DRY/WET)"
+    }
+  },
+  {
+    "id": 33,
+    "default_in_block": false,
+    "default": [33, 0, 0, 0, 0, 0],
+    "name": "Reverb input",
+    "values": ["Mix (stock)", "Grains"],
+    "states": ["Off", "Fixed"],
+    "field": null,
+    "page": false,
+    "amount": false,
+    "action": false,
+    "stateless": false,
+    "synth_path": false,
+    "cpu": {
+      "kind": "measured",
+      "source": "synthetic fixture: emulator instruction counts at b446452, not module cycles or a release measurement",
+      "engines": {
+        "granular": { "off": 0, "fixed": [0, 0.079], "adjustable": [0.079, 0.079], "measured_values": [0, 1] }
+      },
+      "uncertainty": { "points": 0.08 },
+      "note": "granular value=1: +92 to +94 instructions per block (granular q3 and heavy q3 Clouds, about 52k per block), counted as one cycle each against the 120000-cycle block; the uncertainty allows twice that; synth: 0 by construction (the synths keep the stock routing)"
+    }
+  }
+]

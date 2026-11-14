@@ -23,9 +23,10 @@
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
 // Knob cards port options_guide.py: 270-degree arcs and the same LED ladder.
-import { effectiveScales, PULSE_NAMES } from './scales.js?v=0a3471a17df706ac';
-import { defaults, equal, encodeProfile } from './profile.js?v=0a3471a17df706ac';
-import { RELEASE_GUIDES, RELEASE_GUIDE_TAG } from './release_guides.js?v=0a3471a17df706ac';
+import { effectiveScales, PULSE_NAMES } from './scales.js?v=716413d94d04fbd8';
+import { defaults, equal, encodeProfile } from './profile.js?v=716413d94d04fbd8';
+import { RELEASE_GUIDES, RELEASE_GUIDE_TAG } from './release_guides.js?v=716413d94d04fbd8';
+import { placeable, bankWarning } from './layout.js?v=716413d94d04fbd8';
 
 const KNOBS = ['FEEDBACK', 'DRY/WET', 'REVERB'];
 export const ACTIONS = ['None', '[A]+SEED', '[A]+FREEZE', '[A] hold'];
@@ -190,9 +191,15 @@ export function guide(entries, release, fp, mobile = false, scales = null) {
     const f = feature(e);
     y = d.lines(margin, y + 10, `${f.name}: Fixed · ${f.values ? f.values[e[2]] : e[2]}`, mobile ? 43 : 140);
   }
-  for (const e of entries.filter((e) => e[1] === 2 && !e[3] && !e[4] && !e[5])) {
+  for (const e of entries.filter((e) => e[1] === 2 && !e[3] && !e[4] && !e[5] && placeable(feature(e)))) {
     const f = feature(e);
     y = d.lines(margin, y + 10, `${f.name}: ${f.values ? f.values[e[2]] : e[2]} · set on the page: not placed`, mobile ? 43 : 140);
+  }
+  const bank = features.find((f) => f.id === 31);
+  if (bank) {
+    const start = (entries.find((e) => e[0] === 31) || bank.default)[2];
+    y = d.lines(margin, y + 10, `${bank.name}: starts ${bank.values[start]}. ` + (bankWarning(entries, release.profile) ||
+      'While the Plaits synth plays, hold [A] and press FREEZE to step green, red, yellow.'), mobile ? 43 : 140);
   }
   if (release.profile.version === 2) {
     y = d.lines(margin, y + 20, 'Scale cycle: Off and Chromatic are separate knob choices; SEED steps the following scales in order.', mobile ? 43 : 140);

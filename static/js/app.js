@@ -8,16 +8,16 @@
 // check the release's app image against the manifest, encode the update .wav
 // in the browser, check the .wav, offer it for download.
 
-import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, normalise } from './profile.js?v=0a3471a17df706ac';
-import { effectiveScales, validateScales } from './scales.js?v=0a3471a17df706ac';
-import { scaleEditor } from './scale_editor.js?v=0a3471a17df706ac';
-import { guide } from './guide.js?v=0a3471a17df706ac';
-import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=0a3471a17df706ac';
-import { featureHelp, actionHelp } from './help.js?v=0a3471a17df706ac';
+import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, normalise } from './profile.js?v=716413d94d04fbd8';
+import { effectiveScales, validateScales } from './scales.js?v=716413d94d04fbd8';
+import { scaleEditor } from './scale_editor.js?v=716413d94d04fbd8';
+import { guide } from './guide.js?v=716413d94d04fbd8';
+import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=716413d94d04fbd8';
+import { featureHelp, actionHelp } from './help.js?v=716413d94d04fbd8';
 import { KNOBS, KINDS, GROUPS, ACTION_DOES, placeName, pageOf, entryOf, occupant, places, valueLabel, stateLabel,
-  summary, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, fits } from './layout.js?v=0a3471a17df706ac';
-import { drawPanel, highlight } from './panel.js?v=0a3471a17df706ac';
-import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=0a3471a17df706ac';
+  summary, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, fits, placeable, bankWarning } from './layout.js?v=716413d94d04fbd8';
+import { drawPanel, highlight } from './panel.js?v=716413d94d04fbd8';
+import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=716413d94d04fbd8';
 
 const $ = (id) => document.getElementById(id);
 const cap = (text) => text.replace(/^./, (c) => c.toUpperCase());
@@ -40,7 +40,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=0a3471a17df706ac', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=716413d94d04fbd8', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.ready) return;
       if (data.progress !== undefined) {
@@ -487,7 +487,7 @@ function renderSlots() {
     }));
   }
   // Settings with no control, outside Extras: easy to miss otherwise.
-  const loose = profile().features.filter((f) => f.default_in_block !== false).filter((f) => {
+  const loose = profile().features.filter((f) => f.default_in_block !== false && placeable(f)).filter((f) => {
     const e = entryOf(entries, f);
     return e[1] && !places(e).length;
   });
@@ -495,10 +495,12 @@ function renderSlots() {
   $('unplaced').replaceChildren(loose.length ? 'No control: ' : '', ...loose.flatMap((f, i) => [i ? ', ' : '',
     el('button', { type: 'button', id: `loose-${f.id}`, onclick: () => { selection = { id: f.id }; render(); $('inspector-title')?.focus(); } },
       `${f.name} (${entryOf(entries, f)[1] === 2 ? 'not placed' : summary(f, entryOf(entries, f)).toLowerCase()})`)]));
+  $('bank-warning').textContent = bankWarning(entries, profile());
+  $('bank-warning').hidden = !$('bank-warning').textContent;
 }
 
 function renderExtras() {
-  const extras = profile().features.filter((f) => f.default_in_block === false);
+  const extras = profile().features.filter((f) => f.default_in_block === false || !placeable(f));
   $('extras').replaceChildren(...extras.map((f) => {
     const e = entryOf(entries, f);
     const help = featureHelp(f, selected());
@@ -512,7 +514,7 @@ function renderExtras() {
         el('label', { class: 'switch' }, input, el('span')), el('small', { id: `extra-${f.id}-about`, text: help.description }));
     }
     const select = el('select', { id: `extra-${f.id}`, 'aria-labelledby': `extra-${f.id}-name`, 'aria-describedby': `extra-${f.id}-about` });
-    f.values.forEach((v, i) => select.add(new Option(i === 0 && e[1] !== 2 && !/\bstock\b/i.test(valueLabel(f, i)) ? `${valueLabel(f, i)} (stock)` : valueLabel(f, i), i)));
+    f.values.forEach((v, i) => select.add(new Option(i === 0 && e[1] !== 2 && !/\b(stock|default)\b/i.test(valueLabel(f, i)) ? `${valueLabel(f, i)} (stock)` : valueLabel(f, i), i)));
     select.value = e[1] ? e[2] : 0;
     select.onchange = () => {
       const v = Number(select.value);
@@ -596,7 +598,7 @@ function confirmChoices(id, kind, slot, done, back) {
 const STATE_HINTS = [
   (f) => f.id === 12 ? 'Grains go to the reverb unsoftened.' : 'As in Mutable Instruments’ firmware.',
   () => 'No control on the module.',
-  () => 'On a control; your changes are saved.'
+  (f) => placeable(f) ? 'On a control; your changes are saved.' : 'Its own gesture changes it; your changes are saved.'
 ];
 
 function renderInspector() {
@@ -688,7 +690,8 @@ function renderInspector() {
         () => { pending = null; render(); $(`where-${where}`).focus(); }));
     }
   }
-  if (e[1] === 2 && !places(e).length) body.push(el('p', { class: 'warn', text: 'Not on a control yet: choose where to change it.' }));
+  if (e[1] === 2 && !places(e).length && placeable(f)) body.push(el('p', { class: 'warn', text: 'Not on a control yet: choose where to change it.' }));
+  if ([9, 31].includes(f.id) && bankWarning(entries, profile())) body.push(el('p', { class: 'warn', id: 'inspector-bank-warning', text: bankWarning(entries, profile()) }));
   if (kind) {
     body.push(el('div', { class: 'inspector-actions' },
       el('button', { type: 'button', class: 'quiet', id: 'choose-feature', onclick: () => openLibrary({ kind, slot }) }, 'Choose another feature'),
@@ -1018,7 +1021,7 @@ async function checkCapabilities() {
   }
   // A constructor alone does not establish support for module workers.
   await new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=0a3471a17df706ac', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=716413d94d04fbd8', { type: 'module' });
     const done = (error) => {
       clearTimeout(timer); worker.terminate();
       error ? reject(error) : resolve();
@@ -1037,7 +1040,7 @@ async function init() {
   }
   $('compatibility').hidden = true;
   try {
-    const response = await fetch('manifest.json?v=0a3471a17df706ac', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=716413d94d04fbd8', { cache: 'no-cache' });
     manifest = await response.json();
   } catch {
     status('Could not load the release list.', 'error');
