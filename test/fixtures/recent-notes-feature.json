@@ -1,0 +1,30 @@
+{
+  "id": 10,
+  "name": "Random pitch steps",
+  "values": [
+    "Free (Stock)",
+    "Fifths and octaves",
+    "Recent notes"
+  ],
+  "page": true,
+  "amount": false,
+  "action": false,
+  "stateless": false,
+  "synth_path": true,
+  "cpu": null,
+  "default": [
+    10,
+    2,
+    0,
+    2,
+    0,
+    0
+  ],
+  "default_in_block": true,
+  "states": [
+    "Off",
+    "Fixed",
+    "Adjustable"
+  ],
+  "field": 9
+}
