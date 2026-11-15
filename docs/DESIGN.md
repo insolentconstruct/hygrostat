@@ -66,6 +66,7 @@ Any future estimator needs separately qualified workloads and policy.
 - Per-feature costs on the development board predict module changes within about half a point on the granular engine; setting combinations still need module measurement.
 - Exact module measurements of a complete profile (`cpu.combinations[].profile`, hex) take precedence over estimates.
 - The historical helper rounds each engine to 0.1%, warns from 91% and marks values above the provisional 92% policy as blocked. This policy was not a measured failure threshold. These results no longer control the page or its downloads.
+- Measured on a module since, the clean edge at 48 kHz is 90.8% of the block, with the first late load at 91.3%: the 92% policy is above the module's limit. Beta 2's entry keeps it as history; from Beta 3 the module limits below replace it.
 
 ### Module-measured costs
 
@@ -82,6 +83,8 @@ Beta 2's per-feature costs come from `costs/cost-table.json` (development board,
 - Copy each `cpu` object from the option's test fixture. A measured row names its run, share-relative report path and firmware image, and its `source` mentions all three; its uncertainty is above zero. An option without per-block work has `"kind": "zero"`, source `no per-block work (code inspection)`, all-zero costs, zero uncertainty and `"provenance": [{ "inspected": "<firmware commit>" }]`.
 - Every value has a cost on each engine listed; an engine left out needs `<engine>: 0 by construction` (or `not applicable`) in the note.
 - The development entry references the file as `cpu.costs.module_sources: [{ "path": "costs/<tag>-module.json" }]`. `node tools/import-costs.js` fills each option's cost from the module source, the table or the event-only inspection, and records the file's SHA-256 and option IDs there. A later import refuses changed bytes.
+- The source may also carry the release's measured CPU limits, `limits` (the format is in `test/fixtures/beta3-cpu-limits.json`): each codec rate's qualities and its clean and first-late audio-callback cycles, the ceiling rate, one heavy-patch peak per quality and the run's provenance. The import writes them, with percentages and margins, to `cpu.limits` and sets `cpu.ceiling` and `cpu.warning` to the ceiling rate's clean edge, with no added margin. It refuses a quality missing, listed twice or at the wrong rate, a missing peak or one at or above its rate's edge, a ceiling other than the synths' 48 kHz, and limits where another rate leaves the heavy patch less room.
+- Beta 3's limits, measured on the module: 48 kHz (Bright digital, Sunny tape, synths) clean to 90.8%, 32 kHz (Cold digital) 86.6%, 24 kHz (Scorched cassette) 82.7%. The heavy granular patch leaves Bright digital 8.6 points, the least, so 48 kHz sets the ceiling. Heavy peaks are reference only, measured on a test build before the final layout.
 - The import also refuses a row without provenance or cost, a name or value list that differs from the release, an option with no cost source and a row for an option the release lacks. `test/module_costs.js` imports the Beta 3 fixtures this way, and `test/costs.js` checks each release against its own sources.
 
 ## Guides
