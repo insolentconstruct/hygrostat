@@ -164,6 +164,23 @@ for (const [id, value, points] of [[26, 1, 0], [28, 1, 0.079], [28, 2, 0.079], [
 }
 for (const id of [26, 28, 32, 33]) assert.match(additions.find((f) => f.id === id).cpu.note, /synth: 0 by construction/);
 for (const id of [26, 28]) assert.match(additions.find((f) => f.id === id).cpu.note, /within noise/);
+// TIME modulation (23) keeps its Beta 2 entry but takes the module-measured Scan cost in Beta 3.
+const timeScan = JSON.parse(read('fixtures/time-scan-feature.json'));
+const beta2Scan = beta2.profile.features.find((f) => f.id === 23);
+for (const key of Object.keys(beta2Scan)) if (key !== 'cpu') assert.deepEqual(timeScan[key], beta2Scan[key], key);
+assert.deepEqual(beta2Scan.cpu.engines.granular.fixed, [0, 0], 'Beta 2 keeps its historical cost');
+assert.match(timeScan.cpu.source, /^Beads module DWT cycle counts, image beta3-qual-12180c6, run-beta3-2 /);
+assert.deepEqual([Object.keys(timeScan.cpu.engines), timeScan.cpu.uncertainty.points], [['granular'], 0.14]);
+assert.match(timeScan.cpu.note, /synth: 0 by construction/);
+const scanned = structuredClone(release);
+scanned.profile.features[scanned.profile.features.findIndex((f) => f.id === 23)] = structuredClone(timeScan);
+for (const [state, value, points] of [[1, 0, 0], [1, 1, 0.569], [2, 0, 0.569]]) {
+  assert.equal(featureDelta([23, state, value, state === 2 ? 1 : 0, 0, 0], timeScan, 'granular'), points);
+  assert.equal(featureDelta([23, state, value, state === 2 ? 1 : 0, 0, 0], timeScan, 'synth'), 0);
+}
+assert.deepEqual(cpuUsage(base, scanned).engines, cpuUsage(base, beta2).engines, 'Off by default');
+const scan = Object.fromEntries(cpuUsage([...base, entry(23, 1, 1)], scanned).engines.map((e) => [e.engine, e.percent]));
+assert.deepEqual(scan, { ...stock, granular: granular(0.569) });
 // Every option at once is an estimate from measured costs, never unknown.
 const every = [...base, ...additions.map((f) => entry(f.id, 1, f.id === 28 ? 2 : 1))];
 assert.notEqual(cpuUsage(every, release).kind, 'not yet measured');
