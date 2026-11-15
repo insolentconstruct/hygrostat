@@ -37,7 +37,16 @@ assert.equal(feature.synth_path, next.touches_synth);
 for (const key of Object.keys(stock)) {
   if (!['values', 'cpu'].includes(key)) assert.deepEqual(feature[key], stock[key], key);
 }
-assert.equal(feature.cpu, null, 'Beta 3 costs are not yet measured on the module');
+// Free and Fifths keep their Beta 2 costs; Recent notes adds the module count (run-fu-1, +85 cycles of 120000).
+assert.equal(feature.cpu.kind, 'measured');
+assert.match(feature.cpu.source, /Recent notes: Beads module DWT, image beta3-qual-12180c6, run-fu-1/);
+for (const engine of ['synth', 'granular']) {
+  const was = stock.cpu.engines[engine], now = feature.cpu.engines[engine];
+  assert.deepEqual([now.off, now.fixed.slice(0, 2)], [was.off, was.fixed]);
+  assert.deepEqual(now.adjustable, now.fixed.map(() => Math.max(...now.fixed)), 'Adjustable reaches every value');
+}
+assert.deepEqual([feature.cpu.engines.granular.fixed[2], feature.cpu.engines.synth.fixed[2]], [0.071, 0.013]);
+assert.match(feature.cpu.note, /granular value=2: .*within noise.*synth value=2: not measured/);
 
 const release = structuredClone(beta2);
 Object.assign(release, { tag: 'drizzlet-dev-recent-notes', name: 'Synthetic fixture (never offered)',
@@ -73,14 +82,13 @@ assert(text(guide(fixed, release, 'abcd1234', false)).includes('Random pitch ste
 assert.match(featureHelp(feature, release).details, /Recent notes: with PITCH patched.*last 1-8 notes.*unpatched it plays as Free/);
 assert(!featureHelp(stock, beta2).details.includes('Recent notes'));
 
-// Until Beta 3 is measured: the default and Fixed Free stay within the baseline; Fifths and Recent notes are not yet measured.
+// The default keeps the baseline; every Fixed value is measured and costs no more than Adjustable.
 assert.deepEqual(cpuUsage(base, release).engines, cpuUsage(base, beta2).engines);
 const free = edit(base, release.profile, feature, 1, 1);
-assert.deepEqual(cpuUsage(free, release).engines, cpuUsage(base, beta2).engines);
-for (const value of [1, 2]) {
+for (const value of [0, 1, 2]) {
   const usage = cpuUsage(edit(free, release.profile, feature, 2, value), release);
-  assert.equal(usage.kind, 'not yet measured');
-  assert.deepEqual(usage.unknown, ['Random pitch steps']);
+  assert.notEqual(usage.kind, 'not yet measured');
+  for (const [i, e] of usage.engines.entries()) assert(e.percent <= cpuUsage(base, release).engines[i].percent);
 }
 
 // Every state and value of ID 10 against the compiled firmware parser at the same commit.
