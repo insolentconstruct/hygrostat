@@ -61,11 +61,28 @@ The following data and helper tests are retained as historical evidence, not an
 assurance that every configuration is safe or a measured physical CPU limit.
 Any future estimator needs separately qualified workloads and policy.
 
-- Per-feature costs were measured on a development board calibrated to the module. Four event-only features have no per-block cost.
+- Beta 2's per-feature costs were measured on a development board calibrated to the module. Four event-only features have no per-block cost.
 - Baselines are worst-case module measurements: synth 83.4% (with Clouds-style reverb, measured on the codec-fix Beta 2 timing build), granular 83.0% (an October build, before profiles). Each feature adds its cost minus its default's cost, so moving a control between slots doesn't change the estimate.
 - Per-feature costs on the development board predict module changes within about half a point on the granular engine; setting combinations still need module measurement.
 - Exact module measurements of a complete profile (`cpu.combinations[].profile`, hex) take precedence over estimates.
 - The historical helper rounds each engine to 0.1%, warns from 91% and marks values above the provisional 92% policy as blocked. This policy was not a measured failure threshold. These results no longer control the page or its downloads.
+
+### Module-measured costs
+
+Beta 2's per-feature costs come from `costs/cost-table.json` (development board, checksummed); never edit it. From Beta 3, costs measured on the module, and new options with no per-block work, go in one file per release, `costs/<tag>-module.json`. A row replaces the table for its option:
+
+```json
+{ "format": 1, "measured_on": "Beads module", "features": [
+  { "id": 32, "name": "Mix law", "values": ["Stock", "Gentle"],
+    "provenance": [{ "image": "…", "run": "…", "report": "session-…/report.json" }],
+    "cpu": { "kind": "measured", "source": "…", "engines": { "granular": {} }, "uncertainty": { "points": 0.14 }, "note": "…" } }
+] }
+```
+
+- Copy each `cpu` object from the option's test fixture. A measured row names its run, share-relative report path and firmware image, and its `source` mentions all three; its uncertainty is above zero. An option without per-block work has `"kind": "zero"`, source `no per-block work (code inspection)`, all-zero costs, zero uncertainty and `"provenance": [{ "inspected": "<firmware commit>" }]`.
+- Every value has a cost on each engine listed; an engine left out needs `<engine>: 0 by construction` (or `not applicable`) in the note.
+- The development entry references the file as `cpu.costs.module_sources: [{ "path": "costs/<tag>-module.json" }]`. `node tools/import-costs.js` fills each option's cost from the module source, the table or the event-only inspection, and records the file's SHA-256 and option IDs there. A later import refuses changed bytes.
+- The import also refuses a row without provenance or cost, a name or value list that differs from the release, an option with no cost source and a row for an option the release lacks. `test/module_costs.js` imports the Beta 3 fixtures this way, and `test/costs.js` checks each release against its own sources.
 
 ## Guides
 
