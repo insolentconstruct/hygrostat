@@ -54,10 +54,19 @@ for (const f of additions) {
   assert.deepEqual([f.page, f.amount, f.action, f.stateless, f.default_in_block], [false, false, false, false, false]);
   assert.deepEqual(f.default, [f.id, f.states.indexOf(c.default_state), c.default, 0, 0, 0]);
   assert.deepEqual(f.default, [f.id, 0, 0, 0, 0, 0]);
-  if (f.cpu) {
-    assert.equal(f.cpu.kind, [32, 33].includes(f.id) ? 'measured' : 'zero');
-    assert.match(f.cpu.source, /^synthetic fixture/);
-    for (const engine of Object.values(f.cpu.engines)) assert.equal(engine.fixed.length, f.values.length);
+  // A release that offers the option needs its cost: power-on options are inspected, the rest measured on the module.
+  assert.notEqual(f.cpu, null, `${f.name}: CPU cost`);
+  if ([25, 27, 29].includes(f.id)) {
+    assert.deepEqual([f.cpu.kind, f.cpu.uncertainty.points], ['zero', 0]);
+    assert.match(f.cpu.source, /^synthetic fixture: no per-block work \(code inspection\)$/);
+  } else {
+    assert.equal(f.cpu.kind, 'measured');
+    assert.match(f.cpu.source, /^Beads module DWT cycle counts, image beta3-qual-12180c6, run-beta3-2 /);
+    assert.equal(f.cpu.uncertainty.points, 0.14);
+  }
+  for (const engine of Object.values(f.cpu.engines)) {
+    assert.equal(engine.fixed.length, f.values.length);
+    assert.deepEqual(engine.adjustable, engine.fixed.map(() => Math.max(...engine.fixed)));
   }
   const help = featureHelp(f, { development: true, source_commit: ref });
   assert(help.description.length > 15 && help.description.length < 180, f.name);
@@ -134,32 +143,31 @@ for (const sensitivity of [1, 2]) {
   assert.throws(() => unshare(share(release, block), shipped), /another release/);
 }
 
-// Inspected power-on options add no cost; per-block ones stay unmeasured.
+// Inspected power-on options add no cost; the others add their module-measured granular cost, none on the synths.
 assert.deepEqual(cpuUsage(base, release).engines, cpuUsage(base, beta2).engines);
 for (const id of [25, 27, 29]) {
   assert.deepEqual(cpuUsage([...base, entry(id, 1, 1)], release).engines, cpuUsage(base, beta2).engines);
 }
-for (const id of [26, 28, 30]) {
-  const usage = cpuUsage([...base, entry(id, 1, 1)], release);
-  assert.equal(usage.kind, 'not yet measured');
-  assert.deepEqual(usage.unknown, [additions.find((f) => f.id === id).name]);
-}
-// Mix law and Reverb input: measured small granular costs (under 0.1 points), none on the synths.
 const engines = (entries) => Object.fromEntries(cpuUsage(entries, release).engines.map((e) => [e.engine, e.percent]));
 const stock = engines(base);
-for (const [id, points] of [[32, 0.071], [33, 0.079]]) {
+const granular = (points) => Math.round((release.cpu.baselines.granular.percent +
+  release.cpu.estimated_default_delta.granular + points) * 10) / 10;
+for (const [id, value, points] of [[26, 1, 0], [28, 1, 0.079], [28, 2, 0.079], [30, 1, 0], [32, 1, 0.401], [33, 1, 0.307]]) {
   const f = additions.find((f) => f.id === id);
-  assert.deepEqual([Object.keys(f.cpu.engines), f.cpu.engines.granular.fixed], [['granular'], [0, points]]);
-  assert(points > 0 && points < 0.1 && f.cpu.uncertainty.points < 0.1);
-  assert.match(f.cpu.note, /synth: 0 by construction/);
-  assert.equal(featureDelta(entry(id, 1, 1), f, 'granular'), points);
-  assert.equal(featureDelta(entry(id, 1, 1), f, 'synth'), 0);
-  assert.equal(featureDelta(entry(id, 1, 0), f, 'granular'), 0, 'Fixed Stock costs nothing');
-  const usage = cpuUsage([...base, entry(id, 1, 1)], release);
+  assert.equal(featureDelta(entry(id, 1, value), f, 'granular'), points);
+  assert.equal(featureDelta(entry(id, 1, value), f, 'synth'), 0);
+  assert.equal(featureDelta(entry(id, 1, 0), f, 'granular'), 0, 'Fixed stock costs nothing');
+  const usage = cpuUsage([...base, entry(id, 1, value)], release);
   assert.notEqual(usage.kind, 'not yet measured');
-  assert.deepEqual(usage.names.split(', ').filter((name) => !cpuUsage(base, release).names.split(', ').includes(name)), [f.name]);
-  assert.deepEqual(engines([...base, entry(id, 1, 1)]), { ...stock, granular: Math.round((stock.granular + points) * 10) / 10 });
+  assert.deepEqual(usage.names.split(', ').filter((name) => !cpuUsage(base, release).names.split(', ').includes(name)), points ? [f.name] : []);
+  assert.deepEqual(engines([...base, entry(id, 1, value)]), { ...stock, granular: granular(points) });
 }
+for (const id of [26, 28, 32, 33]) assert.match(additions.find((f) => f.id === id).cpu.note, /synth: 0 by construction/);
+for (const id of [26, 28]) assert.match(additions.find((f) => f.id === id).cpu.note, /within noise/);
+// Every option at once is an estimate from measured costs, never unknown.
+const every = [...base, ...additions.map((f) => entry(f.id, 1, f.id === 28 ? 2 : 1))];
+assert.notEqual(cpuUsage(every, release).kind, 'not yet measured');
+assert.deepEqual(engines(every), { ...stock, granular: granular(0.079 + 0.401 + 0.307) });
 console.log(`PASS Beta 3 options 25-30, 32 and 33: catalogue bytes at ${ref.slice(0, 7)}, manifest fields, help anchors, Off/Fixed codec, share links and guides`);
 
 // Plaits bank (31): Adjustable only, no destination, in the factory block; its gesture is fixed by the firmware.
