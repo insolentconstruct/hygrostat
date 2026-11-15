@@ -42,9 +42,15 @@ function choices(f, extremes = false) {
     [f.id, state, value, 0, 0, f.id === 9 && state === 1 && value ? 1 : 0]));
 }
 export function checkReleaseCosts(checked, read) {
-  const { rows, sources } = moduleCosts(checked, read);
+  const { rows, sources, limits } = moduleCosts(checked, read);
   // Each module source is pinned by the import, and each row passes its validation.
   assert.deepEqual(checked.cpu.costs.module_sources ?? [], sources);
+  // Module limits set the ceiling and warning at the ceiling rate's clean edge.
+  assert.deepEqual(checked.cpu.limits ?? null, limits);
+  if (limits) {
+    const edge = limits.rates.find((r) => r.khz === limits.ceiling_khz).clean.percent;
+    assert.deepEqual([checked.cpu.ceiling, checked.cpu.warning, checked.cpu.ceiling_kind], [edge, edge, 'measured']);
+  }
   for (const f of checked.profile.features) assert.deepEqual(f.cpu, importedCost(f, costTable, rows), f.name);
   for (const f of checked.profile.features) {
     const module = rows.get(f.id);
