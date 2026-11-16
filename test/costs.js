@@ -2,19 +2,23 @@
 // MIT licence: see ../static/js/encoder.js.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { costTable, costSource } from '../tools/import-costs.js';
+import { costTable, costSource, inspectionSource, moduleCosts, importedCost } from '../tools/import-costs.js';
 import { defaults, templates, modes, featureDelta, cpuUsage, profileKey,
   encodeProfile, decodeProfile } from '../static/js/profile.js';
-const release = JSON.parse(readFileSync(new URL('../static/manifest.json', import.meta.url))).releases[0];
+const manifest = JSON.parse(readFileSync(new URL('../static/manifest.json', import.meta.url)));
+// The numerical checks below are Beta 2's; every release gets the per-feature oracle.
+const release = manifest.releases.find((r) => r.tag === 'drizzlet-2026.11.09');
 const profile = release.profile;
 const engines = ['synth', 'granular'];
 const round = (v) => Math.round(v * 10) / 10;
 const tableFeature = (f) => costTable.features.find((row) => row.id === f.id);
-// Independent oracle: use only each engine's table fields, never its top-level maxima.
-function tableCost(entry, f, engine) {
-  if (f.id === 24) return 0; // Independently inspected event-only option, outside the historical table.
-  const cpu = tableFeature(f).cpu;
-  if (cpu.kind === 'inspection') return 0;
+const noRows = new Map();
+// A module source row replaces the table; 24 is independently inspected, outside the historical table.
+const oracleCpu = (f, rows) => rows.get(f.id)?.cpu || (f.id === 24 ? { kind: 'inspection' } : tableFeature(f).cpu);
+// Independent oracle: use only each engine's source fields, never its top-level maxima.
+function tableCost(entry, f, engine, rows = noRows) {
+  const cpu = oracleCpu(f, rows);
+  if (cpu.kind !== 'measured') return 0;
   const c = cpu.engines[engine];
   if (!c) return 0;
   if (!entry || entry[1] === 0) return c.off;
@@ -22,8 +26,8 @@ function tableCost(entry, f, engine) {
   if (Array.isArray(v)) return v[entry[2]];
   return (v.zero * (255 - entry[2]) + v.maximum * entry[2]) / 255;
 }
-function tableDelta(entry, f, engine) {
-  return tableCost(entry, f, engine) - tableCost(f.default, f, engine);
+function tableDelta(entry, f, engine, rows = noRows) {
+  return tableCost(entry, f, engine, rows) - tableCost(f.default, f, engine, rows);
 }
 const referenceEntry = (f) => release.cpu.estimate_reference ?
   release.cpu.estimate_reference.profile.find((e) => e[0] === f.id) : f.default;
@@ -37,26 +41,41 @@ function choices(f, extremes = false) {
   return modes(f).flatMap(([state]) => (state === 0 ? [0] : values).map((value) =>
     [f.id, state, value, 0, 0, f.id === 9 && state === 1 && value ? 1 : 0]));
 }
-for (const f of profile.features) {
-  const row = tableFeature(f);
-  assert(row || f.id === 24, 'unknown feature has no cost oracle');
-  const cpu = row?.cpu || { kind: 'inspection' };
-  assert(!('off' in f.cpu) && !('fixed' in f.cpu) && !('adjustable' in f.cpu));
-  for (const engine of engines) {
-    if (cpu.kind === 'measured' && !cpu.engines[engine]) {
-      assert.match(cpu.note, new RegExp(`${engine}: (0 by construction|not applicable)`));
-      assert.equal(f.cpu.engines[engine], undefined);
-    }
-    for (const entry of choices(f)) {
-      assert(Math.abs(featureDelta(entry, f, engine) - tableDelta(entry, f, engine)) < 1e-12,
-        `${f.name}, ${engine}, state ${entry[1]}, value ${entry[2]}`);
-    }
-    assert.equal(featureDelta(undefined, { ...f, cpu: null }, engine), null);
-    assert.equal(featureDelta(undefined, { ...f, cpu: { kind: 'unknown' } }, engine), null);
+export function checkReleaseCosts(checked, read) {
+  const { rows, sources, limits } = moduleCosts(checked, read);
+  // Each module source is pinned by the import, and each row passes its validation.
+  assert.deepEqual(checked.cpu.costs.module_sources ?? [], sources);
+  // Module limits set the ceiling and warning at the ceiling rate's clean edge.
+  assert.deepEqual(checked.cpu.limits ?? null, limits);
+  if (limits) {
+    const edge = limits.rates.find((r) => r.khz === limits.ceiling_khz).clean.percent;
+    assert.deepEqual([checked.cpu.ceiling, checked.cpu.warning, checked.cpu.ceiling_kind], [edge, edge, 'measured']);
   }
-  assert.equal(f.cpu.source, cpu.kind === 'measured' ? costSource : 'no per-block work (code inspection)');
-  assert(!JSON.stringify(f.cpu).includes('measured on the module'));
+  for (const f of checked.profile.features) assert.deepEqual(f.cpu, importedCost(f, costTable, rows), f.name);
+  for (const f of checked.profile.features) {
+    const module = rows.get(f.id);
+    assert(module || tableFeature(f) || f.id === 24, 'unknown feature has no cost oracle');
+    const cpu = oracleCpu(f, rows);
+    assert(!('off' in f.cpu) && !('fixed' in f.cpu) && !('adjustable' in f.cpu));
+    for (const engine of engines) {
+      if (cpu.kind === 'measured' && !cpu.engines[engine]) {
+        assert.match(cpu.note, new RegExp(`${engine}: (0 by construction|not applicable)`));
+        assert.equal(f.cpu.engines[engine], undefined);
+      }
+      for (const entry of choices(f)) {
+        assert(Math.abs(featureDelta(entry, f, engine) - tableDelta(entry, f, engine, rows)) < 1e-12,
+          `${f.name}, ${engine}, state ${entry[1]}, value ${entry[2]}`);
+      }
+      assert.equal(featureDelta(undefined, { ...f, cpu: null }, engine), null);
+      assert.equal(featureDelta(undefined, { ...f, cpu: { kind: 'unknown' } }, engine), null);
+    }
+    assert.equal(f.cpu.source, module ? module.cpu.source : cpu.kind === 'measured' ? costSource : inspectionSource);
+    // Only a module source may describe a module measurement.
+    if (!module) assert(!JSON.stringify(f.cpu).includes('measured on the module'));
+  }
+  assert.equal(checked.cpu.costs.source, costSource);
 }
+for (const r of manifest.releases) checkReleaseCosts(r);
 for (const engine of engines) for (let id = 10; id < profile.features[0].values.length; ++id) {
   assert.equal(featureDelta([1, 1, id], profile.features[0], engine), null, 'unmeasured user-scale cost stays unknown');
   assert.equal(featureDelta([1, 2, id], profile.features[0], engine), null, 'unmeasured adjustable user-scale cost stays unknown');
@@ -115,16 +134,17 @@ for (const engine of engines) {
   maxima.push(`${engine} ${estimate.toFixed(1)}% (delta ${maximum.toFixed(3)} points)`);
   const result = cpuUsage(entries, release).engines.find((e) => e.engine === engine);
   assert.equal(result.percent, estimate);
-  assert.equal(result.warning, estimate >= 91);
-  assert.equal(result.blocked, estimate > 92);
-  for (const percent of [90, 91, 91.5, 92, 92.5]) {
+  const { warning: warnAt, ceiling } = release.cpu;
+  assert.equal(result.warning, estimate >= warnAt);
+  assert.equal(result.blocked, estimate > ceiling);
+  for (const percent of [warnAt - 1, warnAt, (warnAt + ceiling) / 2, ceiling, ceiling + 0.5].map(round)) {
     const measured = structuredClone(release);
     measured.cpu.combinations = [{ profile: profileKey(entries, profile), synth: percent, granular: percent }];
     const usage = cpuUsage(entries, measured);
     assert.equal(usage.percent, percent);
     assert.equal(usage.kind, 'measured');
-    assert.equal(usage.warning, percent >= 91);
-    assert.equal(usage.blocked, percent > 92);
+    assert.equal(usage.warning, percent >= warnAt);
+    assert.equal(usage.blocked, percent > ceiling);
     assert(usage.engines.every((e) => e.measured && e.percent === percent));
     // Exercise an override below a higher estimate on either engine.
     measured.cpu.baselines[engine].percent = 99;
