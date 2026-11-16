@@ -7,8 +7,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="light dark">
+<meta name="description" content="Build custom Drizzlet firmware for Mutable Instruments Beads in your browser: choose features, control layout and defaults.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
 <title>Drizzlet Hygrostat</title>
-<script src="js/theme.js?v=1320ba67bbecbc47"></script>
+<script src="js/theme.js?v=9ab9aaf9d2a7a4a4"></script>
 <style>
   /* Brushed panel greys, with the module's own LED colours as the only accents. */
   :root {
@@ -203,13 +205,18 @@
   .inspector-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; }
 
   /* Extras */
-  #extras { display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); gap: 0 1.5rem; }
+  .extra-group h3 { margin: 1rem 0 .25rem; }
+  .extra-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); gap: 0 1.5rem; }
   .extra { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 0 1rem; padding: .35rem 0 .5rem;
     border-top: 1px solid var(--rule); }
   .extra-name { font-weight: 600; }
   .extra small { grid-column: 1; }
   .extra > .switch, .extra > select { grid-column: 2; grid-row: 1 / span 2; }
   .extra select { width: auto; min-width: 8rem; }
+  .extra .start, .extra-more { grid-column: 1 / -1; }
+  .extra-more { color: var(--muted); font-size: .9rem; }
+  .extra-more > summary { width: fit-content; min-width: 44px; min-height: 44px; padding: .65rem 0; font: inherit; color: var(--link); }
+  .extra-more p { margin: 0 0 .25rem; }
   .extra .placement { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: .25rem .6rem; font-size: .9rem; color: var(--muted); }
   .extra .placement button { min-height: 44px; border: 0; padding: 0; background: none; color: var(--link); text-decoration: underline; }
   .switch { position: relative; display: inline-block; width: 3.2rem; height: 44px; }
@@ -425,6 +432,7 @@
 
   <section class="extras" aria-labelledby="extras-title">
     <h2 id="extras-title">Extras</h2>
+    <p class="note">Values here are fixed, except starting values, which you can change on the module.</p>
     <div id="extras"></div>
   </section>
 </main>
@@ -509,6 +517,6 @@
   </div>
   <div id="library-body"></div>
 </dialog>
-<script type="module" src="js/app.js?v=1320ba67bbecbc47"></script>
+<script type="module" src="js/app.js?v=9ab9aaf9d2a7a4a4"></script>
 </body>
 </html>

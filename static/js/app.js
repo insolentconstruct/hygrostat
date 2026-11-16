@@ -9,17 +9,17 @@
 // in the browser, check the .wav, offer it for download.
 
 import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, normalise,
-  pageLeds } from './profile.js?v=1320ba67bbecbc47';
-import { effectiveScales, validateScales } from './scales.js?v=1320ba67bbecbc47';
-import { scaleEditor } from './scale_editor.js?v=1320ba67bbecbc47';
-import { guide } from './guide.js?v=1320ba67bbecbc47';
-import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=1320ba67bbecbc47';
-import { featureHelp, actionHelp } from './help.js?v=1320ba67bbecbc47';
-import { KNOBS, KINDS, GROUPS, ACTION_DOES, placeName, pageOf, entryOf, occupant, places, valueLabel, stateLabel,
+  pageLeds } from './profile.js?v=9ab9aaf9d2a7a4a4';
+import { effectiveScales, validateScales } from './scales.js?v=9ab9aaf9d2a7a4a4';
+import { scaleEditor } from './scale_editor.js?v=9ab9aaf9d2a7a4a4';
+import { guide } from './guide.js?v=9ab9aaf9d2a7a4a4';
+import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=9ab9aaf9d2a7a4a4';
+import { featureHelp, actionHelp } from './help.js?v=9ab9aaf9d2a7a4a4';
+import { KNOBS, KINDS, GROUPS, EXTRA_GROUPS, extraGroup, ACTION_DOES, placeName, pageOf, entryOf, occupant, places, valueLabel, stateLabel,
   summary, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, fits, placeable, bankWarning, slotCount,
-  usedPages, compaction, compact } from './layout.js?v=1320ba67bbecbc47';
-import { drawPanel, highlight } from './panel.js?v=1320ba67bbecbc47';
-import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=1320ba67bbecbc47';
+  usedPages, compaction, compact } from './layout.js?v=9ab9aaf9d2a7a4a4';
+import { drawPanel, highlight } from './panel.js?v=9ab9aaf9d2a7a4a4';
+import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=9ab9aaf9d2a7a4a4';
 
 const $ = (id) => document.getElementById(id);
 const cap = (text) => text.replace(/^./, (c) => c.toUpperCase());
@@ -42,7 +42,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=1320ba67bbecbc47', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=9ab9aaf9d2a7a4a4', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.ready) return;
       if (data.progress !== undefined) {
@@ -543,37 +543,53 @@ function renderSlots() {
   $('bank-warning').hidden = !$('bank-warning').textContent;
 }
 
+// Extras that read better under another name here.
+const EXTRA_NAMES = { 31: 'Starting bank' };
+
 function renderExtras() {
   const extras = profile().features.filter((f) => f.default_in_block === false || !placeable(f));
-  $('extras').replaceChildren(...extras.map((f) => {
-    const e = entryOf(entries, f);
-    const help = featureHelp(f, selected());
-    const toggle = f.values?.length === 2 && f.values[0] === 'Off' && !f.page;
-    const name = el('span', { class: 'extra-name', id: `extra-${f.id}-name`, text: f.name });
-    if (toggle) {
-      const input = el('input', { type: 'checkbox', role: 'switch', id: `extra-${f.id}`, 'aria-labelledby': `extra-${f.id}-name`,
-        'aria-describedby': `extra-${f.id}-about`, onchange: (event) => commit(() => edit(entries, profile(), f, 1, event.target.checked ? 1 : 0)) });
-      input.checked = e[1] === 1 && e[2] === 1;
-      return el('div', { class: 'extra' }, el('label', { for: `extra-${f.id}` }, name),
-        el('label', { class: 'switch' }, input, el('span')), el('small', { id: `extra-${f.id}-about`, text: help.description }));
-    }
-    const select = el('select', { id: `extra-${f.id}`, 'aria-labelledby': `extra-${f.id}-name`, 'aria-describedby': `extra-${f.id}-about` });
-    f.values.forEach((v, i) => select.add(new Option(i === 0 && e[1] !== 2 && !/\b(stock|default)\b/i.test(valueLabel(f, i)) ? `${valueLabel(f, i)} (stock)` : valueLabel(f, i), i)));
-    select.value = e[1] ? e[2] : 0;
-    select.onchange = () => {
-      const v = Number(select.value);
-      commit(() => {
-        if (e[1] === 2) return edit(entries, profile(), f, 2, v);
-        if (!v) return edit(entries, profile(), f, 1, 0);
-        return edit(edit(entries, profile(), f, 1, 1), profile(), f, 2, v);
-      });
-    };
-    const on = places(e).find((p) => p.kind === 'page');
-    const placement = f.page ? el('span', { class: 'placement' }, on ? `On ${placeName('page', on.slot)}, starting value shown.` : '',
-      el('button', { type: 'button', id: `extra-${f.id}-place`, onclick: () => putOnPage(f) }, on ? 'Show' : 'Put on an options page')) : null;
-    return el('div', { class: 'extra' }, el('label', { for: `extra-${f.id}` }, name), select,
-      el('small', { id: `extra-${f.id}-about`, text: help.description }), placement);
-  }));
+  $('extras').replaceChildren(...EXTRA_GROUPS.map(([group], n) => {
+    const members = extras.filter((f) => extraGroup(f) === group);
+    return members.length && el('section', { class: 'extra-group', 'aria-labelledby': `extras-group-${n}` },
+      el('h3', { id: `extras-group-${n}`, text: group }), el('div', { class: 'extra-list' }, ...members.map(extra)));
+  }).filter(Boolean));
+}
+
+function extra(f) {
+  const e = entryOf(entries, f);
+  const help = featureHelp(f, selected());
+  const toggle = f.values?.length === 2 && f.values[0] === 'Off' && !f.page;
+  const title = EXTRA_NAMES[f.id] ?? f.name;
+  const name = el('span', { class: 'extra-name', id: `extra-${f.id}-name`, text: title });
+  const about = el('small', { id: `extra-${f.id}-about`, text: help.description });
+  // A value the module itself can change is only where it starts.
+  const start = e[1] === 2 && !placeable(f) ? el('small', { class: 'start', id: `extra-${f.id}-start`, text: `Starting value. ${STATE_HINTS[2](f)}` }) : null;
+  const described = [about, start].filter(Boolean).map((part) => part.id).join(' ');
+  const more = el('details', { class: 'extra-more', id: `extra-${f.id}-more` }, el('summary', {}, 'More', el('span', { class: 'sr-only', text: ` about ${title}` })),
+    help.details ? el('p', { id: `extra-${f.id}-details`, text: help.details }) : null,
+    el('a', { class: 'linkish', href: help.url, text: 'Documentation', 'aria-label': `${f.name} documentation` }));
+  if (toggle) {
+    const input = el('input', { type: 'checkbox', role: 'switch', id: `extra-${f.id}`, 'aria-labelledby': `extra-${f.id}-name`,
+      'aria-describedby': described, onchange: (event) => commit(() => edit(entries, profile(), f, 1, event.target.checked ? 1 : 0)) });
+    input.checked = e[1] === 1 && e[2] === 1;
+    return el('div', { class: 'extra' }, el('label', { for: `extra-${f.id}` }, name),
+      el('label', { class: 'switch' }, input, el('span')), about, start, more);
+  }
+  const select = el('select', { id: `extra-${f.id}`, 'aria-labelledby': `extra-${f.id}-name`, 'aria-describedby': described });
+  f.values.forEach((v, i) => select.add(new Option(i === 0 && e[1] !== 2 && !/\b(stock|default)\b/i.test(valueLabel(f, i)) ? `${valueLabel(f, i)} (stock)` : valueLabel(f, i), i)));
+  select.value = e[1] ? e[2] : 0;
+  select.onchange = () => {
+    const v = Number(select.value);
+    commit(() => {
+      if (e[1] === 2) return edit(entries, profile(), f, 2, v);
+      if (!v) return edit(entries, profile(), f, 1, 0);
+      return edit(edit(entries, profile(), f, 1, 1), profile(), f, 2, v);
+    });
+  };
+  const on = places(e).find((p) => p.kind === 'page');
+  const placement = f.page ? el('span', { class: 'placement' }, on ? `On ${placeName('page', on.slot)}, starting value shown.` : '',
+    el('button', { type: 'button', id: `extra-${f.id}-place`, onclick: () => putOnPage(f) }, on ? 'Show' : 'Put on an options page')) : null;
+  return el('div', { class: 'extra' }, el('label', { for: `extra-${f.id}` }, name), select, about, start, placement, more);
 }
 
 function putOnPage(f) {
@@ -1066,7 +1082,7 @@ async function checkCapabilities() {
   }
   // A constructor alone does not establish support for module workers.
   await new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=1320ba67bbecbc47', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=9ab9aaf9d2a7a4a4', { type: 'module' });
     const done = (error) => {
       clearTimeout(timer); worker.terminate();
       error ? reject(error) : resolve();
@@ -1095,7 +1111,7 @@ async function init() {
   }
   $('compatibility').hidden = true;
   try {
-    const response = await fetch('manifest.json?v=1320ba67bbecbc47', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=9ab9aaf9d2a7a4a4', { cache: 'no-cache' });
     manifest = await response.json();
   } catch {
     status('Could not load the release list.', 'error');

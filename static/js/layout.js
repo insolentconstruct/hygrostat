@@ -7,7 +7,7 @@
 // Editor rules for the layout view: where each feature sits on the module and
 // how a placement, swap or removal changes the six-byte entries. Every result
 // goes through normalise(), so the validator stays the final gate.
-import { normalise, initialEntry, pageLeds, pageSlots } from './profile.js?v=1320ba67bbecbc47';
+import { normalise, initialEntry, pageLeds, pageSlots } from './profile.js?v=9ab9aaf9d2a7a4a4';
 
 export const KNOBS = ['FEEDBACK', 'DRY/WET', 'REVERB'];
 // Entry byte for each kind of destination, and how many there are; a
@@ -29,6 +29,13 @@ export const GROUPS = [
   ['Controls', [9, 16, 21, 25, 27, 29, 30]],
   ['Indicators', [15, 17, 18, 19, 20, 22]]
 ];
+// Extras by what they change; an unlisted ID shows under Sound.
+export const EXTRA_GROUPS = [
+  ['Sound', [16, 23, 24, 26, 28, 30, 31, 32, 33]],
+  ['Startup', [15, 27, 29]],
+  ['Indicators and interface', [17, 19, 20, 22, 25]]
+];
+export const extraGroup = (f) => EXTRA_GROUPS.find(([, ids]) => ids.includes(f.id))?.[0] ?? 'Sound';
 export const fits = (f, kind) => Boolean(f[kind]);
 // A setting with no destination, such as the Plaits bank, has its own gesture.
 export const placeable = (f) => Object.keys(KINDS).some((kind) => fits(f, kind));
