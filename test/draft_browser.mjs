@@ -44,6 +44,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     await page.click('#more-templates');
     await page.click('#template-pitched-grains');
     await page.click('#use-template');
+    await page.click('#scale-panel > summary');
     await page.getByRole('button', { name: 'Remove Pelog', exact: true }).click();
     await until(async () => (await shown()).scales?.length === 7);
     const own = await shareHref();

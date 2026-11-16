@@ -158,10 +158,12 @@ assert.equal(cpuUsage(warning, measuredCosts(release)).percent, 91.1);
 assert.equal(cpuUsage(heavy, measuredCosts(release)).percent, 92.5);
 assert.equal(createHash('sha256').update(tableBytes).digest('hex'), tableSha256);
 assert.equal(release.cpu.costs.table_sha256, tableSha256);
-// The importer only updates a development entry; the tagged costs must still be its exact output.
-const reimported = structuredClone(manifest); reimported.releases.splice(1); reimported.releases[0].development = true;
-importCosts(reimported); delete reimported.releases[0].development;
-assert.deepEqual(reimported.releases[0], manifest.releases[0]);
+// The importer only updates a development entry; each tagged release's costs must still be its exact output.
+for (const tagged of manifest.releases.filter((r) => !r.development)) {
+  const reimported = { releases: [{ ...structuredClone(tagged), development: true }] };
+  importCosts(reimported); delete reimported.releases[0].development;
+  assert.deepEqual(reimported.releases[0], tagged, `${tagged.tag}: exact import output`);
+}
 for (const candidate of manifest.releases.filter((r) => r.development)) {
   assert.deepEqual(importCosts({ releases: [structuredClone(candidate)] }).releases[0], candidate, `${candidate.tag}: exact import output`);
 }

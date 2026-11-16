@@ -1709,12 +1709,9 @@
       "date": "2026-11-10"
     },
     {
-      "tag": "drizzlet-dev-fab20b1",
-      "name": "Drizzlet Beta 3 “Smirr” — candidate (unreleased)",
-      "development": true,
-      "source_commit": "fab20b14d632d28f7f289cce98834bfa06f40075",
-      "binary_source_commit": "9f8be782b8adcbb523afb6eaa81629c4406fcc1a",
-      "app": "images/drizzlet-dev-fab20b1/app.bin?v=e0546edb39278d76571bfb7c67505acdf1f910d4cc590fafb66775ea92ffc011",
+      "tag": "drizzlet-2026.11.16",
+      "name": "Drizzlet Beta 3 “Smirr”",
+      "app": "images/drizzlet-2026.11.16/app.bin?v=e0546edb39278d76571bfb7c67505acdf1f910d4cc590fafb66775ea92ffc011",
       "profile": {
         "offset": 1024,
         "size": 4096,
@@ -3832,7 +3829,7 @@
           ],
           "module_sources": [
             {
-              "path": "costs/drizzlet-dev-fab20b1-module.json",
+              "path": "costs/drizzlet-2026.11.16-module.json",
               "sha256": "2c0c4754c39045e3b73619225b0edf13856df4011fabad127c3e110e6d27b4cf",
               "features": [
                 10,
@@ -4075,8 +4072,8 @@
       "app_size": 660124,
       "wav_sha256": "664acbf4a52a37f41483229a7f1b7a18008425f4ffbe52948084d32defb52d29",
       "slug": "beta-3-smirr",
-      "date": "2026-11-15"
+      "date": "2026-11-16"
     }
   ],
-  "asset_version": "360783a80845bd80"
+  "asset_version": "1320ba67bbecbc47"
 }

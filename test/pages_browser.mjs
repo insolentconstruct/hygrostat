@@ -10,7 +10,7 @@ const base = process.env.BASE || 'http://127.0.0.1:8080/';
 const site = process.env.SITE || '/site';
 const until = async (test) => { for (let i = 0; i < 100; ++i) { if (await test()) return; await new Promise((done) => setTimeout(done, 100)); } throw new Error('Timed out waiting for editor.'); };
 const published = JSON.parse(readFileSync(`${site}/manifest.json`));
-published.releases = published.releases.filter((r) => !r.development); // Beta 2's four pages.
+published.releases = published.releases.filter((r) => r.slug === 'beta-2-fog'); // Beta 2's four pages.
 // The synthetic release is listed after Beta 2, so it opens first.
 const seven = structuredClone(published);
 const synthetic = structuredClone(published.releases[0]);
