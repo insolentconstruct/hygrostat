@@ -464,6 +464,9 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
       assert.equal(await page.getAttribute('#guide-mobile', 'download'), `options-guide${dev}-mobile.svg`);
     }
     phase = 'extras';
+    const extraHeadings = (r) => layout.EXTRA_GROUPS.map(([group]) => group)
+      .filter((group) => r.profile.features.some((f) => (f.default_in_block === false || !layout.placeable(f)) && layout.extraGroup(f) === group));
+    assert.deepEqual(await page.locator('#extras .extra-group h3').allTextContents(), extraHeadings(release));
     // Extras: switches and value menus give the same bytes as the inspector.
     for (const f of release.profile.features.filter((f) => f.default_in_block === false)) {
       const control = page.locator(`#extra-${f.id}`);
@@ -489,6 +492,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
       const fullFP = await fingerprint(encodeProfile(defaults(full.profile), full.profile));
       await until(async () => await fullPage.textContent('#fingerprint') === fullFP);
     }
+    assert.deepEqual(await fullPage.locator('#extras .extra-group h3').allTextContents(), extraHeadings(full));
     await fullPage.click('#extra-23-place');
     assert((await fullPage.textContent('#status')).includes('All page positions are in use'));
     if (fullPage !== page) await fullPage.close();

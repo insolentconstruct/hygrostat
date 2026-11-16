@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { defaults, encodeProfile, decodeProfile, validate, templates, normalise, initialEntry, modes,
   share, unshare } from '../static/js/profile.js';
-import { KINDS, GROUPS, ACTION_DOES, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, occupant,
+import { KINDS, GROUPS, EXTRA_GROUPS, extraGroup, placeable, ACTION_DOES, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, occupant,
   entryOf, places, valueLabel, stateLabel, summary, placeName } from '../static/js/layout.js';
 const manifest = JSON.parse(readFileSync(new URL('../static/manifest.json', import.meta.url)));
 const profile = manifest.releases[0].profile;
@@ -165,4 +165,14 @@ assert.equal(new Set(grouped).size, grouped.length, 'features occur in one group
 assert(grouped.every((id) => features.some((f) => f.id === id) || (id >= 24 && id <= 33)), 'only the known later profile-only features may be absent from an older release');
 assert.deepEqual(grouped.filter((id) => features.some((f) => f.id === id)).sort((a, b) => a - b), features.map((f) => f.id));
 for (const f of features.filter((f) => f.action)) assert(ACTION_DOES[f.id], f.name);
+// Extras groups: every release's extras listed once by ID; an unknown ID shows under Sound.
+const extraIds = EXTRA_GROUPS.flatMap(([, ids]) => ids);
+assert.equal(new Set(extraIds).size, extraIds.length, 'extras occur in one group only');
+assert.deepEqual(EXTRA_GROUPS.map(([name]) => name), ['Sound', 'Startup', 'Indicators and interface']);
+for (const release of manifest.releases) {
+  for (const f of release.profile.features.filter((f) => f.default_in_block === false || !placeable(f))) assert(extraIds.includes(f.id), f.name);
+}
+assert.deepEqual([15, 27, 29].map((id) => extraGroup({ id })), ['Startup', 'Startup', 'Startup']);
+assert.deepEqual([17, 19, 20, 22, 25].map((id) => extraGroup({ id })), Array(5).fill('Indicators and interface'));
+assert.deepEqual([16, 23, 24, 26, 28, 30, 31, 32, 33, 99].map((id) => extraGroup({ id })), Array(10).fill('Sound'));
 console.log(`PASS layout: ${edits} edits match the previous editor, ${placements} placements and swaps valid and local, removals keep values`);

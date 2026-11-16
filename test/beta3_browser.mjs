@@ -17,7 +17,7 @@ release.profile.features.push(...additions, bank);
 manifest.releases = [release];
 const { unshare } = await import(pathToFileURL(resolve(site, 'js/profile.js')).href);
 const { featureHelp } = await import(pathToFileURL(resolve(site, 'js/help.js')).href);
-const { bankWarning } = await import(pathToFileURL(resolve(site, 'js/layout.js')).href);
+const { bankWarning, EXTRA_GROUPS, extraGroup, placeable } = await import(pathToFileURL(resolve(site, 'js/layout.js')).href);
 // Value 0 is the stock or default choice, so the menu marks it only when its label does not.
 const labels = (f) => f.values.map((v, i) => i === 0 && !/\b(stock|default)\b/i.test(v) ? `${v} (stock)` : v);
 for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['webkit', webkit]]) {
@@ -37,6 +37,37 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     await until(async () => await page.getAttribute('#summary', 'data-fingerprint'));
     const entries = async () => unshare(await page.getAttribute('#share', 'href'), [release]).entries;
     const startingFP = await page.textContent('#fingerprint');
+    // Extras: labelled groups from the ID table, each Extra with its details and documentation behind More.
+    const extras = release.profile.features.filter((f) => f.default_in_block === false || !placeable(f));
+    assert.deepEqual(await page.locator('#extras .extra-group h3').allTextContents(), ['Sound', 'Startup', 'Indicators and interface']);
+    const groups = { Sound: [16, 23, 24, 26, 28, 30, 31, 32, 33], Startup: [15, 27, 29], 'Indicators and interface': [17, 19, 20, 22, 25] };
+    assert.deepEqual(Object.fromEntries(EXTRA_GROUPS), groups);
+    for (const [group, ids] of Object.entries(groups)) {
+      const shown = page.locator('#extras .extra-group').filter({ has: page.locator('h3', { hasText: group }) });
+      const controls = await shown.locator('.extra > select, .extra input[role=switch]').evaluateAll((list) => list.map((c) => Number(c.id.slice(6))));
+      assert.deepEqual(controls.sort((x, y) => x - y), ids, group);
+      assert(ids.every((id) => extraGroup({ id }) === group));
+    }
+    for (const f of extras) {
+      const help = featureHelp(f, release);
+      assert.equal(await page.isVisible(`#extra-${f.id}-more a`), false, 'details start closed');
+      await page.click(`#extra-${f.id}-more summary`);
+      assert.equal(await page.getAttribute(`#extra-${f.id}-more a`, 'href'), help.url);
+      assert.equal(await page.getAttribute(`#extra-${f.id}-more a`, 'aria-label'), `${f.name} documentation`);
+      for (const target of [`#extra-${f.id}-more summary`, `#extra-${f.id}-more a`]) {
+        const box = await page.locator(target).boundingBox();
+        assert(box.height >= 44 && box.width >= 44, `${target}: 44px target`);
+      }
+      if (help.details) assert.equal(await page.textContent(`#extra-${f.id}-details`), help.details);
+      else assert.equal(await page.locator(`#extra-${f.id}-details`).count(), 0);
+      await page.click(`#extra-${f.id}-more summary`);
+      assert.equal(await page.locator(`#extra-${f.id}-start`).count(), f.id === 31 ? 1 : 0, 'only a value the module can change is a starting value');
+    }
+    assert.equal(await page.textContent('#extra-31-name'), 'Starting bank');
+    assert.match(await page.textContent('#extra-31-about'), /\[A\] \+ FREEZE steps the bank/);
+    assert.equal(await page.textContent('#extra-31-start'), 'Starting value. Its own gesture changes it; your changes are saved.');
+    assert.equal(await page.getAttribute('#extra-31', 'aria-describedby'), 'extra-31-about extra-31-start');
+    assert.equal(await page.getAttribute('#extra-32', 'aria-describedby'), 'extra-32-about');
     for (const f of additions) {
       assert.equal(await page.inputValue(`#extra-${f.id}`), '0');
       assert.deepEqual(await page.locator(`#extra-${f.id} option`).allTextContents(), labels(f));
@@ -103,6 +134,6 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     assert.equal(await page.locator('#inspector-bank-warning').count(), 0);
     assert.deepEqual(errors, []);
     await context.close();
-    console.log(`PASS ${name}: Beta 3 options 25-30, 32 and 33 render, encode Fixed values, return to Off and link their documentation; Plaits bank starts and warns; no firmware built.`);
+    console.log(`PASS ${name}: Extras grouped with details and documentation; Beta 3 options 25-30, 32 and 33 render, encode Fixed values, return to Off and link their documentation; Plaits bank starts and warns; no firmware built.`);
   } finally { await browser.close(); }
 }
