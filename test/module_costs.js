@@ -42,6 +42,7 @@ const files = (json, at = path) => (p) => {
 // A development entry built from Beta 2 plus the fixtures, with costs cleared so the import must fill them.
 const development = (refs = [{ path }]) => {
   const m = structuredClone(manifest);
+  m.releases.splice(1); // Beta 2 only.
   const r = m.releases[0];
   Object.assign(r, { tag: 'drizzlet-dev-beta3-costs', development: true, source_commit: '0'.repeat(40) });
   r.profile.features = [...r.profile.features.filter((f) => !replaced.some((g) => g.id === f.id)),
@@ -67,6 +68,11 @@ assert.match(release.cpu.release_note, /measured on the Beads module, each namin
 assert.equal(createHash('sha256').update(tableBytes).digest('hex'), tableSha256);
 assert.equal(JSON.stringify(costTable), historical, 'the historical table is never rewritten');
 checkReleaseCosts(release, files(source));
+// The Beta 3 candidate's committed source is exactly this file.
+for (const candidate of manifest.releases.filter((r) => r.development)) {
+  const [pinned] = candidate.cpu.costs.module_sources;
+  assert.deepEqual(readFileSync(new URL(`../${pinned.path}`, import.meta.url)), files(source, pinned.path)(pinned.path));
+}
 
 // Module CPU limits: the 48 kHz clean edge is the ceiling; other rates and heavy peaks are measured reference.
 assert.deepEqual([release.cpu.ceiling, release.cpu.warning, release.cpu.ceiling_kind], [90.8, 90.8, 'measured']);

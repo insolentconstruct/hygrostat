@@ -1,5 +1,5 @@
 // Copyright 2026 Insolent Construct. MIT licence: see ../static/js/encoder.js.
-// Beta 3 profile-only options (features 25-30, 32 and 33) on a synthetic release; no offered release has them yet.
+// Beta 3 profile-only options (features 25-30, 32 and 33) on a synthetic release; no tagged release has them yet.
 import assert from 'node:assert/strict';
 import { readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -18,8 +18,18 @@ const manifest = JSON.parse(read('../static/manifest.json'));
 const additions = [JSON.parse(read('fixtures/idle-timeout-feature.json')), ...JSON.parse(read('fixtures/beta3-features.json'))];
 const ids = additions.map((f) => f.id);
 assert.deepEqual(ids, [25, 26, 27, 28, 29, 30, 32, 33]);
-const shipped = manifest.releases;
-assert(shipped.every((r) => !r.profile.features.some((f) => ids.includes(f.id))), 'no offered release lists features 25-30, 32 or 33');
+const shipped = manifest.releases.filter((r) => !r.development);
+assert(shipped.every((r) => !r.profile.features.some((f) => ids.includes(f.id))), 'no tagged release lists features 25-30, 32 or 33');
+// The Beta 3 candidate offers Beta 2's features with 10 and 23 replaced and 25-33 added; costs come from its import.
+const candidate = manifest.releases.find((r) => r.development);
+if (candidate) {
+  const replaced = ['recent-notes-feature', 'time-scan-feature'].map((name) => JSON.parse(read(`fixtures/${name}.json`)));
+  const expected = [...shipped[0].profile.features.filter((f) => !replaced.some((g) => g.id === f.id)), ...replaced,
+    ...additions, JSON.parse(read('fixtures/plaits-bank-feature.json'))].sort((a, b) => a.id - b.id);
+  const withoutCpu = (features) => features.map((f) => ({ ...f, cpu: undefined }));
+  assert.deepEqual(withoutCpu(candidate.profile.features), withoutCpu(expected), 'candidate features follow the fixtures');
+  assert.deepEqual([candidate.source_commit, candidate.profile.page_leds], [ref, [1, 2, 4, 3, 5, 6, 7]]);
+}
 
 // The catalogue copy matches the final Beta 3 firmware byte for byte.
 const catalogueBytes = read('fixtures/beta3-profile-features.json');
@@ -203,7 +213,7 @@ assert.match(bankFeature.cpu.source, /^synthetic fixture.*code inspection/);
 for (const engine of Object.values(bankFeature.cpu.engines)) {
   assert.deepEqual([engine.off, engine.fixed, engine.adjustable], [0, [0, 0, 0], [0, 0, 0]]);
 }
-assert(shipped.every((r) => !r.profile.features.some((f) => f.id === 31)), 'no offered release lists feature 31');
+assert(shipped.every((r) => !r.profile.features.some((f) => f.id === 31)), 'no tagged release lists feature 31');
 const bankHelp = featureHelp(bankFeature, { development: true, source_commit: ref });
 assert(bankHelp.description.length > 15 && bankHelp.description.length < 180 && !bankHelp.description.includes('\n'));
 assert.equal(new URL(bankHelp.url).hash, '#plaits-bank');

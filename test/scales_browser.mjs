@@ -9,7 +9,7 @@ const base = process.env.BASE || 'http://127.0.0.1:8080/';
 const site = process.env.SITE || '/site';
 const until = async (test) => { for (let i = 0; i < 100; ++i) { if (await test()) return; await new Promise((done) => setTimeout(done, 100)); } throw new Error('Timed out waiting for editor.'); };
 const manifest = JSON.parse(readFileSync(`${site}/manifest.json`));
-const release = manifest.releases[0];
+const release = manifest.releases.at(-1);
 // Exercise the pending V2 editor without inventing or offering a firmware image.
 release.profile.version = 2; release.profile.size = 4096;
 release.profile.features.find((f) => f.id === 1).values = Array.from({ length: 16 }, (_, i) => `Scale ${i}`);

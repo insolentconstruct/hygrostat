@@ -8,8 +8,11 @@ import { pathToFileURL } from 'node:url';
 import { chromium, firefox, webkit } from 'playwright';
 const base = process.env.BASE || 'http://127.0.0.1:8080/';
 const site = process.env.SITE || '/site';
-const release = JSON.parse(readFileSync(`${site}/manifest.json`)).releases[0];
-const { encodeProfile, defaults, share, unshare, fingerprint, templates, profileKey, cpuUsage } = await import(
+// The page opens the newest release.
+const release = JSON.parse(readFileSync(`${site}/manifest.json`)).releases.at(-1);
+// Adjustable-only features (Beta 3's Plaits bank) have no Off or Fixed choice.
+const offFixed = (f) => f.states.includes('Off') && f.states.includes('Fixed');
+const { encodeProfile, defaults, share, unshare, fingerprint, templates, profileKey, cpuUsage, pageSlots } = await import(
   pathToFileURL(resolve(site, 'js/profile.js')).href);
 const layout = await import(pathToFileURL(resolve(site, 'js/layout.js')).href);
 const { guide } = await import(pathToFileURL(resolve(site, 'js/guide.js')).href);
@@ -224,7 +227,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
       }
     }
     assert.deepEqual(await pressed(), ['Drizzlet']);
-    assert.equal(await page.textContent('#positions'), '12 of 12 page positions used');
+    assert.equal(await page.textContent('#positions'), `12 of ${pageSlots(release.profile)} page positions used`);
     assert.equal(await page.isVisible('#development'), Boolean(release.development));
     // Preview every focused template without changing the profile or share link.
     const unchangedShare = await page.getAttribute('#share', 'href');
@@ -327,7 +330,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     let expected = layout.place(defaults(release.profile), release.profile, 18, 'page', 10);
     await waitFingerprint(await fingerprint(encodeProfile(expected, release.profile)));
     assert((await page.textContent('#cell-10')).includes('LED brightness'));
-    assert.equal(await page.textContent('#positions'), '12 of 12 page positions used');
+    assert.equal(await page.textContent('#positions'), `12 of ${pageSlots(release.profile)} page positions used`);
     await page.click('#cell-1');
     await page.click('#choose-feature');
     await page.click('#lib-7');
@@ -398,16 +401,16 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     const stockFP = await fingerprint(encodeProfile(templates(release.profile)['Stock plus fixes'], release.profile));
     await waitFingerprint(stockFP);
     await noCPU();
-    assert.equal(await page.textContent('#positions'), '0 of 12 page positions used');
+    assert.equal(await page.textContent('#positions'), `0 of ${pageSlots(release.profile)} page positions used`);
     const stockShare = await page.getAttribute('#share', 'href');
     const manifestURL = /\/manifest\.json(?:\?|$)/;
     phase = 'legacy CPU fixture';
     // Historical metadata is inert even without feature costs or a reference.
     const boundedManifest = JSON.parse(readFileSync(`${site}/manifest.json`));
-    delete boundedManifest.releases[0].cpu.estimate_reference;
-    delete boundedManifest.releases[0].cpu.default_measured;
-    delete boundedManifest.releases[0].cpu.estimated_default_delta;
-    for (const f of boundedManifest.releases[0].profile.features) f.cpu = null;
+    delete boundedManifest.releases.at(-1).cpu.estimate_reference;
+    delete boundedManifest.releases.at(-1).cpu.default_measured;
+    delete boundedManifest.releases.at(-1).cpu.estimated_default_delta;
+    for (const f of boundedManifest.releases.at(-1).profile.features) f.cpu = null;
     let boundedRequests = 0;
     const boundedRoute = (route) => {
       boundedRequests++;
@@ -427,18 +430,18 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     phase = 'unknown CPU fixture';
     // Preserve the enabled/unknown regression using an explicit Off-default fixture.
     const offManifest = JSON.parse(readFileSync(`${site}/manifest.json`));
-    delete offManifest.releases[0].cpu.estimate_reference;
-    delete offManifest.releases[0].cpu.default_measured;
-    delete offManifest.releases[0].cpu.estimated_default_delta;
-    for (const f of offManifest.releases[0].profile.features) {
-      f.default = [f.id, 0, 0, 0, 0, 0];
+    delete offManifest.releases.at(-1).cpu.estimate_reference;
+    delete offManifest.releases.at(-1).cpu.default_measured;
+    delete offManifest.releases.at(-1).cpu.estimated_default_delta;
+    for (const f of offManifest.releases.at(-1).profile.features) {
+      if (offFixed(f)) f.default = [f.id, 0, 0, 0, 0, 0];
       f.cpu = null;
     }
     const offRoute = (route) => route.fulfill({ json: offManifest });
     await context.route(manifestURL, offRoute);
     await page.reload();
     await waitFingerprint(stockFP);
-    for (const f of release.profile.features) {
+    for (const f of release.profile.features.filter(offFixed)) {
       await mode(f, 1);
       await until(async () => unshare(await page.getAttribute('#share', 'href'), [release])
           .entries.find((e) => e[0] === f.id)?.[1] === 1);
@@ -479,8 +482,18 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
       }
       await waitFingerprint(releaseFP);
     }
-    await page.click('#extra-23-place');
-    assert((await page.textContent('#status')).includes('All page positions are in use'));
+    // Full pages refuse another feature: Beta 2's four pages are full by default.
+    const full = JSON.parse(readFileSync(`${site}/manifest.json`)).releases.find((r) => pageSlots(r.profile) === 12);
+    const fullPage = full.tag === release.tag ? page : await context.newPage();
+    if (fullPage !== page) {
+      await fullPage.goto(base);
+      await fullPage.selectOption('#release', full.tag);
+      const fullFP = await fingerprint(encodeProfile(defaults(full.profile), full.profile));
+      await until(async () => await fullPage.textContent('#fingerprint') === fullFP);
+    }
+    await fullPage.click('#extra-23-place');
+    assert((await fullPage.textContent('#status')).includes('All page positions are in use'));
+    if (fullPage !== page) await fullPage.close();
     await waitFingerprint(releaseFP);
     await page.focus('#cell-10');
     await page.keyboard.press('Delete');
@@ -493,7 +506,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     phase = 'share links';
     // Keep the unknown-cost share-link regression independent of shipped costs.
     const unknownManifest = JSON.parse(readFileSync(`${site}/manifest.json`));
-    unknownManifest.releases[0].profile.features.find((f) => f.id === 1).cpu = null;
+    unknownManifest.releases.at(-1).profile.features.find((f) => f.id === 1).cpu = null;
     const unknownRoute = (route) => route.fulfill({ json: unknownManifest });
     await context.route(manifestURL, unknownRoute);
     await page.reload();
@@ -578,7 +591,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     phase = 'measured CPU fixture';
     // Historical thresholds never disable a valid build or local-image input.
     const measuredManifest = JSON.parse(readFileSync(`${site}/manifest.json`));
-    const measured = measuredManifest.releases[0];
+    const measured = measuredManifest.releases.at(-1);
     measured.profile.features.find((f) => f.id === 1).cpu = null;
     measured.cpu.combinations = [{ profile: profileKey(chosen, release.profile), synth: 90.4, granular: 89 }];
     const measuredRoute = (route) => route.fulfill({ json: measuredManifest });
@@ -678,8 +691,9 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     await counterPage.keyboard.press('Tab');
     await until(async () => (await counterPage.textContent('#download-counts')).includes('Site visitors: 400'));
     const lines = counterPage.locator('#download-counts p');
-    assert.equal(await lines.count(), JSON.parse(readFileSync(`${site}/manifest.json`)).releases.length + 1);
-    assert((await lines.first().textContent()).includes(`${release.name}: downloaded 20 times`));
+    const listed = JSON.parse(readFileSync(`${site}/manifest.json`)).releases.length;
+    assert.equal(await lines.count(), listed + 1);
+    assert((await lines.nth(listed - 1).textContent()).includes(`${release.name}: downloaded 20 times`));
     assert.equal(await lines.last().textContent(), 'Site visitors: 400');
     await counters.close();
     phase = 'capability refusal';

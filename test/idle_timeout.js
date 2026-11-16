@@ -1,5 +1,5 @@
 // Copyright 2026 Insolent Construct. MIT licence: see ../static/js/encoder.js.
-// Options page idle timeout (feature 25) on a synthetic release; no offered release has it yet.
+// Options page idle timeout (feature 25) on a synthetic release; no tagged release has it yet.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { validate, encodeProfile, decodeProfile, defaults, share, unshare } from '../static/js/profile.js';
@@ -10,8 +10,8 @@ const text = (svg) => [...svg.matchAll(/<text\b[^>]*>(.*?)<\/text>/g)].map((m) =
 const read = (file) => readFileSync(new URL(file, import.meta.url), 'utf8');
 const manifest = JSON.parse(read('../static/manifest.json'));
 const feature = JSON.parse(read('fixtures/idle-timeout-feature.json'));
-const shipped = manifest.releases;
-assert(shipped.every((r) => !r.profile.features.some((f) => f.id === 25)), 'no offered release lists feature 25');
+const shipped = manifest.releases.filter((r) => !r.development);
+assert(shipped.every((r) => !r.profile.features.some((f) => f.id === 25)), 'no tagged release lists feature 25');
 const beta2 = shipped[0];
 const release = structuredClone(beta2);
 Object.assign(release, { tag: 'drizzlet-dev-idle-timeout', name: 'Synthetic fixture (never offered)',

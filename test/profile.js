@@ -156,7 +156,7 @@ const legacyCpuFixture = (r) => {
 const withMeasuredCosts = (r) => {
   const fixture = legacyCpuFixture(r);
   const costs = JSON.parse(readFileSync(new URL('fixtures/synthetic-costs.json', import.meta.url)));
-  for (const f of fixture.profile.features) f.cpu = costs[f.id];
+  for (const f of fixture.profile.features) f.cpu = costs[f.id] ?? f.cpu; // Beta 3 additions keep their own.
   return fixture;
 };
 {
@@ -196,7 +196,8 @@ const withMeasuredCosts = (r) => {
     const historical = structuredClone(r); historical.cpu.baselines.synth.percent = 85.8;
     assert.equal(cpuUsage(defaults(historical.profile), historical).engines.find((e) => e.engine === 'synth').percent, 85.8);
     assert.equal(usage.engines.find((e) => e.engine === 'synth').percent, 83.4);
-    assert.match(r.cpu.baselines.synth.provenance, /measured on the module with this release's code/);
+    assert.match(r.cpu.baselines.synth.provenance, shipped.development ? /Not yet remeasured with this release’s code/ :
+      /measured on the module with this release's code/);
     assert.match(r.cpu.baselines.synth.provenance, /already includes Clouds-style reverb/);
     const highDefault = structuredClone(r);
     highDefault.cpu.baselines.synth.percent = 99;

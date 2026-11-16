@@ -9,17 +9,17 @@
 // in the browser, check the .wav, offer it for download.
 
 import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, normalise,
-  pageLeds } from './profile.js?v=81442e856ae67bcf';
-import { effectiveScales, validateScales } from './scales.js?v=81442e856ae67bcf';
-import { scaleEditor } from './scale_editor.js?v=81442e856ae67bcf';
-import { guide } from './guide.js?v=81442e856ae67bcf';
-import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=81442e856ae67bcf';
-import { featureHelp, actionHelp } from './help.js?v=81442e856ae67bcf';
+  pageLeds } from './profile.js?v=360783a80845bd80';
+import { effectiveScales, validateScales } from './scales.js?v=360783a80845bd80';
+import { scaleEditor } from './scale_editor.js?v=360783a80845bd80';
+import { guide } from './guide.js?v=360783a80845bd80';
+import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=360783a80845bd80';
+import { featureHelp, actionHelp } from './help.js?v=360783a80845bd80';
 import { KNOBS, KINDS, GROUPS, ACTION_DOES, placeName, pageOf, entryOf, occupant, places, valueLabel, stateLabel,
   summary, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, fits, placeable, bankWarning, slotCount,
-  usedPages, compaction, compact } from './layout.js?v=81442e856ae67bcf';
-import { drawPanel, highlight } from './panel.js?v=81442e856ae67bcf';
-import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=81442e856ae67bcf';
+  usedPages, compaction, compact } from './layout.js?v=360783a80845bd80';
+import { drawPanel, highlight } from './panel.js?v=360783a80845bd80';
+import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=360783a80845bd80';
 
 const $ = (id) => document.getElementById(id);
 const cap = (text) => text.replace(/^./, (c) => c.toUpperCase());
@@ -42,7 +42,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=81442e856ae67bcf', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=360783a80845bd80', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.ready) return;
       if (data.progress !== undefined) {
@@ -412,7 +412,8 @@ function renderGrid() {
   $('grid').caption.textContent = `Options pages 1 to ${rows.length} by knob. Arrow keys move, Enter selects, Delete empties a position.`;
   markTemplateChanges();
   const tabs = document.querySelector('.page-tabs');
-  tabs.style.gridTemplateColumns = `repeat(${rows.length}, 1fr)`;
+  // More than four pages take two rows of tabs, so seven fit a phone.
+  tabs.style.gridTemplateColumns = `repeat(${rows.length > 4 ? Math.ceil(rows.length / 2) : rows.length}, 1fr)`;
   tabs.replaceChildren(...pageNumbers().map((page) => el('button', {
     type: 'button', role: 'tab', id: `tab-${page}`, 'aria-selected': String(page === pageTab),
     'aria-controls': 'grid', tabindex: page === pageTab ? '0' : '-1',
@@ -1066,7 +1067,7 @@ async function checkCapabilities() {
   }
   // A constructor alone does not establish support for module workers.
   await new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=81442e856ae67bcf', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=360783a80845bd80', { type: 'module' });
     const done = (error) => {
       clearTimeout(timer); worker.terminate();
       error ? reject(error) : resolve();
@@ -1095,7 +1096,7 @@ async function init() {
   }
   $('compatibility').hidden = true;
   try {
-    const response = await fetch('manifest.json?v=81442e856ae67bcf', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=360783a80845bd80', { cache: 'no-cache' });
     manifest = await response.json();
   } catch {
     status('Could not load the release list.', 'error');
