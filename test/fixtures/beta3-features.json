@@ -1,0 +1,166 @@
+[
+  {
+    "id": 26,
+    "default_in_block": false,
+    "default": [26, 0, 0, 0, 0, 0],
+    "name": "Delay SEED latch fade",
+    "values": ["Switch at once (stock)", "Fade"],
+    "states": ["Off", "Fixed"],
+    "field": null,
+    "page": false,
+    "amount": false,
+    "action": false,
+    "stateless": false,
+    "synth_path": false,
+    "cpu": {
+      "kind": "measured",
+      "source": "Beads module DWT cycle counts, image beta3-qual-12180c6, run-beta3-2 (session-2026-11-11/beta3/module-plan/run-beta3-2/run/dwt/report.json)",
+      "engines": {
+        "granular": { "off": 0, "fixed": [0, 0], "adjustable": [0, 0], "measured_values": [0, 1] }
+      },
+      "uncertainty": { "points": 0.14 },
+      "note": "granular value=1: q3 stereo stress32 fixture, callback minus fixture mean -75, maximum -146 cycles: within noise (the two Off rows differ by 83 cycles in mean, 478 in maximum; the uncertainty is twice the mean difference), recorded as 0; armed without delay: the fade runs only in delay mode, which Beta 2 counts put well below the granular worst case; synth: 0 by construction (the delay is granular only)"
+    }
+  },
+  {
+    "id": 27,
+    "default_in_block": false,
+    "default": [27, 0, 0, 0, 0, 0],
+    "name": "Input gain at power-on",
+    "values": ["Automatic (stock)", "Manual"],
+    "states": ["Off", "Fixed"],
+    "field": null,
+    "page": false,
+    "amount": false,
+    "action": false,
+    "stateless": false,
+    "synth_path": true,
+    "cpu": {
+      "kind": "zero",
+      "source": "synthetic fixture: no per-block work (code inspection)",
+      "engines": {
+        "synth": { "off": 0, "fixed": [0, 0], "adjustable": [0, 0] },
+        "granular": { "off": 0, "fixed": [0, 0], "adjustable": [0, 0] }
+      },
+      "uncertainty": { "points": 0 },
+      "note": "power-on gain default only; not a release measurement"
+    }
+  },
+  {
+    "id": 28,
+    "default_in_block": false,
+    "default": [28, 0, 0, 0, 0, 0],
+    "name": "Attack sensitivity",
+    "values": ["Normal (default)", "Low", "High"],
+    "states": ["Off", "Fixed"],
+    "field": null,
+    "page": false,
+    "amount": false,
+    "action": false,
+    "stateless": false,
+    "synth_path": true,
+    "cpu": {
+      "kind": "measured",
+      "source": "Beads module DWT cycle counts, image beta3-qual-12180c6, run-beta3-2 (session-2026-11-11/beta3/module-plan/run-beta3-2/run/dwt/report.json)",
+      "engines": {
+        "granular": { "off": 0, "fixed": [0, 0.079, 0.079], "adjustable": [0.079, 0.079, 0.079], "measured_values": [0, 2] }
+      },
+      "uncertainty": { "points": 0.14 },
+      "note": "granular value=2 (High): q3 stereo stress32 fixture, callback minus fixture mean +95, maximum -30 cycles: within noise (the two Off rows differ by 83 cycles in mean, 478 in maximum; the uncertainty is twice the mean difference), recorded as the mean; Low is the same comparison with another threshold, so it takes the same cost; more detected onsets can start more grains, which this count does not cover; synth: 0 by construction (attack detection runs only outside synth mode)"
+    }
+  },
+  {
+    "id": 29,
+    "default_in_block": false,
+    "default": [29, 0, 0, 0, 0, 0],
+    "name": "SEED at power-on",
+    "values": ["Latched (stock)", "Unlatched"],
+    "states": ["Off", "Fixed"],
+    "field": null,
+    "page": false,
+    "amount": false,
+    "action": false,
+    "stateless": false,
+    "synth_path": true,
+    "cpu": {
+      "kind": "zero",
+      "source": "synthetic fixture: no per-block work (code inspection)",
+      "engines": {
+        "synth": { "off": 0, "fixed": [0, 0], "adjustable": [0, 0] },
+        "granular": { "off": 0, "fixed": [0, 0], "adjustable": [0, 0] }
+      },
+      "uncertainty": { "points": 0 },
+      "note": "power-on SEED latch state only; not a release measurement"
+    }
+  },
+  {
+    "id": 30,
+    "default_in_block": false,
+    "default": [30, 0, 0, 0, 0, 0],
+    "name": "PITCH knob",
+    "values": ["Notches (stock)", "Smooth"],
+    "states": ["Off", "Fixed"],
+    "field": null,
+    "page": false,
+    "amount": false,
+    "action": false,
+    "stateless": false,
+    "synth_path": true,
+    "cpu": {
+      "kind": "measured",
+      "source": "Beads module DWT cycle counts, image beta3-qual-12180c6, run-beta3-2 (session-2026-11-11/beta3/module-plan/run-beta3-2/run/dwt/report.json)",
+      "engines": {
+        "synth": { "off": 0, "fixed": [0, 0], "adjustable": [0, 0] },
+        "granular": { "off": 0, "fixed": [0, 0], "adjustable": [0, 0], "measured_values": [0, 1] }
+      },
+      "uncertainty": { "points": 0.14 },
+      "note": "granular value=1: q3 stereo stress32 fixture, callback minus fixture mean -174, maximum -530 cycles (the two Off rows differ by 83 cycles in mean, 478 in maximum; the uncertainty is twice the mean difference); recorded as 0, since the smooth law only skips one SmoothStep per block; synth: not measured; the PITCH knob is read in the callback ahead of either engine, so the same 0 applies"
+    }
+  },
+  {
+    "id": 32,
+    "default_in_block": false,
+    "default": [32, 0, 0, 0, 0, 0],
+    "name": "Mix law",
+    "values": ["Stock", "Gentle"],
+    "states": ["Off", "Fixed"],
+    "field": null,
+    "page": false,
+    "amount": false,
+    "action": false,
+    "stateless": false,
+    "synth_path": false,
+    "cpu": {
+      "kind": "measured",
+      "source": "Beads module DWT cycle counts, image beta3-qual-12180c6, run-beta3-2 (session-2026-11-11/beta3/module-plan/run-beta3-2/run/dwt/report.json)",
+      "engines": {
+        "granular": { "off": 0, "fixed": [0, 0.401], "adjustable": [0.401, 0.401], "measured_values": [0, 1] }
+      },
+      "uncertainty": { "points": 0.14 },
+      "note": "granular value=1: q3 stereo stress32 fixture, callback minus fixture mean +482, maximum +148 cycles (the two Off rows differ by 83 cycles in mean, 478 in maximum; the uncertainty is twice the mean difference); larger than the +85 emulator instructions counted at b446452; synth: 0 by construction (the synths keep their own DRY/WET)"
+    }
+  },
+  {
+    "id": 33,
+    "default_in_block": false,
+    "default": [33, 0, 0, 0, 0, 0],
+    "name": "Reverb input",
+    "values": ["Mix (stock)", "Grains"],
+    "states": ["Off", "Fixed"],
+    "field": null,
+    "page": false,
+    "amount": false,
+    "action": false,
+    "stateless": false,
+    "synth_path": false,
+    "cpu": {
+      "kind": "measured",
+      "source": "Beads module DWT cycle counts, image beta3-qual-12180c6, run-beta3-2 (session-2026-11-11/beta3/module-plan/run-beta3-2/run/dwt/report.json)",
+      "engines": {
+        "granular": { "off": 0, "fixed": [0, 0.307], "adjustable": [0.307, 0.307], "measured_values": [0, 1] }
+      },
+      "uncertainty": { "points": 0.14 },
+      "note": "granular value=1: q3 stereo stress32 fixture, callback minus fixture mean +369, maximum +362 cycles (the two Off rows differ by 83 cycles in mean, 478 in maximum; the uncertainty is twice the mean difference); larger than the +92 to +94 emulator instructions counted at b446452; synth: 0 by construction (the synths keep the stock routing)"
+    }
+  }
+]

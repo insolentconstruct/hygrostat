@@ -8,7 +8,7 @@ It works with Drizzlet Beta 2 and later. Firmware releases are on the [eurorack 
 
 Beta 2's factory layout is a starting point: change control placement and defaults in Hygrostat to suit your playing. Feedback on Beta 2 may inform a different factory layout in Beta 3; saved custom layouts keep their explicit placements.
 
-For firmware with scale-bank support, the scale editor chooses which scales are available and their order. Replace the factory definitions, enter notes in cents or import a Scala file, and choose each scale's LED colour and flash pattern. Off and Chromatic remain separate knob choices. Profiles support up to 14 scales with 24 notes each; shared links and downloaded guides include the bank.
+For firmware with scale-bank support, the scale editor chooses which scales are available and their order. Replace the default definitions, enter notes in cents or import a Scala file, and choose each scale's LED colour and flash pattern. Off and Chromatic remain separate knob choices. Profiles support up to 14 scales with 24 notes each; shared links and downloaded guides include the bank.
 
 ## Privacy
 
@@ -47,10 +47,10 @@ The tests check the page against the firmware it offers. They need a supported N
 ```sh
 git clone --branch drizzlet https://github.com/insolentconstruct/eurorack.git firmware
 git -C firmware submodule update --init stmlib
-for t in manifest profile draft scales scales_firmware event_costs downloads help layout readiness costs idle_timeout; do node test/$t.js; done
+for t in manifest profile draft scales scales_firmware event_costs module_costs downloads help layout option_pages readiness costs idle_timeout recent_notes beta3_options; do node test/$t.js; done
 ```
 
-`test/browser.mjs` and `test/scales_browser.mjs` run the page in Chromium, Firefox and WebKit (CI runs it in the Playwright 1.65.0 image). It needs Playwright with its browsers and the page served locally: `SITE=static BASE=http://localhost:8000/ node test/browser.mjs` (and the same command with `test/scales_browser.mjs` and `test/draft_browser.mjs`). The scale browser test uses a synthetic release list and never builds or offers a synthetic firmware image. `test/idle_timeout.js` checks against the final Beta 3 firmware commit (override with `BETA3_FIRMWARE_REF`); the firmware clone needs its branches. `test/scales_firmware.js` checks the V2 codec against the current firmware parser; it needs firmware with scale-bank support.
+`test/browser.mjs` and `test/scales_browser.mjs` run the page in Chromium, Firefox and WebKit (CI runs it in the Playwright 1.65.0 image). It needs Playwright with its browsers and the page served locally: `SITE=static BASE=http://localhost:8000/ node test/browser.mjs` (and the same command with `test/scales_browser.mjs`, `test/draft_browser.mjs`, `test/beta3_browser.mjs` and `test/pages_browser.mjs`). The scale, Beta 3 and page browser tests use synthetic release lists and never build or offer a synthetic firmware image. `test/option_pages.js` checks options pages 5–7 with a synthetic seven-page release. `test/idle_timeout.js`, `test/recent_notes.js`, `test/beta3_options.js` and `test/option_pages.js` check against the final Beta 3 firmware commit (override with `BETA3_FIRMWARE_REF`); the firmware clone needs its branches. `test/scales_firmware.js` checks the V2 codec against the current firmware parser; it needs firmware with scale-bank support.
 
 `BASE=http://localhost:8000/ node test/security_browser.mjs` checks actual CSP blocking and referrer behaviour in all three engines without re-encoding a WAV.
 
@@ -59,9 +59,10 @@ After changing anything in `static/js/` or `static/manifest.json`, run `node too
 ## Adding a release
 
 1. After the firmware is tagged, copy the tag's `app.bin` to `static/images/<tag>/` and delete the development image.
-2. Replace the development entry in `static/manifest.json` with the release: tag, name, date, hashes, profile format and catalogue. Preserve historical measurement data. Remove `development` and `source_commit`. Set `RELEASE_GUIDE_TAG` in `static/js/release_guides.js` to the tag and update its drawings if the release guides changed.
-3. Run `node tools/version-assets.js` and the tests.
-4. Merge to `main`. CI tests, builds and deploys the page.
+2. Replace the development entry in `static/manifest.json` with the release: tag, name, date, hashes, profile format and catalogue. Preserve historical measurement data. Add the tag's `options-guide.svg` and `options-guide-mobile.svg` to `RELEASE_GUIDES` in `static/js/release_guides.js`.
+3. Add the release's module-measured costs as `costs/<tag>-module.json` and run `node tools/import-costs.js` (see [module-measured costs](docs/DESIGN.md#module-measured-costs)). Then remove `development` and `source_commit`.
+4. Run `node tools/version-assets.js` and the tests.
+5. Merge to `main`. CI tests, builds and deploys the page.
 
 If a deploy goes wrong, see [ROLLBACK.md](ROLLBACK.md). Design notes for maintainers are in [docs/DESIGN.md](docs/DESIGN.md).
 
