@@ -1,5 +1,5 @@
 // Copyright 2026 Insolent Construct. MIT licence: see ../static/js/encoder.js.
-// Random pitch steps' third value, Recent notes (Beta 3), on a synthetic release; no offered release has it yet.
+// Random pitch steps' third value, Recent notes (Beta 3), on a synthetic release; no tagged release has it yet.
 import assert from 'node:assert/strict';
 import { readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -17,8 +17,8 @@ const manifest = JSON.parse(read('../static/manifest.json'));
 const beta2 = manifest.releases[0];
 const stock = beta2.profile.features.find((f) => f.id === 10);
 const feature = JSON.parse(read('fixtures/recent-notes-feature.json'));
-assert(manifest.releases.every((r) => r.profile.features.find((f) => f.id === 10).values.length === 2),
-  'no offered release lists Recent notes');
+assert(manifest.releases.filter((r) => !r.development && r.slug !== 'beta-3-smirr').every((r) => r.profile.features.find((f) => f.id === 10).values.length === 2),
+  'no release before Beta 3 lists Recent notes');
 
 // The firmware catalogue lists the third value; nothing else about ID 10 changes but the page range.
 const catalogue = JSON.parse(firmwareShow(ref, 'beads/build/profile-features.json'));

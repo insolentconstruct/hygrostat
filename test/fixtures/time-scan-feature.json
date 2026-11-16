@@ -1,0 +1,53 @@
+{
+  "id": 23,
+  "name": "TIME modulation",
+  "values": [
+    "Random",
+    "Scan"
+  ],
+  "page": true,
+  "amount": false,
+  "action": false,
+  "stateless": false,
+  "synth_path": false,
+  "states": [
+    "Off",
+    "Fixed",
+    "Adjustable"
+  ],
+  "default_in_block": false,
+  "default": [
+    23,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "cpu": {
+    "kind": "measured",
+    "source": "Beads module DWT cycle counts, image beta3-qual-12180c6, run-beta3-2 (session-2026-11-11/beta3/module-plan/run-beta3-2/run/dwt/report.json)",
+    "engines": {
+      "granular": {
+        "off": 0,
+        "fixed": [
+          0,
+          0.569
+        ],
+        "adjustable": [
+          0.569,
+          0.569
+        ],
+        "measured_values": [
+          0,
+          1
+        ]
+      }
+    },
+    "uncertainty": {
+      "points": 0.14
+    },
+    "note": "granular value=1: q3 stereo stress32 fixture, callback minus fixture mean +683, maximum +390 cycles (the two Off rows differ by 83 cycles in mean, 478 in maximum; the uncertainty is twice the mean difference); synth: 0 by construction (TIME scan is in Processor::Process only)"
+  },
+  "field": 12
+}

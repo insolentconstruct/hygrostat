@@ -27,13 +27,24 @@ const descriptions = {
   22: ['Show PITCH unison/octaves, ignoring CV and random pitch.', 'small-beta-2-profile-options'],
   23: ['Scan the granular buffer when TIME CV is unplugged.', 'small-beta-2-profile-options'],
   24: ['Keep the synth reverb tail as stock does, or clear it when synth playback stops.', 'synth-reverb-tail'],
-  25: ['Close the options pages after a time without button presses or knob turns; Off keeps them open until closed.', 'options-page-idle-timeout']
+  25: ['Close the options pages after a time without button presses or knob turns; Off keeps them open until closed.', 'options-page-idle-timeout'],
+  26: ['In delay mode, switch timing at once when SEED latches, as stock (it can pop), or fade the delay out and back in over about 10 ms instead.', 'delay-seed-latch-fade'],
+  27: ['Start in manual gain at unity when no gain is saved; a saved gain wins.', 'input-gain-at-power-on'],
+  28: ['How strong a hit Attacks needs: Low ignores softer notes, High catches them.', 'attack-sensitivity'],
+  29: ['Power on with SEED unlatched, so grains wait for SEED presses or gates.', 'seed-at-power-on'],
+  30: ['Turn PITCH smoothly between its intervals, without notches; PITCH CV unchanged.', 'pitch-knob'],
+  31: ['Which eight Plaits models the synth starts with: green, red or yellow. FEEDBACK picks a model in the bank.', 'plaits-bank'],
+  32: ['How fast DRY/WET brings in the grains: at 9 o’clock they sit 2.5 dB under the dry (stock) or 7.6 dB (Gentle; Clouds 8.8 dB).', 'mix-law'],
+  33: ['Reverb the whole mix, as stock, or only the grains before DRY/WET, as on Clouds: fully dry has no reverb.', 'reverb-input']
 };
 
 export function featureHelp(feature, release) {
   const [description, section] = descriptions[feature.id];
   const recent = feature.values?.includes('Recent notes') ? ' Recent notes: with PITCH patched, each CCW grain plays one of the last 1-8 notes sent to PITCH (more as you turn further CCW); unpatched it plays as Free.' : '';
-  const details = feature.id === 10 ? 'Around C, the steps are C and G across octaves, including G below C (a fourth down). Pitch scale applies afterwards and can change these intervals. Works on granular and Beads wavetable grains, not the continuous oscillator, Plaits or Spectral.' + recent : '';
+  const details = feature.id === 10 ? 'Around C, the steps are C and G across octaves, including G below C (a fourth down). Pitch scale applies afterwards and can change these intervals. Works on granular and Beads wavetable grains, not the continuous oscillator, Plaits or Spectral.' + recent :
+    feature.id === 31 ? 'While the Plaits synth plays, hold [A] and press FREEZE to step green, red, yellow; the bank is saved. Other modes keep that gesture.' :
+    feature.id === 32 ? 'The dry level and both ends of the knob stay stock; DRY/WET CV follows the same law. Granular, delay and spectral; the synths keep their own DRY/WET.' :
+    feature.id === 33 ? 'Turning DRY/WET down cuts the tail too. In Scorched cassette the wow and flutter comes after the reverb. Granular, delay and spectral; the synths keep the stock routing.' : '';
   return { description, details, url: docs.replace('{TAG}', encodeURIComponent(release.development ? release.source_commit : release.tag)) + '#' + section };
 }
 

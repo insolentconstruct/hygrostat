@@ -26,7 +26,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync, mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { firmwareRepo, firmwareShow } from './firmware.js';
+import { firmwareRef as releaseRef, firmwareRepo, firmwareShow } from './firmware.js';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -70,14 +70,17 @@ for (const offset of [0, 4, 5, 6, 7, 8, 12, 13, 14, 15]) {
 // The refusal table from beads/test/profile_test.cc, parsed so it cannot drift.
 const firmwareRef = release.development ? release.source_commit : 'refs/tags/' + release.tag;
 const firmwareFile = (file) => firmwareShow(firmwareRef, file, { encoding: 'utf8' });
-const ancestor = spawnSync('git', ['-C', firmwareRepo, 'merge-base', '--is-ancestor', firmwareRef, 'HEAD'], { encoding: 'utf8' });
+// The working firmware must match the newest release; older ones are checked at their own tags.
+const newest = manifest.releases.at(-1);
+const newestRef = releaseRef(newest);
+const ancestor = spawnSync('git', ['-C', firmwareRepo, 'merge-base', '--is-ancestor', newestRef, 'HEAD'], { encoding: 'utf8' });
 assert.ifError(ancestor.error);
 assert([0, 1].includes(ancestor.status), ancestor.stderr);
-// Check the working firmware parser once its HEAD contains the pinned release.
+// Check the working firmware parser once its HEAD contains the newest release.
 if (ancestor.status === 0) {
-  for (const file of ['beads/profile.cc', 'beads/profile.h', ...(profile.version === 2 ? ['beads/dsp/pitch_quantizer.h'] : [])]) {
-    assert.deepEqual(readFileSync(join(firmwareRepo, file)), firmwareShow(firmwareRef, file),
-      `${file}: working parser must match the pinned oracle`);
+  for (const file of ['beads/profile.cc', 'beads/profile.h', ...(newest.profile.version === 2 ? ['beads/dsp/pitch_quantizer.h'] : [])]) {
+    assert.deepEqual(readFileSync(join(firmwareRepo, file)), firmwareShow(newestRef, file),
+      `${file}: working parser must match ${newest.tag}`);
   }
 }
 const firmwareTests = firmwareFile('beads/test/profile_test.cc');
@@ -156,18 +159,20 @@ const legacyCpuFixture = (r) => {
 const withMeasuredCosts = (r) => {
   const fixture = legacyCpuFixture(r);
   const costs = JSON.parse(readFileSync(new URL('fixtures/synthetic-costs.json', import.meta.url)));
-  for (const f of fixture.profile.features) f.cpu = costs[f.id];
+  for (const f of fixture.profile.features) f.cpu = costs[f.id] ?? f.cpu; // Beta 3 additions keep their own.
   return fixture;
 };
 {
   const release = withMeasuredCosts(manifest.releases[0]);
-  for (const [percent, warning, blocked] of [[90.94, false, false], [90.99, true, false], [92.04, true, false], [92.06, true, true]]) {
+  const { warning: warnAt, ceiling } = release.cpu;
+  for (const [percent, warning, blocked] of [[warnAt - 0.06, false, false], [warnAt - 0.01, true, false],
+    [ceiling + 0.04, true, false], [ceiling + 0.06, true, true]]) {
     const r = structuredClone(release);
     for (const f of r.profile.features) for (const cpu of Object.values(f.cpu.engines)) cpu.off = 0;
     for (const baseline of Object.values(r.cpu.baselines)) baseline.percent = percent;
     const result = cpuUsage([], r); assert.equal(result.warning, warning); assert.equal(result.blocked, blocked);
   }
-  for (const [percent, blocked] of [[92, false], [92.1, true]]) {
+  for (const [percent, blocked] of [[ceiling, false], [Math.round(ceiling * 10 + 1) / 10, true]]) {
     const r = structuredClone(release); r.cpu.combinations = [{ profile: profileKey([], profile), synth: percent, granular: percent }];
     const result = cpuUsage([], r); assert.equal(result.kind, 'measured'); assert.equal(result.blocked, blocked);
   }
@@ -175,7 +180,7 @@ const withMeasuredCosts = (r) => {
     const r = structuredClone(release);
     for (const f of r.profile.features) for (const cpu of Object.values(f.cpu.engines)) cpu.off = 0;
     for (const baseline of Object.values(r.cpu.baselines)) baseline.percent = 80;
-    r.cpu.baselines[engine].percent = 92.1;
+    r.cpu.baselines[engine].percent = r.cpu.ceiling + 0.1;
     const usage = cpuUsage([], r);
     assert(usage.blocked && usage.warning, `${engine} independently gates the profile`);
     assert(usage.engines.find((e) => e.engine === engine).blocked);
@@ -194,14 +199,16 @@ const withMeasuredCosts = (r) => {
     const historical = structuredClone(r); historical.cpu.baselines.synth.percent = 85.8;
     assert.equal(cpuUsage(defaults(historical.profile), historical).engines.find((e) => e.engine === 'synth').percent, 85.8);
     assert.equal(usage.engines.find((e) => e.engine === 'synth').percent, 83.4);
-    assert.match(r.cpu.baselines.synth.provenance, /measured on the module with this release's code/);
+    // Only Beta 2's synth baseline was measured with its own code; Beta 3 reuses it.
+    assert.match(r.cpu.baselines.synth.provenance, r.slug === 'beta-2-fog' ? /measured on the module with this release's code/ :
+      /Not yet remeasured with this release’s code/);
     assert.match(r.cpu.baselines.synth.provenance, /already includes Clouds-style reverb/);
     const highDefault = structuredClone(r);
     highDefault.cpu.baselines.synth.percent = 99;
     assert(!cpuUsage(defaults(r.profile), highDefault).blocked, 'default is always allowed');
     for (const [name, candidate] of Object.entries(templates(r.profile))) {
       const result = cpuUsage(candidate, r);
-      assert.equal(result.blocked, result.kind !== 'measured' && result.engines.some((e) => e.percent > 92), name);
+      assert.equal(result.blocked, result.kind !== 'measured' && result.engines.some((e) => e.percent > r.cpu.ceiling), name);
       assert(!result.blocked, `shipped template ${name} builds or warns`);
     }
     const heavy = defaults(r.profile).map((e) => e.slice());
@@ -224,7 +231,7 @@ const withMeasuredCosts = (r) => {
   for (const f of release.profile.features) f.cpu = null;
   const chosen = defaults(profile);
   chosen.find((e) => e[0] === 2)[2] = 1;
-  for (const [percent, blocked] of [[90.4, false], [92, false], [92.1, true]]) {
+  for (const [percent, blocked] of [[90.4, false], [release.cpu.ceiling, false], [Math.round(release.cpu.ceiling * 10 + 1) / 10, true]]) {
     const r = structuredClone(release);
     r.cpu.combinations = [{ profile: profileKey(chosen, profile), synth: percent, granular: 89 }];
     const result = cpuUsage(chosen, r);
@@ -331,6 +338,14 @@ for (const mobile of [false, true]) {
   const later = guide(entries, { ...release, tag: 'drizzlet-2099.01.01' }, fp, mobile);
   assert(!later.includes('data-profile-fingerprint') && later.includes('drizzlet-2099.01.01'));
   assert(!guide([], release, fp, mobile).includes('PAGE 1'));
+}
+// Every tagged release's untouched default is its own tag's drawing.
+for (const r of manifest.releases.filter((r) => !r.development)) {
+  for (const mobile of [false, true]) {
+    const svg = guide(defaults(r.profile), r, fp, mobile);
+    assert.equal(svg.replace(/<text data-profile-fingerprint="true"[^>]*>.*?<\/text>\n/, ''), firmwareShow(`refs/tags/${r.tag}`,
+      `beads/build/docs/options-guide${mobile ? '-mobile' : ''}.svg`, { encoding: 'utf8' }), `${r.tag}: release guide`);
+  }
 }
 // Differential coverage: byte mutations of every entry field, all headers,
 // every placement kind and sparse profiles, against the actual C++ parser.

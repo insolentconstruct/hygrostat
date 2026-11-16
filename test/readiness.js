@@ -7,8 +7,8 @@ import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync } from 'node:fs';
 import { firmwareShow } from './firmware.js';
 import { defaults, encodeProfile, equal, cpuUsage, profileKey, modes,
-  validateProfileFormat, initialEntry } from '../static/js/profile.js';
-import { importedCost, tableBytes, tableSha256, importCosts } from '../tools/import-costs.js';
+  validateProfileFormat, initialEntry, pageSlots } from '../static/js/profile.js';
+import { importedCost, tableBytes, tableSha256, importCosts, costTable, moduleCosts } from '../tools/import-costs.js';
 import './costs.js';
 import './help.js';
 import { guide } from '../static/js/guide.js';
@@ -18,6 +18,7 @@ const read = (p) => readFileSync(new URL(p, root), 'utf8');
 const manifest = JSON.parse(read('manifest.json'));
 const catalogue = JSON.parse(read('profile-features.json'));
 const release = manifest.releases[0], profile = release.profile;
+const moduleRows = moduleCosts(release).rows;
 const firmwareRef = release.development ? release.source_commit : 'refs/tags/' + release.tag;
 const source = (file) => firmwareShow(firmwareRef, file, { encoding: 'utf8' });
 const catalogueBytes = readFileSync(new URL('profile-features.json', root));
@@ -54,14 +55,14 @@ for (const [i, definition] of definitions.entries()) {
   assert.equal(f.stateless, c.stateless ?? false);
   assert.equal(c.cpu_cost, null);
   assert.notEqual(f.cpu, null);
-  assert.deepEqual(f.cpu, importedCost(f));
+  assert.deepEqual(f.cpu, importedCost(f, costTable, moduleRows));
   assert.equal(f.default[1], ['Off', 'Fixed', 'Adjustable'].indexOf(c.default_state));
   assert.equal(f.default[2], c.default);
   assert.equal(f.values?.length || 0, Number(definition[1]));
   for (const [key, index, slots] of [['page', 3, 'page_slots'], ['amount', 4, 'amount_slots'], ['action', 5, 'actions']]) {
     assert.equal(f[key], definition[index] === 'true', `${f.name}: firmware ${key}`);
     assert.equal(f[key], c[slots].length > 0, `${f.name}: catalogue ${key}`);
-    const count = key === 'page' ? 12 : key === 'amount' ? 2 : 3;
+    const count = key === 'page' ? pageSlots(profile) : key === 'amount' ? 2 : 3;
     assert.deepEqual(c[slots], f[key] ? Array.from({ length: count }, (_, n) => n + 1) : []);
   }
   assert.equal(f.stateless, definition[6] === 'true');
@@ -126,6 +127,7 @@ const measuredCosts = (r) => {
   delete fixture.cpu.default_measured;
   delete fixture.cpu.estimated_default_delta;
   fixture.cpu.baselines.synth.percent = 87.2; // Former synth baseline these thresholds were set against.
+  Object.assign(fixture.cpu, { warning: 91, ceiling: 92 }); // Synthetic thresholds for the synthetic costs.
   const costs = JSON.parse(readFileSync(new URL('fixtures/synthetic-costs.json', import.meta.url)));
   for (const f of fixture.profile.features) f.cpu = costs[f.id];
   return fixture;
@@ -156,10 +158,15 @@ assert.equal(cpuUsage(warning, measuredCosts(release)).percent, 91.1);
 assert.equal(cpuUsage(heavy, measuredCosts(release)).percent, 92.5);
 assert.equal(createHash('sha256').update(tableBytes).digest('hex'), tableSha256);
 assert.equal(release.cpu.costs.table_sha256, tableSha256);
-// The importer only updates a development entry; the tagged costs must still be its exact output.
-const reimported = structuredClone(manifest); reimported.releases[0].development = true;
-importCosts(reimported); delete reimported.releases[0].development;
-assert.deepEqual(reimported, manifest);
+// The importer only updates a development entry; each tagged release's costs must still be its exact output.
+for (const tagged of manifest.releases.filter((r) => !r.development)) {
+  const reimported = { releases: [{ ...structuredClone(tagged), development: true }] };
+  importCosts(reimported); delete reimported.releases[0].development;
+  assert.deepEqual(reimported.releases[0], tagged, `${tagged.tag}: exact import output`);
+}
+for (const candidate of manifest.releases.filter((r) => r.development)) {
+  assert.deepEqual(importCosts({ releases: [structuredClone(candidate)] }).releases[0], candidate, `${candidate.tag}: exact import output`);
+}
 for (const change of [(r) => r.profile.features.shift(), (r) => { r.profile.features[0].name += ' mismatch'; },
   (r) => { r.profile.features[0].id = 99; }]) {
   const r = structuredClone(release); r.development = true; change(r);
