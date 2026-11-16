@@ -425,7 +425,6 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     assert.equal(boundedRequests, 1, 'reload fetched the versioned manifest fixture');
     await noCPU();
     assert.equal(await page.isDisabled('#build'), false);
-    assert.equal(await page.isDisabled('#local'), false);
     await context.unroute(manifestURL, boundedRoute);
     phase = 'unknown CPU fixture';
     // Preserve the enabled/unknown regression using an explicit Off-default fixture.
@@ -447,7 +446,6 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
           .entries.find((e) => e[0] === f.id)?.[1] === 1);
       await noCPU();
       assert.equal(await page.isDisabled('#build'), false);
-      assert.equal(await page.isDisabled('#local'), false);
       await mode(f, 0);
       await waitFingerprint(stockFP);
       assert.equal(await page.getAttribute('#share', 'href'), stockShare, `${f.name}: exact Off bytes`);
@@ -538,41 +536,34 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     await noCPU();
     assert.equal(await page.isDisabled('#build'), false);
     await context.unroute(manifestURL, unknownRoute);
-    phase = 'local image refusal';
-    // Reject wrong-sized local files before reading or hashing their contents.
+    phase = 'wrong app image refusal';
+    // A wrong-sized download is refused before hashing; a same-sized wrong image by its hash.
+    const appURL = new URL(release.app, base).pathname;
+    let wrongLength = 0;
+    const isApp = (url) => url.pathname === appURL;
+    const appRoute = (route) => route.fulfill({ body: Buffer.alloc(wrongLength), contentType: 'application/octet-stream' });
+    await context.route(isApp, appRoute);
     await page.evaluate(() => {
-      window.localBoundary = { reads: 0, hashes: 0, digest: crypto.subtle.digest };
+      window.appBoundary = { hashes: 0, digest: crypto.subtle.digest };
       crypto.subtle.digest = function(...args) {
-        window.localBoundary.hashes++;
-        return window.localBoundary.digest.apply(this, args);
+        window.appBoundary.hashes++;
+        return window.appBoundary.digest.apply(this, args);
       };
     });
-    for (const [size, length, reads, hashes] of [
-      [8 * 1024 ** 3, 0, 0, 0],
-      [release.app_size, release.app_size + 1, 1, 0],
-      [release.app_size, release.app_size, 1, 1]
-    ]) {
-      await page.evaluate(({ size, length }) => {
-        window.localBoundary.reads = window.localBoundary.hashes = 0;
-        const input = document.querySelector('#local');
-        const source = new File([new Uint8Array(length)], 'wrong-image.bin');
-        const read = source.arrayBuffer.bind(source);
-        const file = size === source.size ? source : { size, arrayBuffer: read };
-        file.arrayBuffer = () => { window.localBoundary.reads++; return read(); };
-        Object.defineProperty(input, 'files', { configurable: true, value: [file] });
-        input.dispatchEvent(new Event('change'));
-      }, { size, length });
-      await until(async () => await page.getAttribute('#status', 'class') === 'error' && !await page.isDisabled('#local'));
-      const actual = await page.evaluate(() => ({ reads: window.localBoundary.reads, hashes: window.localBoundary.hashes }));
-      assert.deepEqual(actual, { reads, hashes });
+    for (const [length, hashes] of [[0, 0], [release.app_size + 1, 0], [release.app_size, 1]]) {
+      wrongLength = length;
+      await page.evaluate(() => { window.appBoundary.hashes = 0; });
+      await page.click('#build');
+      await until(async () => await page.getAttribute('#status', 'class') === 'error' && !await page.isDisabled('#build'));
+      assert.equal(await page.evaluate(() => window.appBoundary.hashes), hashes);
       assert((await page.textContent('#status')).includes(hashes ? 'does not match' : 'must be'));
       assert.equal(await page.isVisible('#result'), false);
     }
     await page.evaluate(() => {
-      delete document.querySelector('#local').files;
-      crypto.subtle.digest = window.localBoundary.digest;
-      delete window.localBoundary;
+      crypto.subtle.digest = window.appBoundary.digest;
+      delete window.appBoundary;
     });
+    await context.unroute(isApp, appRoute);
     phase = 'release WAV';
     // Building the release default reproduces the release WAV, with its guides.
     if (name === 'chromium') {
@@ -589,7 +580,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
       assert((await page.textContent('#result')).includes('calibration'));
     }
     phase = 'measured CPU fixture';
-    // Historical thresholds never disable a valid build or local-image input.
+    // Historical thresholds never disable a valid build.
     const measuredManifest = JSON.parse(readFileSync(`${site}/manifest.json`));
     const measured = measuredManifest.releases.at(-1);
     measured.profile.features.find((f) => f.id === 1).cpu = null;
@@ -605,7 +596,6 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
       assert.equal(cpuUsage(chosen, measured).blocked, percent > measured.cpu.ceiling, 'fixture exercises the stored threshold');
       await noCPU();
       assert.equal(await page.isDisabled('#build'), false);
-      assert.equal(await page.isDisabled('#local'), false);
     }
     if (name === 'chromium') {
       phase = 'formerly blocked custom WAV';

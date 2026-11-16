@@ -8,7 +8,7 @@
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="light dark">
 <title>Drizzlet Hygrostat</title>
-<script src="js/theme.js?v=215337228bd83bb1"></script>
+<script src="js/theme.js?v=1320ba67bbecbc47"></script>
 <style>
   /* Brushed panel greys, with the module's own LED colours as the only accents. */
   :root {
@@ -357,7 +357,7 @@
   </div>
   <p class="lead">Choose Beads features and where you control them.</p>
   <p class="steps">Select a position, choose a feature and its starting value, then build the update.</p>
-  <p id="starting-point-note" class="note" hidden>Starting points replace your setup and restore factory scales.</p>
+  <p id="starting-point-note" class="note" hidden>Starting points replace your setup and restore default scales.</p>
   <div id="draft-notice" role="status" hidden></div>
   <div class="presets" role="group" aria-labelledby="presets-label">
     <span id="presets-label">Start from</span>
@@ -429,7 +429,12 @@
   </section>
 </main>
 
-<section id="scale-editor" class="wrap" aria-label="Pitch scales" hidden></section>
+<section id="scale-editor" class="wrap" hidden>
+  <details id="scale-panel">
+    <summary>Pitch scales</summary>
+    <div class="inner"></div>
+  </details>
+</section>
 
 <div class="after wrap">
   <section id="result" hidden aria-labelledby="result-title">
@@ -455,9 +460,6 @@
           <dt>Update file (SHA-256)</dt><dd id="wav-hash">After building</dd>
           <dt>Release update file (SHA-256)</dt><dd id="expected-hash"></dd>
         </dl>
-        <p class="note">Build from a local copy: choose the selected release’s <code>app.bin</code>.</p>
-        <label for="local" class="sr-only">Local app.bin</label>
-        <input id="local" type="file" accept=".bin,application/octet-stream">
       </section>
     </div>
   </details>
@@ -507,6 +509,6 @@
   </div>
   <div id="library-body"></div>
 </dialog>
-<script type="module" src="js/app.js?v=215337228bd83bb1"></script>
+<script type="module" src="js/app.js?v=1320ba67bbecbc47"></script>
 </body>
 </html>

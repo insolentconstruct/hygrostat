@@ -9,17 +9,17 @@
 // in the browser, check the .wav, offer it for download.
 
 import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, normalise,
-  pageLeds } from './profile.js?v=215337228bd83bb1';
-import { effectiveScales, validateScales } from './scales.js?v=215337228bd83bb1';
-import { scaleEditor } from './scale_editor.js?v=215337228bd83bb1';
-import { guide } from './guide.js?v=215337228bd83bb1';
-import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=215337228bd83bb1';
-import { featureHelp, actionHelp } from './help.js?v=215337228bd83bb1';
+  pageLeds } from './profile.js?v=1320ba67bbecbc47';
+import { effectiveScales, validateScales } from './scales.js?v=1320ba67bbecbc47';
+import { scaleEditor } from './scale_editor.js?v=1320ba67bbecbc47';
+import { guide } from './guide.js?v=1320ba67bbecbc47';
+import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=1320ba67bbecbc47';
+import { featureHelp, actionHelp } from './help.js?v=1320ba67bbecbc47';
 import { KNOBS, KINDS, GROUPS, ACTION_DOES, placeName, pageOf, entryOf, occupant, places, valueLabel, stateLabel,
   summary, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, fits, placeable, bankWarning, slotCount,
-  usedPages, compaction, compact } from './layout.js?v=215337228bd83bb1';
-import { drawPanel, highlight } from './panel.js?v=215337228bd83bb1';
-import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=215337228bd83bb1';
+  usedPages, compaction, compact } from './layout.js?v=1320ba67bbecbc47';
+import { drawPanel, highlight } from './panel.js?v=1320ba67bbecbc47';
+import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=1320ba67bbecbc47';
 
 const $ = (id) => document.getElementById(id);
 const cap = (text) => text.replace(/^./, (c) => c.toUpperCase());
@@ -42,7 +42,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=215337228bd83bb1', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=1320ba67bbecbc47', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.ready) return;
       if (data.progress !== undefined) {
@@ -189,21 +189,20 @@ const featureById = (id) => profile().features.find((f) => f.id === id);
 
 let busy = false;
 
-async function run(getApp) {
+async function run() {
   if (busy) return;
   busy = true;
   $('scale-editor').inert = $('workspace').inert = $('presets').inert = $('preset-confirm').inert = $('template-gallery').inert = $('draft-notice').inert = true;
-  $('build').disabled = $('release').disabled = $('local').disabled = true;
+  $('build').disabled = $('release').disabled = true;
   $('result').hidden = true;
   try {
     const release = selected();
-    await build(release, await getApp(release));
+    await build(release, await fetchApp(release));
   } catch (error) {
     status(`Stopped: ${error.message}`, 'error');
   } finally {
     $('progress').hidden = true;
-    $('local').value = '';
-    $('build').disabled = $('release').disabled = $('local').disabled = false;
+    $('build').disabled = $('release').disabled = false;
     busy = false;
     if (pendingShare) { pendingShare = false; loadSharedProfile(); }
     $('scale-editor').inert = $('workspace').inert = $('presets').inert = $('preset-confirm').inert = $('template-gallery').inert = $('draft-notice').inert = false;
@@ -264,7 +263,7 @@ function useTemplate(name) {
   scales = null;
   preset = name;
   $('template-gallery').hidden = true;
-  commit(() => candidate, `Started from ${name}${selected().profile.version === 2 ? '; factory scales restored' : ''}.`);
+  commit(() => candidate, `Started from ${name}${selected().profile.version === 2 ? '; default scales restored' : ''}.`);
 }
 
 function renderPresets() {
@@ -273,7 +272,7 @@ function renderPresets() {
   $('presets').replaceChildren(...['Drizzlet', 'Stock plus fixes'].map((name) => el('button', {
     type: 'button', class: 'chip', id: `preset-${templateId(name)}`,
     'aria-pressed': String(name === current), text: name,
-    title: selected().profile.version === 2 ? 'Replace this setup and restore factory scales' : 'Replace this setup',
+    title: selected().profile.version === 2 ? 'Replace this setup and restore default scales' : 'Replace this setup',
     onclick: () => choosePreset(name)
   })), el('button', {
     type: 'button', class: 'chip', id: 'more-templates', text: 'More starting points…',
@@ -300,7 +299,7 @@ function choosePreset(name) {
 
 function presetConfirm(name) {
   const count = changes(templates(profile())[name], entries, profile()).length + Number(scales !== null);
-  const restore = selected().profile.version === 2 ? ' and restore factory scales' : '';
+  const restore = selected().profile.version === 2 ? ' and restore default scales' : '';
   const back = () => { presetPending = null; renderPresets(); $(`preset-${templateId(name)}`).focus(); };
   return [el('p', { id: 'preset-confirm-text', text: `Replace your setup with ${name}? ${count} setting${count === 1 ? '' : 's'}${scales !== null ? ', including your scale bank,' : ''} will change.` }),
     el('div', { class: 'options' },
@@ -340,7 +339,7 @@ function renderTemplates() {
   const describe = (f, e) => [summary(f, e), ...places(e).map((p) => placeName(p.kind, p.slot))].join(' · ');
   const items = different.map((f) => el('li', {}, el('strong', { text: `${f.name}: ` }),
     `${describe(f, entryOf(entries, f))} → ${describe(f, entryOf(candidate, f))}`));
-  if (selected().profile.version === 2 && scales !== null) items.push(el('li', { text: 'Restore the factory scale bank, including its definitions, order and LED indications.' }));
+  if (selected().profile.version === 2 && scales !== null) items.push(el('li', { text: 'Restore the default scale bank, including its definitions, order and LED indications.' }));
   $('template-preview-title').textContent = `${templatePreview}: ${items.length} change${items.length === 1 ? '' : 's'}`;
   $('template-changes').replaceChildren(...[items.length ? el('ul', {}, ...items.slice(0, 6)) :
     el('p', { text: 'Your setup already matches this starting point.' }),
@@ -865,7 +864,7 @@ async function refresh() {
     notice.dismissed = false;
     renderNotice();
   }
-  $('build').disabled = $('local').disabled = busy;
+  $('build').disabled = busy;
   const changed = changes(entries, templates(release.profile)[preset] || defaults(release.profile), release.profile).length + Number(scales !== null);
   $('changes').textContent = changed ? `${changed} change${changed === 1 ? '' : 's'} from ${preset}` : `${preset}, unchanged`;
   const slots = slotCount('page', release.profile);
@@ -1067,7 +1066,7 @@ async function checkCapabilities() {
   }
   // A constructor alone does not establish support for module workers.
   await new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=215337228bd83bb1', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=1320ba67bbecbc47', { type: 'module' });
     const done = (error) => {
       clearTimeout(timer); worker.terminate();
       error ? reject(error) : resolve();
@@ -1096,7 +1095,7 @@ async function init() {
   }
   $('compatibility').hidden = true;
   try {
-    const response = await fetch('manifest.json?v=215337228bd83bb1', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=1320ba67bbecbc47', { cache: 'no-cache' });
     manifest = await response.json();
   } catch {
     status('Could not load the release list.', 'error');
@@ -1151,16 +1150,7 @@ async function init() {
   $('forget-draft').onclick = forgetSaved;
   setupEditor();
   renderNotice();
-  $('build').onclick = () => run(fetchApp);
-  $('local').onchange = () => {
-    const file = $('local').files[0];
-    if (file) run(async (release) => {
-      if (file.size !== release.app_size) {
-        throw new Error(`the app image must be ${release.app_size} bytes for ${release.tag}`);
-      }
-      return new Uint8Array(await file.arrayBuffer());
-    });
-  };
+  $('build').onclick = run;
 }
 
 init();
