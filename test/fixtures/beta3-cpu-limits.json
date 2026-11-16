@@ -1,0 +1,18 @@
+{
+  "block_cycles": 120000,
+  "provenance": [{ "image": "drizzlet-cpu-ceiling-b92c048", "run": "run-ceil-3",
+    "report": "session-2026-11-11/cpu-ceiling/run-ceil-3/RESULTS.md" }],
+  "rates": [
+    { "khz": 48, "qualities": ["Bright digital", "Sunny tape"], "clean_cycles": 108908, "first_late_cycles": 109504 },
+    { "khz": 32, "qualities": ["Cold digital"], "clean_cycles": 103935, "first_late_cycles": 104520 },
+    { "khz": 24, "qualities": ["Scorched cassette"], "clean_cycles": 99182, "first_late_cycles": 99762 }
+  ],
+  "ceiling_khz": 48,
+  "heavy": [
+    { "quality": "Bright digital", "peak_cycles": 98625 },
+    { "quality": "Sunny tape", "peak_cycles": 75598 },
+    { "quality": "Cold digital", "peak_cycles": 77679 },
+    { "quality": "Scorched cassette", "peak_cycles": 61116 }
+  ],
+  "note": "Audio-callback peak cycles of a 120000-cycle block. Clean is the highest load with the first left-channel word on time, each edge repeated twice; the synths run at 48 kHz. Heavy rows are one heavy granular patch per quality on a Beta 3 test build before the final layout: reference only."
+}

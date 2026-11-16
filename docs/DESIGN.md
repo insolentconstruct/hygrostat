@@ -49,7 +49,7 @@ Do not rewrite an existing custom profile's explicit slots when defaults change.
 
 `static/js/draft.js` keeps the setup in `localStorage` so a reload reopens it. A draft is JSON with a schema `v` (1), the save time, the exact share fragment, and the release name, profile version and format; a starting-point name is kept only if it is a template. Nothing is sent anywhere.
 
-- Only edits save: `commit()` and a release change mark the draft, and `refresh()` writes it from the block it already encodes. Selection, dialogs and opening a link never save. The page's fresh state (Drizzlet defaults, factory scales, newest release) removes the draft.
+- Only edits save: `commit()` and a release change mark the draft, and `refresh()` writes it from the block it already encodes. Selection, dialogs and opening a link never save. The page's fresh state (Drizzlet defaults, default scales, newest release) removes the draft.
 - On load a share link wins and leaves the draft alone. The first edit to a shared setup first copies the person’s own draft to `hygrostat-draft-before-link`; a draft that started from a link is marked and copied there only when the slot is empty, so later links never replace the own setup. **Open it** swaps the two slots. The first edit after a link or **Share** also removes the fragment from the address.
 - Restore uses `unshare()` and must re-encode to the stored bytes. A draft whose tag is gone moves to the newest release with the same profile version and format. Anything else, in either slot, is refused on load: the text goes to `hygrostat-draft-refused` (one slot, never overwritten) or, if that is taken, stays in place and saving pauses. Only the person discards it.
 - **Start fresh** (with Undo) and **Forget saved setup** are the only other ways a draft goes, apart from clearing site data.
@@ -61,15 +61,35 @@ The following data and helper tests are retained as historical evidence, not an
 assurance that every configuration is safe or a measured physical CPU limit.
 Any future estimator needs separately qualified workloads and policy.
 
-- Per-feature costs were measured on a development board calibrated to the module. Four event-only features have no per-block cost.
+- Beta 2's per-feature costs were measured on a development board calibrated to the module. Four event-only features have no per-block cost.
 - Baselines are worst-case module measurements: synth 83.4% (with Clouds-style reverb, measured on the codec-fix Beta 2 timing build), granular 83.0% (an October build, before profiles). Each feature adds its cost minus its default's cost, so moving a control between slots doesn't change the estimate.
 - Per-feature costs on the development board predict module changes within about half a point on the granular engine; setting combinations still need module measurement.
 - Exact module measurements of a complete profile (`cpu.combinations[].profile`, hex) take precedence over estimates.
-- The historical helper rounds each engine to 0.1%, warns from 91% and marks values above the provisional 92% policy as blocked. This policy was not a measured failure threshold. These results no longer control the page or its downloads.
+- The historical helper rounds each engine to 0.1%, warns from the release's `cpu.warning` and marks values above its `cpu.ceiling` as blocked. These results no longer control the page or its downloads.
+- Beta 2 first stored a provisional 92% policy (warning 91%), which was not a measured failure threshold. Measured on a module since, the clean edge at 48 kHz is 90.8% of the block, with the first late load at 91.3%, so Beta 2 now stores 90.8% for both. The audio driver is unchanged from Beta 2 to the measured Beta 3 test build. From Beta 3 the module limits below set them.
+
+### Module-measured costs
+
+Beta 2's per-feature costs come from `costs/cost-table.json` (development board, checksummed); never edit it. From Beta 3, costs measured on the module, and new options with no per-block work, go in one file per release, `costs/<tag>-module.json`. A row replaces the table for its option:
+
+```json
+{ "format": 1, "measured_on": "Beads module", "features": [
+  { "id": 32, "name": "Mix law", "values": ["Stock", "Gentle"],
+    "provenance": [{ "image": "…", "run": "…", "report": "session-…/report.json" }],
+    "cpu": { "kind": "measured", "source": "…", "engines": { "granular": {} }, "uncertainty": { "points": 0.14 }, "note": "…" } }
+] }
+```
+
+- Copy each `cpu` object from the option's test fixture. A measured row names its run, share-relative report path and firmware image, and its `source` mentions all three; its uncertainty is above zero. An option without per-block work has `"kind": "zero"`, source `no per-block work (code inspection)`, all-zero costs, zero uncertainty and `"provenance": [{ "inspected": "<firmware commit>" }]`.
+- Every value has a cost on each engine listed; an engine left out needs `<engine>: 0 by construction` (or `not applicable`) in the note.
+- The development entry references the file as `cpu.costs.module_sources: [{ "path": "costs/<tag>-module.json" }]`. `node tools/import-costs.js` fills each option's cost from the module source, the table or the event-only inspection, and records the file's SHA-256 and option IDs there. A later import refuses changed bytes.
+- The source may also carry the release's measured CPU limits, `limits` (the format is in `test/fixtures/beta3-cpu-limits.json`): each codec rate's qualities and its clean and first-late audio-callback cycles, the ceiling rate, one heavy-patch peak per quality and the run's provenance. The import writes them, with percentages and margins, to `cpu.limits` and sets `cpu.ceiling` and `cpu.warning` to the ceiling rate's clean edge, with no added margin. It refuses a quality missing, listed twice or at the wrong rate, a missing peak or one at or above its rate's edge, a ceiling other than the synths' 48 kHz, and limits where another rate leaves the heavy patch less room.
+- Beta 3's limits, measured on the module: 48 kHz (Bright digital, Sunny tape, synths) clean to 90.8%, 32 kHz (Cold digital) 86.6%, 24 kHz (Scorched cassette) 82.7%. The heavy granular patch leaves Bright digital 8.6 points, the least, so 48 kHz sets the ceiling. Heavy peaks are reference only, measured on a test build before the final layout.
+- The import also refuses a row without provenance or cost, a name or value list that differs from the release, an option with no cost source and a row for an option the release lacks. `test/module_costs.js` imports the Beta 3 fixtures this way, and `test/costs.js` checks each release against its own sources.
 
 ## Guides
 
-`static/js/guide.js` draws custom layouts with knob geometry ported from the firmware's `options_guide.py`. `release_guides.js` holds the release's own SVGs for the untouched default, selected by `RELEASE_GUIDE_TAG` because the profile format can stay the same across releases; apart from the added fingerprint element, the default guide must equal the release SVG byte for byte.
+`static/js/guide.js` draws custom layouts with knob geometry ported from the firmware's `options_guide.py`. `release_guides.js` holds each tagged release's own SVGs for the untouched default, selected by tag because the profile format can stay the same across releases; apart from the added fingerprint element, the default guide must equal the release SVG byte for byte.
 
 ## Counting
 
@@ -91,5 +111,7 @@ Hugo copies `static/` unchanged (no templates yet); CI checks `public/` equals `
 The accepted Beta 2 factory layout keeps Pitch scale, Random pitch steps and Attacks on page 1; page 2 is Frozen feedback, Delay mode and Reverb character; page 3 remains Processor, Synth and Synth start. Page 4 adds LED brightness and SEED latch beside Limiter, initially 100%, Off (Stock) and Stock. Users can change placements and defaults in Hygrostat. Beta 2 feedback may inform Beta 3's factory layout; existing custom profiles retain their explicit placements.
 
 The Beta 2 release entry is `drizzlet-2026.11.09`, source `578521f`. Its `date` is the UTC publication date, `2026-11-10`; the tag uses the maintainer's local release date. Tests read the tag's own app/WAV pins, guides and catalogue. The synth baseline was measured on this release's timing build; the granular baseline and cost table are historical. Setting combinations remain unmeasured.
+
+The Beta 3 release entry is `drizzlet-2026.11.16`, the newest release and the page's default. Its image and WAV are the `fab20b1` candidate's (built from code-identical `9f8be78`), with seven options pages, Beta 2's features with Recent notes and the module-measured TIME scan cost, and features 25–33. Its `date` is the UTC publication date, `2026-11-16`. Its costs and limits come from `costs/drizzlet-2026.11.16-module.json`. Its baselines are Beta 2's measurements, not yet remeasured with Beta 3 code. Beta 2 still refuses Beta 3 features.
 
 The release keeps the historical granular baseline and cost table unchanged. `cpu.estimate_reference` pins the former estimator defaults and their firmware source/profile hash; `default_measured: false` prevents new-default measurement claims. The table-derived Off-to-Adjustable allowances are 0.492 synth and 0.737 granular points, yielding provisional default estimates of 83.9% and 83.7%. These are estimates, not module measurements of the new default; legacy explicit profiles cancel those allowances. Runtime estimation checks the declared allowances against the same reference costs, and incomplete or contradictory reference flags refuse.

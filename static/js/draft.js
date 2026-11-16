@@ -3,14 +3,14 @@
 // The setup kept in this browser so a reload reopens it. No DOM; storage is passed in.
 // A draft is the share fragment plus a little context; see docs/DESIGN.md.
 
-import { defaults, encodeProfile, equal, normalise, share, templates, unshare } from './profile.js?v=d3cdc8ee403b3861';
+import { defaults, encodeProfile, equal, normalise, share, templates, unshare } from './profile.js?v=1320ba67bbecbc47';
 
 export const DRAFT = 'hygrostat-draft';
 export const BEFORE_LINK = 'hygrostat-draft-before-link';
 export const REFUSED = 'hygrostat-draft-refused';
 const SCHEMA = 1;
 
-// The page's own fresh state: Drizzlet defaults with factory scales on the newest release.
+// The page's own fresh state: Drizzlet defaults with default scales on the newest release.
 export const isFresh = (release, block, newest) => release === newest &&
   equal(block, encodeProfile(defaults(release.profile), release.profile));
 
