@@ -10,8 +10,8 @@ const text = (svg) => [...svg.matchAll(/<text\b[^>]*>(.*?)<\/text>/g)].map((m) =
 const read = (file) => readFileSync(new URL(file, import.meta.url), 'utf8');
 const manifest = JSON.parse(read('../static/manifest.json'));
 const feature = JSON.parse(read('fixtures/idle-timeout-feature.json'));
-const shipped = manifest.releases.filter((r) => !r.development);
-assert(shipped.every((r) => !r.profile.features.some((f) => f.id === 25)), 'no tagged release lists feature 25');
+const shipped = manifest.releases.filter((r) => !r.development && r.slug !== 'beta-3-smirr');
+assert(shipped.every((r) => !r.profile.features.some((f) => f.id === 25)), 'no release before Beta 3 lists feature 25');
 const beta2 = shipped[0];
 const release = structuredClone(beta2);
 Object.assign(release, { tag: 'drizzlet-dev-idle-timeout', name: 'Synthetic fixture (never offered)',

@@ -68,8 +68,8 @@ assert.match(release.cpu.release_note, /measured on the Beads module, each namin
 assert.equal(createHash('sha256').update(tableBytes).digest('hex'), tableSha256);
 assert.equal(JSON.stringify(costTable), historical, 'the historical table is never rewritten');
 checkReleaseCosts(release, files(source));
-// The Beta 3 candidate's committed source is exactly this file.
-for (const candidate of manifest.releases.filter((r) => r.development)) {
+// Beta 3's committed source is exactly this file.
+for (const candidate of manifest.releases.filter((r) => r.cpu.costs.module_sources)) {
   const [pinned] = candidate.cpu.costs.module_sources;
   assert.deepEqual(readFileSync(new URL(`../${pinned.path}`, import.meta.url)), files(source, pinned.path)(pinned.path));
 }

@@ -59,7 +59,7 @@ After changing anything in `static/js/` or `static/manifest.json`, run `node too
 ## Adding a release
 
 1. After the firmware is tagged, copy the tag's `app.bin` to `static/images/<tag>/` and delete the development image.
-2. Replace the development entry in `static/manifest.json` with the release: tag, name, date, hashes, profile format and catalogue. Preserve historical measurement data. Set `RELEASE_GUIDE_TAG` in `static/js/release_guides.js` to the tag and update its drawings if the release guides changed.
+2. Replace the development entry in `static/manifest.json` with the release: tag, name, date, hashes, profile format and catalogue. Preserve historical measurement data. Add the tag's `options-guide.svg` and `options-guide-mobile.svg` to `RELEASE_GUIDES` in `static/js/release_guides.js`.
 3. Add the release's module-measured costs as `costs/<tag>-module.json` and run `node tools/import-costs.js` (see [module-measured costs](docs/DESIGN.md#module-measured-costs)). Then remove `development` and `source_commit`.
 4. Run `node tools/version-assets.js` and the tests.
 5. Merge to `main`. CI tests, builds and deploys the page.

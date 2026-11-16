@@ -89,7 +89,7 @@ Beta 2's per-feature costs come from `costs/cost-table.json` (development board,
 
 ## Guides
 
-`static/js/guide.js` draws custom layouts with knob geometry ported from the firmware's `options_guide.py`. `release_guides.js` holds the release's own SVGs for the untouched default, selected by `RELEASE_GUIDE_TAG` because the profile format can stay the same across releases; apart from the added fingerprint element, the default guide must equal the release SVG byte for byte.
+`static/js/guide.js` draws custom layouts with knob geometry ported from the firmware's `options_guide.py`. `release_guides.js` holds each tagged release's own SVGs for the untouched default, selected by tag because the profile format can stay the same across releases; apart from the added fingerprint element, the default guide must equal the release SVG byte for byte.
 
 ## Counting
 
@@ -112,6 +112,6 @@ The accepted Beta 2 factory layout keeps Pitch scale, Random pitch steps and Att
 
 The Beta 2 release entry is `drizzlet-2026.11.09`, source `578521f`. Its `date` is the UTC publication date, `2026-11-10`; the tag uses the maintainer's local release date. Tests read the tag's own app/WAV pins, guides and catalogue. The synth baseline was measured on this release's timing build; the granular baseline and cost table are historical. Setting combinations remain unmeasured.
 
-The Beta 3 candidate, `drizzlet-dev-fab20b1`, offers firmware `fab20b1` (image built from code-identical `9f8be78`) with seven options pages, Beta 2's features with Recent notes and the module-measured TIME scan cost, and features 25–33. Its costs and limits come from `costs/drizzlet-dev-fab20b1-module.json`. Its baselines are Beta 2's measurements, not yet remeasured with Beta 3 code. Tagged releases still refuse Beta 3 features. At the tag, follow [Adding a release](../README.md#adding-a-release): rename the cost source to the tag, re-import, and set the date and release guides.
+The Beta 3 release entry is `drizzlet-2026.11.16`, the newest release and the page's default. Its image and WAV are the `fab20b1` candidate's (built from code-identical `9f8be78`), with seven options pages, Beta 2's features with Recent notes and the module-measured TIME scan cost, and features 25–33. Its `date` is the UTC publication date, `2026-11-16`. Its costs and limits come from `costs/drizzlet-2026.11.16-module.json`. Its baselines are Beta 2's measurements, not yet remeasured with Beta 3 code. Beta 2 still refuses Beta 3 features.
 
 The release keeps the historical granular baseline and cost table unchanged. `cpu.estimate_reference` pins the former estimator defaults and their firmware source/profile hash; `default_measured: false` prevents new-default measurement claims. The table-derived Off-to-Adjustable allowances are 0.492 synth and 0.737 granular points, yielding provisional default estimates of 83.9% and 83.7%. These are estimates, not module measurements of the new default; legacy explicit profiles cancel those allowances. Runtime estimation checks the declared allowances against the same reference costs, and incomplete or contradictory reference flags refuse.

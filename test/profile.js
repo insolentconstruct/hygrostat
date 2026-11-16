@@ -196,8 +196,9 @@ const withMeasuredCosts = (r) => {
     const historical = structuredClone(r); historical.cpu.baselines.synth.percent = 85.8;
     assert.equal(cpuUsage(defaults(historical.profile), historical).engines.find((e) => e.engine === 'synth').percent, 85.8);
     assert.equal(usage.engines.find((e) => e.engine === 'synth').percent, 83.4);
-    assert.match(r.cpu.baselines.synth.provenance, shipped.development ? /Not yet remeasured with this release’s code/ :
-      /measured on the module with this release's code/);
+    // Only Beta 2's synth baseline was measured with its own code; Beta 3 reuses it.
+    assert.match(r.cpu.baselines.synth.provenance, r.slug === 'beta-2-fog' ? /measured on the module with this release's code/ :
+      /Not yet remeasured with this release’s code/);
     assert.match(r.cpu.baselines.synth.provenance, /already includes Clouds-style reverb/);
     const highDefault = structuredClone(r);
     highDefault.cpu.baselines.synth.percent = 99;
@@ -334,6 +335,14 @@ for (const mobile of [false, true]) {
   const later = guide(entries, { ...release, tag: 'drizzlet-2099.01.01' }, fp, mobile);
   assert(!later.includes('data-profile-fingerprint') && later.includes('drizzlet-2099.01.01'));
   assert(!guide([], release, fp, mobile).includes('PAGE 1'));
+}
+// Every tagged release's untouched default is its own tag's drawing.
+for (const r of manifest.releases.filter((r) => !r.development)) {
+  for (const mobile of [false, true]) {
+    const svg = guide(defaults(r.profile), r, fp, mobile);
+    assert.equal(svg.replace(/<text data-profile-fingerprint="true"[^>]*>.*?<\/text>\n/, ''), firmwareShow(`refs/tags/${r.tag}`,
+      `beads/build/docs/options-guide${mobile ? '-mobile' : ''}.svg`, { encoding: 'utf8' }), `${r.tag}: release guide`);
+  }
 }
 // Differential coverage: byte mutations of every entry field, all headers,
 // every placement kind and sparse profiles, against the actual C++ parser.

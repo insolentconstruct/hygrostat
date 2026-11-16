@@ -8,8 +8,8 @@
 // highlighted. Centres and sizes in mm are the printable guide's geometry
 // (Mutable Instruments Beads panel file, geometry only, CC BY-SA 3.0); the
 // drawing is plain SVG with no artwork.
-import { pageOf, pageLedName, KNOBS } from './layout.js?v=360783a80845bd80';
-import { pageLeds } from './profile.js?v=360783a80845bd80';
+import { pageOf, pageLedName, KNOBS } from './layout.js?v=215337228bd83bb1';
+import { pageLeds } from './profile.js?v=215337228bd83bb1';
 
 const SVG = 'http://www.w3.org/2000/svg';
 const WIDTH = 70.8, HEIGHT = 128.52;

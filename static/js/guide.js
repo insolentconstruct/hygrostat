@@ -23,11 +23,11 @@
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
 // Knob cards port options_guide.py: 270-degree arcs and the same LED ladder.
-import { effectiveScales, PULSE_NAMES } from './scales.js?v=360783a80845bd80';
-import { defaults, equal, encodeProfile, pageLeds, PAGE_LEDS } from './profile.js?v=360783a80845bd80';
-import { pageLedName, usedPages } from './layout.js?v=360783a80845bd80';
-import { RELEASE_GUIDES, RELEASE_GUIDE_TAG } from './release_guides.js?v=360783a80845bd80';
-import { placeable, bankWarning } from './layout.js?v=360783a80845bd80';
+import { effectiveScales, PULSE_NAMES } from './scales.js?v=215337228bd83bb1';
+import { defaults, equal, encodeProfile, pageLeds, PAGE_LEDS } from './profile.js?v=215337228bd83bb1';
+import { pageLedName, usedPages } from './layout.js?v=215337228bd83bb1';
+import { RELEASE_GUIDES } from './release_guides.js?v=215337228bd83bb1';
+import { placeable, bankWarning } from './layout.js?v=215337228bd83bb1';
 
 const KNOBS = ['FEEDBACK', 'DRY/WET', 'REVERB'];
 export const ACTIONS = ['None', '[A]+SEED', '[A]+FREEZE', '[A] hold'];
@@ -136,11 +136,12 @@ function pageSteps(entries, profile) {
 }
 
 export function guide(entries, release, fp, mobile = false, scales = null) {
-  if (scales === null && release.tag === RELEASE_GUIDE_TAG && equal(encodeProfile(entries, release.profile, scales),
+  const drawings = RELEASE_GUIDES.get(release.tag);
+  if (scales === null && drawings && equal(encodeProfile(entries, release.profile, scales),
       encodeProfile(defaults(release.profile), release.profile))) {
     // Normalisation removes this added fingerprint text; the remaining SVG
     // is byte-identical to options_guide.py's release drawing.
-    const reference = RELEASE_GUIDES[Number(mobile)];
+    const reference = drawings[Number(mobile)];
     const height = Number(reference.match(/viewBox="0 0 \d+ ([\d.]+)"/)[1]);
     return reference.replace('</g>\n</svg>',
         `<text data-profile-fingerprint="true" x="${mobile ? 22 : 35}" y="${height - 8}" font-size="12">Profile ${escape(fp)}</text>\n</g>\n</svg>`);
@@ -163,8 +164,8 @@ export function guide(entries, release, fp, mobile = false, scales = null) {
     `Close: hold [M] 3 seconds or press another button${idle ? `, or leave all buttons and knobs for ${feature(idle).values[idle[2]]}` : ''}; release before normal use. On the Pitch scale page with Scale selected, tap SEED to step.`,
     'Move knobs more than a tenth of their travel to engage. Wait before powering off.'
   ] : ['This profile has no options pages. Hold [M] does nothing.'])) y = d.lines(margin, y, line, mobile ? 43 : 140) + 3;
-  // Share the release's to-scale control sketch and LED legend.
-  const reference = RELEASE_GUIDES[0];
+  // Share the release's (or the newest release's) to-scale control sketch and LED legend.
+  const reference = (drawings || [...RELEASE_GUIDES.values()].at(-1))[0];
   const panelStart = reference.indexOf('<text x="405" y="20"');
   const panelEnd = reference.indexOf('<text x="780" y="70"');
   if (panelStart >= 0 && panelEnd > panelStart) {
