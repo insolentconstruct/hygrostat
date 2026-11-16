@@ -27,6 +27,7 @@ assert.deepEqual(importedCost(intervals), importedCost({ ...intervals, name: 'Ra
 assert.throws(() => importedCost({ ...intervals, name: 'Unknown pitch mode' }));
 assert.throws(() => importedCost({ ...intervals, id: 1 }));
 const extended = structuredClone(manifest);
+extended.releases.splice(1); // Beta 2 only.
 const release = extended.releases[0];
 release.development = true; // The importer only updates a development entry.
 release.profile.version = 2; release.profile.size = 4096;
@@ -76,6 +77,7 @@ for (const change of [
   assert.throws(() => importCosts({ releases: [invalid] }));
 }
 const prior = structuredClone(manifest);
+prior.releases.splice(1);
 prior.releases[0].development = true;
 prior.releases[0].profile.features = prior.releases[0].profile.features.filter((f) => f.id !== 24);
 assert.equal(importCosts(prior).releases[0].profile.features.length, 23);

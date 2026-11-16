@@ -23,10 +23,11 @@
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
 // Knob cards port options_guide.py: 270-degree arcs and the same LED ladder.
-import { effectiveScales, PULSE_NAMES } from './scales.js?v=716413d94d04fbd8';
-import { defaults, equal, encodeProfile } from './profile.js?v=716413d94d04fbd8';
-import { RELEASE_GUIDES, RELEASE_GUIDE_TAG } from './release_guides.js?v=716413d94d04fbd8';
-import { placeable, bankWarning } from './layout.js?v=716413d94d04fbd8';
+import { effectiveScales, PULSE_NAMES } from './scales.js?v=1320ba67bbecbc47';
+import { defaults, equal, encodeProfile, pageLeds, PAGE_LEDS } from './profile.js?v=1320ba67bbecbc47';
+import { pageLedName, usedPages } from './layout.js?v=1320ba67bbecbc47';
+import { RELEASE_GUIDES } from './release_guides.js?v=1320ba67bbecbc47';
+import { placeable, bankWarning } from './layout.js?v=1320ba67bbecbc47';
 
 const KNOBS = ['FEEDBACK', 'DRY/WET', 'REVERB'];
 export const ACTIONS = ['None', '[A]+SEED', '[A]+FREEZE', '[A] hold'];
@@ -124,12 +125,23 @@ class Drawing {
   }
 }
 
+// Beta 2 keeps its four-page wording; seven-page releases list each cue and this profile's order.
+function pageSteps(entries, profile) {
+  if (pageLeds(profile).length === PAGE_LEDS[0].length) {
+    return ['Change page: tap [M]; empty pages skip. LEDs: FEEDBACK, DRY/WET, REVERB, then all three.'];
+  }
+  return ['Change page: tap [M]; empty pages skip. LEDs: pages 1-3 FEEDBACK, DRY/WET, REVERB; 4 FEEDBACK+DRY/WET; ' +
+    '5 FEEDBACK+REVERB; 6 DRY/WET+REVERB; 7 all three.',
+  `This profile's pages: ${usedPages(entries, profile).join(' → ')}, then back to the first.`];
+}
+
 export function guide(entries, release, fp, mobile = false, scales = null) {
-  if (scales === null && release.tag === RELEASE_GUIDE_TAG && equal(encodeProfile(entries, release.profile, scales),
+  const drawings = RELEASE_GUIDES.get(release.tag);
+  if (scales === null && drawings && equal(encodeProfile(entries, release.profile, scales),
       encodeProfile(defaults(release.profile), release.profile))) {
     // Normalisation removes this added fingerprint text; the remaining SVG
     // is byte-identical to options_guide.py's release drawing.
-    const reference = RELEASE_GUIDES[Number(mobile)];
+    const reference = drawings[Number(mobile)];
     const height = Number(reference.match(/viewBox="0 0 \d+ ([\d.]+)"/)[1]);
     return reference.replace('</g>\n</svg>',
         `<text data-profile-fingerprint="true" x="${mobile ? 22 : 35}" y="${height - 8}" font-size="12">Profile ${escape(fp)}</text>\n</g>\n</svg>`);
@@ -147,24 +159,24 @@ export function guide(entries, release, fp, mobile = false, scales = null) {
   let y = 90;
   for (const line of (entries.some((e) => e[3]) ? [
     'Open: hold [M] 3 seconds; all three mix LEDs pulse. Release.',
-    'Change page: tap [M]; empty pages skip. LEDs: FEEDBACK, DRY/WET, REVERB, then all three.',
+    ...pageSteps(entries, release.profile),
     '[A] shows stored values. Turn knobs to change; changes save automatically.',
     `Close: hold [M] 3 seconds or press another button${idle ? `, or leave all buttons and knobs for ${feature(idle).values[idle[2]]}` : ''}; release before normal use. On the Pitch scale page with Scale selected, tap SEED to step.`,
     'Move knobs more than a tenth of their travel to engage. Wait before powering off.'
   ] : ['This profile has no options pages. Hold [M] does nothing.'])) y = d.lines(margin, y, line, mobile ? 43 : 140) + 3;
-  // Share the release's to-scale control sketch and LED legend.
-  const reference = RELEASE_GUIDES[0];
+  // Share the release's (or the newest release's) to-scale control sketch and LED legend.
+  const reference = (drawings || [...RELEASE_GUIDES.values()].at(-1))[0];
   const panelStart = reference.indexOf('<text x="405" y="20"');
   const panelEnd = reference.indexOf('<text x="780" y="70"');
   if (panelStart >= 0 && panelEnd > panelStart) {
     d.items.push(`<g transform="translate(${margin} ${y}) scale(${mobile ? 0.85 : 1}) translate(-405 -20)">${reference.slice(panelStart, panelEnd)}</g>`);
     y += 285;
   }
-  for (let page = 1; page <= 4; ++page) {
+  for (let page = 1; page <= pageLeds(release.profile).length; ++page) {
     const placed = entries.filter((e) => e[3] && Math.ceil(e[3] / 3) === page);
     if (!placed.length) continue;
     y += 20;
-    d.text(margin, y, `PAGE ${page} — ${page === 4 ? 'all three LEDs' : KNOBS[page - 1] + ' LED'} pulsing`, 20, 'bold');
+    d.text(margin, y, `PAGE ${page} — ${pageLedName(release.profile, page)} pulsing`, 20, 'bold');
     y += 34;
     if (mobile) {
       for (const e of placed) y += d.card(margin, y, width - margin * 2,

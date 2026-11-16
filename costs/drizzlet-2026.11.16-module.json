@@ -1,0 +1,578 @@
+{
+  "format": 1,
+  "measured_on": "Beads module",
+  "features": [
+    {
+      "id": 10,
+      "name": "Random pitch steps",
+      "values": [
+        "Free (Stock)",
+        "Fifths and octaves",
+        "Recent notes"
+      ],
+      "provenance": [
+        {
+          "image": "beta3-qual-12180c6",
+          "run": "run-fu-1",
+          "report": "session-2026-11-11/beta3/followup/run-fu-1/run/followup/report.json"
+        }
+      ],
+      "cpu": {
+        "kind": "measured",
+        "source": "Free and Fifths: the Beta 2 cost table (module-calibrated development board); Recent notes: Beads module DWT, image beta3-qual-12180c6, run-fu-1 (session-2026-11-11/beta3/followup/run-fu-1/run/followup/report.json)",
+        "engines": {
+          "synth": {
+            "off": 0,
+            "fixed": [
+              0,
+              0.013,
+              0.013
+            ],
+            "adjustable": [
+              0.013,
+              0.013,
+              0.013
+            ],
+            "measured_values": [
+              0,
+              1
+            ]
+          },
+          "granular": {
+            "off": 0,
+            "fixed": [
+              0,
+              0.066,
+              0.071
+            ],
+            "adjustable": [
+              0.071,
+              0.071,
+              0.071
+            ],
+            "measured_values": [
+              0,
+              1,
+              2
+            ]
+          }
+        },
+        "uncertainty": {
+          "points": 0.22
+        },
+        "note": "synth value=1: worst-case +16 cycles; largest scenario median +15 (synth b2-wavetable-clouds-size: random intervals), peak up to +139, 2 scenarios; granular value=1: worst-case +78 cycles; largest scenario median +78 (q3 stress32: random intervals), peak up to +183, 8 scenarios; granular value=2: 140 s panel captures of a light granular patch (callback about 27%), Recent notes drawing (PITCH attenurandomizer CCW) against following (CW): callback mean +85, maximum -264 cycles, one capture each, so within noise; recorded as the mean, and the uncertainty covers the maximum difference; synth value=2: not measured; the synth keeps no notes and takes the Free offset, so the measured Fifths cost bounds it"
+      }
+    },
+    {
+      "id": 23,
+      "name": "TIME modulation",
+      "values": [
+        "Random",
+        "Scan"
+      ],
+      "provenance": [
+        {
+          "image": "beta3-qual-12180c6",
+          "run": "run-beta3-2",
+          "report": "session-2026-11-11/beta3/module-plan/run-beta3-2/run/dwt/report.json"
+        }
+      ],
+      "cpu": {
+        "kind": "measured",
+        "source": "Beads module DWT cycle counts, image beta3-qual-12180c6, run-beta3-2 (session-2026-11-11/beta3/module-plan/run-beta3-2/run/dwt/report.json)",
+        "engines": {
+          "granular": {
+            "off": 0,
+            "fixed": [
+              0,
+              0.569
+            ],
+            "adjustable": [
+              0.569,
+              0.569
+            ],
+            "measured_values": [
+              0,
+              1
+            ]
+          }
+        },
+        "uncertainty": {
+          "points": 0.14
+        },
+        "note": "granular value=1: q3 stereo stress32 fixture, callback minus fixture mean +683, maximum +390 cycles (the two Off rows differ by 83 cycles in mean, 478 in maximum; the uncertainty is twice the mean difference); synth: 0 by construction (TIME scan is in Processor::Process only)"
+      }
+    },
+    {
+      "id": 25,
+      "name": "Options page idle timeout",
+      "values": [
+        "Off (stay open)",
+        "5 s",
+        "10 s",
+        "20 s",
+        "30 s"
+      ],
+      "provenance": [
+        {
+          "inspected": "fab20b14d632d28f7f289cce98834bfa06f40075"
+        }
+      ],
+      "cpu": {
+        "kind": "zero",
+        "source": "no per-block work (code inspection)",
+        "engines": {
+          "synth": {
+            "off": 0,
+            "fixed": [
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "adjustable": [
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          },
+          "granular": {
+            "off": 0,
+            "fixed": [
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "adjustable": [
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          }
+        },
+        "uncertainty": {
+          "points": 0
+        },
+        "note": "options-page timer only; not a release measurement"
+      }
+    },
+    {
+      "id": 26,
+      "name": "Delay SEED latch fade",
+      "values": [
+        "Switch at once (stock)",
+        "Fade"
+      ],
+      "provenance": [
+        {
+          "image": "beta3-qual-12180c6",
+          "run": "run-beta3-2",
+          "report": "session-2026-11-11/beta3/module-plan/run-beta3-2/run/dwt/report.json"
+        }
+      ],
+      "cpu": {
+        "kind": "measured",
+        "source": "Beads module DWT cycle counts, image beta3-qual-12180c6, run-beta3-2 (session-2026-11-11/beta3/module-plan/run-beta3-2/run/dwt/report.json)",
+        "engines": {
+          "granular": {
+            "off": 0,
+            "fixed": [
+              0,
+              0
+            ],
+            "adjustable": [
+              0,
+              0
+            ],
+            "measured_values": [
+              0,
+              1
+            ]
+          }
+        },
+        "uncertainty": {
+          "points": 0.14
+        },
+        "note": "granular value=1: q3 stereo stress32 fixture, callback minus fixture mean -75, maximum -146 cycles: within noise (the two Off rows differ by 83 cycles in mean, 478 in maximum; the uncertainty is twice the mean difference), recorded as 0; armed without delay: the fade runs only in delay mode, which Beta 2 counts put well below the granular worst case; synth: 0 by construction (the delay is granular only)"
+      }
+    },
+    {
+      "id": 27,
+      "name": "Input gain at power-on",
+      "values": [
+        "Automatic (stock)",
+        "Manual"
+      ],
+      "provenance": [
+        {
+          "inspected": "fab20b14d632d28f7f289cce98834bfa06f40075"
+        }
+      ],
+      "cpu": {
+        "kind": "zero",
+        "source": "no per-block work (code inspection)",
+        "engines": {
+          "synth": {
+            "off": 0,
+            "fixed": [
+              0,
+              0
+            ],
+            "adjustable": [
+              0,
+              0
+            ]
+          },
+          "granular": {
+            "off": 0,
+            "fixed": [
+              0,
+              0
+            ],
+            "adjustable": [
+              0,
+              0
+            ]
+          }
+        },
+        "uncertainty": {
+          "points": 0
+        },
+        "note": "power-on gain default only; not a release measurement"
+      }
+    },
+    {
+      "id": 28,
+      "name": "Attack sensitivity",
+      "values": [
+        "Normal (default)",
+        "Low",
+        "High"
+      ],
+      "provenance": [
+        {
+          "image": "beta3-qual-12180c6",
+          "run": "run-beta3-2",
+          "report": "session-2026-11-11/beta3/module-plan/run-beta3-2/run/dwt/report.json"
+        }
+      ],
+      "cpu": {
+        "kind": "measured",
+        "source": "Beads module DWT cycle counts, image beta3-qual-12180c6, run-beta3-2 (session-2026-11-11/beta3/module-plan/run-beta3-2/run/dwt/report.json)",
+        "engines": {
+          "granular": {
+            "off": 0,
+            "fixed": [
+              0,
+              0.079,
+              0.079
+            ],
+            "adjustable": [
+              0.079,
+              0.079,
+              0.079
+            ],
+            "measured_values": [
+              0,
+              2
+            ]
+          }
+        },
+        "uncertainty": {
+          "points": 0.14
+        },
+        "note": "granular value=2 (High): q3 stereo stress32 fixture, callback minus fixture mean +95, maximum -30 cycles: within noise (the two Off rows differ by 83 cycles in mean, 478 in maximum; the uncertainty is twice the mean difference), recorded as the mean; Low is the same comparison with another threshold, so it takes the same cost; more detected onsets can start more grains, which this count does not cover; synth: 0 by construction (attack detection runs only outside synth mode)"
+      }
+    },
+    {
+      "id": 29,
+      "name": "SEED at power-on",
+      "values": [
+        "Latched (stock)",
+        "Unlatched"
+      ],
+      "provenance": [
+        {
+          "inspected": "fab20b14d632d28f7f289cce98834bfa06f40075"
+        }
+      ],
+      "cpu": {
+        "kind": "zero",
+        "source": "no per-block work (code inspection)",
+        "engines": {
+          "synth": {
+            "off": 0,
+            "fixed": [
+              0,
+              0
+            ],
+            "adjustable": [
+              0,
+              0
+            ]
+          },
+          "granular": {
+            "off": 0,
+            "fixed": [
+              0,
+              0
+            ],
+            "adjustable": [
+              0,
+              0
+            ]
+          }
+        },
+        "uncertainty": {
+          "points": 0
+        },
+        "note": "power-on SEED latch state only; not a release measurement"
+      }
+    },
+    {
+      "id": 30,
+      "name": "PITCH knob",
+      "values": [
+        "Notches (stock)",
+        "Smooth"
+      ],
+      "provenance": [
+        {
+          "image": "beta3-qual-12180c6",
+          "run": "run-beta3-2",
+          "report": "session-2026-11-11/beta3/module-plan/run-beta3-2/run/dwt/report.json"
+        }
+      ],
+      "cpu": {
+        "kind": "measured",
+        "source": "Beads module DWT cycle counts, image beta3-qual-12180c6, run-beta3-2 (session-2026-11-11/beta3/module-plan/run-beta3-2/run/dwt/report.json)",
+        "engines": {
+          "synth": {
+            "off": 0,
+            "fixed": [
+              0,
+              0
+            ],
+            "adjustable": [
+              0,
+              0
+            ]
+          },
+          "granular": {
+            "off": 0,
+            "fixed": [
+              0,
+              0
+            ],
+            "adjustable": [
+              0,
+              0
+            ],
+            "measured_values": [
+              0,
+              1
+            ]
+          }
+        },
+        "uncertainty": {
+          "points": 0.14
+        },
+        "note": "granular value=1: q3 stereo stress32 fixture, callback minus fixture mean -174, maximum -530 cycles (the two Off rows differ by 83 cycles in mean, 478 in maximum; the uncertainty is twice the mean difference); recorded as 0, since the smooth law only skips one SmoothStep per block; synth: not measured; the PITCH knob is read in the callback ahead of either engine, so the same 0 applies"
+      }
+    },
+    {
+      "id": 31,
+      "name": "Plaits bank",
+      "values": [
+        "Green",
+        "Red",
+        "Yellow"
+      ],
+      "provenance": [
+        {
+          "inspected": "fab20b14d632d28f7f289cce98834bfa06f40075"
+        }
+      ],
+      "cpu": {
+        "kind": "zero",
+        "source": "no per-block work (code inspection)",
+        "engines": {
+          "synth": {
+            "off": 0,
+            "fixed": [
+              0,
+              0,
+              0
+            ],
+            "adjustable": [
+              0,
+              0,
+              0
+            ]
+          },
+          "granular": {
+            "off": 0,
+            "fixed": [
+              0,
+              0,
+              0
+            ],
+            "adjustable": [
+              0,
+              0,
+              0
+            ]
+          }
+        },
+        "uncertainty": {
+          "points": 0
+        },
+        "note": "starting bank only: every bank stays reachable on [A]+FREEZE, so it adds no DSP; not a release measurement"
+      }
+    },
+    {
+      "id": 32,
+      "name": "Mix law",
+      "values": [
+        "Stock",
+        "Gentle"
+      ],
+      "provenance": [
+        {
+          "image": "beta3-qual-12180c6",
+          "run": "run-beta3-2",
+          "report": "session-2026-11-11/beta3/module-plan/run-beta3-2/run/dwt/report.json"
+        }
+      ],
+      "cpu": {
+        "kind": "measured",
+        "source": "Beads module DWT cycle counts, image beta3-qual-12180c6, run-beta3-2 (session-2026-11-11/beta3/module-plan/run-beta3-2/run/dwt/report.json)",
+        "engines": {
+          "granular": {
+            "off": 0,
+            "fixed": [
+              0,
+              0.401
+            ],
+            "adjustable": [
+              0.401,
+              0.401
+            ],
+            "measured_values": [
+              0,
+              1
+            ]
+          }
+        },
+        "uncertainty": {
+          "points": 0.14
+        },
+        "note": "granular value=1: q3 stereo stress32 fixture, callback minus fixture mean +482, maximum +148 cycles (the two Off rows differ by 83 cycles in mean, 478 in maximum; the uncertainty is twice the mean difference); larger than the +85 emulator instructions counted at b446452; synth: 0 by construction (the synths keep their own DRY/WET)"
+      }
+    },
+    {
+      "id": 33,
+      "name": "Reverb input",
+      "values": [
+        "Mix (stock)",
+        "Grains"
+      ],
+      "provenance": [
+        {
+          "image": "beta3-qual-12180c6",
+          "run": "run-beta3-2",
+          "report": "session-2026-11-11/beta3/module-plan/run-beta3-2/run/dwt/report.json"
+        }
+      ],
+      "cpu": {
+        "kind": "measured",
+        "source": "Beads module DWT cycle counts, image beta3-qual-12180c6, run-beta3-2 (session-2026-11-11/beta3/module-plan/run-beta3-2/run/dwt/report.json)",
+        "engines": {
+          "granular": {
+            "off": 0,
+            "fixed": [
+              0,
+              0.307
+            ],
+            "adjustable": [
+              0.307,
+              0.307
+            ],
+            "measured_values": [
+              0,
+              1
+            ]
+          }
+        },
+        "uncertainty": {
+          "points": 0.14
+        },
+        "note": "granular value=1: q3 stereo stress32 fixture, callback minus fixture mean +369, maximum +362 cycles (the two Off rows differ by 83 cycles in mean, 478 in maximum; the uncertainty is twice the mean difference); larger than the +92 to +94 emulator instructions counted at b446452; synth: 0 by construction (the synths keep the stock routing)"
+      }
+    }
+  ],
+  "limits": {
+    "block_cycles": 120000,
+    "provenance": [
+      {
+        "image": "drizzlet-cpu-ceiling-b92c048",
+        "run": "run-ceil-3",
+        "report": "session-2026-11-11/cpu-ceiling/run-ceil-3/RESULTS.md"
+      }
+    ],
+    "rates": [
+      {
+        "khz": 48,
+        "qualities": [
+          "Bright digital",
+          "Sunny tape"
+        ],
+        "clean_cycles": 108908,
+        "first_late_cycles": 109504
+      },
+      {
+        "khz": 32,
+        "qualities": [
+          "Cold digital"
+        ],
+        "clean_cycles": 103935,
+        "first_late_cycles": 104520
+      },
+      {
+        "khz": 24,
+        "qualities": [
+          "Scorched cassette"
+        ],
+        "clean_cycles": 99182,
+        "first_late_cycles": 99762
+      }
+    ],
+    "ceiling_khz": 48,
+    "heavy": [
+      {
+        "quality": "Bright digital",
+        "peak_cycles": 98625
+      },
+      {
+        "quality": "Sunny tape",
+        "peak_cycles": 75598
+      },
+      {
+        "quality": "Cold digital",
+        "peak_cycles": 77679
+      },
+      {
+        "quality": "Scorched cassette",
+        "peak_cycles": 61116
+      }
+    ],
+    "note": "Audio-callback peak cycles of a 120000-cycle block. Clean is the highest load with the first left-channel word on time, each edge repeated twice; the synths run at 48 kHz. Heavy rows are one heavy granular patch per quality on a Beta 3 test build before the final layout: reference only."
+  }
+}
