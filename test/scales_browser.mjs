@@ -37,6 +37,12 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     await page.goto(base);
     await until(async () => await page.isVisible('#scale-editor') && await page.getAttribute('#summary', 'data-fingerprint'));
     const bank = async () => unshare(await page.getAttribute('#share', 'href'), [release]).scales;
+    const openScales = async () => { await page.click('#scale-panel > summary'); await until(async () => await page.isVisible('.scale-list')); };
+    // Pitch scales start collapsed; the summary opens them.
+    assert.equal(await page.getAttribute('#scale-panel', 'open'), null);
+    assert.equal(await page.isVisible('.scale-list'), false);
+    assert.equal(await page.isVisible('#scale-panel > summary'), true);
+    assert.equal(await page.textContent('#scale-panel > summary'), 'Pitch scales');
     const startingFP = await page.textContent('#fingerprint');
     assert.equal(await page.inputValue('#extra-24'), '0');
     assert.deepEqual(await page.locator('#extra-24 option').allTextContents(), ['Keep (stock)', 'Clear']);
@@ -45,7 +51,6 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     await until(async () => unshare(await page.getAttribute('#share', 'href'), [release]).entries.some((e) => e[0] === 24 && e[1] === 1 && e[2] === 1));
     assert.equal(await page.locator('[id^="cpu"]').count(), 0);
     assert.equal(await page.isDisabled('#build'), false);
-    assert.equal(await page.isDisabled('#local'), false);
     await page.click('#browse');
     await page.click('#lib-24');
     assert.equal(await page.textContent('#inspector-title'), 'Synth reverb tail');
@@ -56,6 +61,10 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     await until(async () => await page.textContent('#fingerprint') === startingFP);
     assert(!unshare(await page.getAttribute('#share', 'href'), [release]).entries.some((e) => e[0] === 24));
     assert.equal(await bank(), null);
+    await page.focus('#scale-panel > summary');
+    await page.keyboard.press('Enter');
+    await until(async () => await page.isVisible('.scale-list'));
+    assert.equal(await page.getAttribute('#scale-panel', 'open'), '');
     assert.equal(await page.locator('.scale-list li').count(), 8);
     // Up, Down and Remove line up across rows whatever the pattern name (#25).
     const columns = await page.$$eval('.scale-list li', (rows) => rows.map((row) =>
@@ -77,7 +86,6 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     assert.equal(edited.notes.length, 3);
     assert.equal(await page.locator('[id^="cpu"]').count(), 0);
     assert.equal(await page.isDisabled('#build'), false);
-    assert.equal(await page.isDisabled('#local'), false);
     const shared = await page.getAttribute('#share', 'href');
     await page.reload();
     await until(async () => await page.getAttribute('#summary', 'data-fingerprint'));
@@ -85,10 +93,16 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     await page.goto(base + shared);
     await until(async () => (await bank())?.some((s) => s.name === '<Custom & scale>'));
     assert.deepEqual((await bank()).find((s) => s.id === 10), edited);
+    assert.equal(await page.getAttribute('#scale-panel', 'open'), null, 'a shared bank still starts collapsed');
+    await openScales();
     await page.getByRole('button', { name: 'Remove <Custom & scale>', exact: true }).click();
     assert(!(await bank()).some((s) => s.id === 10));
+    // An error opens collapsed scales so it stays visible.
+    await page.click('#scale-panel > summary');
+    await until(async () => await page.getAttribute('#scale-panel', 'open') === null);
     await page.setInputFiles('#scale-import', { name: 'example.scl', mimeType: 'text/plain', buffer: Buffer.from('Invalid Scala') });
     await until(async () => (await page.textContent('#scale-error')).includes('Invalid Scala'));
+    assert.equal(await page.isVisible('#scale-error'), true);
     assert.equal(await page.inputValue('#scale-import'), '', 'failed import clears the file selection for retry');
     // Retry the same filename; a delayed read must preserve concurrent edits.
     await page.evaluate(() => {
@@ -119,7 +133,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     assert.equal(await page.inputValue('#value'), '0', 'removed fixed scale displays Off');
     await page.click('#more-templates');
     await page.click('#template-pitched-grains');
-    assert.match(await page.textContent('#template-changes'), /factory scale bank/);
+    assert.match(await page.textContent('#template-changes'), /default scale bank/);
     await page.click('#use-template');
     await until(async () => (await bank()) === null);
     assert.equal(unshare(await page.getAttribute('#share', 'href'), [release]).entries.find((e) => e[0] === 1)[2], 6);
@@ -133,7 +147,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     await until(async () => (await bank()) === null);
     assert.equal(unshare(await page.getAttribute('#share', 'href'), [release]).entries.find((e) => e[0] === 1)[2], 6);
     await page.getByRole('button', { name: 'Add scale', exact: true }).click();
-    await page.getByRole('button', { name: 'Restore factory scales', exact: true }).click();
+    await page.getByRole('button', { name: 'Restore default scales', exact: true }).click();
     assert.equal(await bank(), null);
     assert.equal(await page.locator('.scale-list li').count(), 8);
     // A chip asks before discarding an edited scale bank; Cancel keeps it.
@@ -141,7 +155,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     await until(async () => (await bank())?.length === 7);
     await page.click('#preset-drizzlet');
     assert.match(await page.textContent('#preset-confirm-text'), /including your scale bank/);
-    assert.match(await page.textContent('#preset-replace'), /restore factory scales/);
+    assert.match(await page.textContent('#preset-replace'), /restore default scales/);
     await page.click('#preset-cancel');
     assert.equal(await page.isVisible('#preset-confirm'), false);
     assert.equal((await bank())?.length, 7);

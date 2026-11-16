@@ -22,7 +22,7 @@
 //
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
-import { effectiveScales, importScala, MAX_SCALES, PULSE_NAMES, validateScales } from './scales.js?v=215337228bd83bb1';
+import { effectiveScales, importScala, MAX_SCALES, PULSE_NAMES, validateScales } from './scales.js?v=1320ba67bbecbc47';
 
 const node = (tag, text = '') => {
   const value = document.createElement(tag);
@@ -40,8 +40,11 @@ const cents = (value) => String(Number((value * 100).toFixed(4)));
 
 export function scaleEditor(root, { get, set, error, releaseKey }) {
   let chosen = null;
+  const panel = root.querySelector('details');
+  const body = panel.querySelector('.inner');
   const report = (message) => {
     error(message);
+    panel.open = true;
     const local = root.querySelector('#scale-error');
     if (local) local.textContent = message;
   };
@@ -57,8 +60,8 @@ export function scaleEditor(root, { get, set, error, releaseKey }) {
     const bank = effectiveScales(scales);
     if (!bank.some((s) => s.id === chosen)) chosen = bank[0]?.id ?? null;
     const head = node('div'); head.className = 'section-head';
-    head.append(node('h2', 'Pitch scales'), button('Restore factory scales', () => { chosen = null; apply(null, 'Factory scales restored.'); }));
-    const about = node('p', 'Choose the scales available in the Scale position, in SEED-tap order. Off and Chromatic remain separate knob choices.');
+    head.append(node('p', 'Choose the scales available in the Scale position, in SEED-tap order. Off and Chromatic remain separate knob choices.'),
+      button('Restore default scales', () => { chosen = null; apply(null, 'Default scales restored.'); }));
     const list = node('ol'); list.className = 'scale-list';
     bank.forEach((scale, index) => {
       const row = node('li');
@@ -111,9 +114,9 @@ export function scaleEditor(root, { get, set, error, releaseKey }) {
     actions.append(add, importLabel);
     const note = node('p', 'Up to 14 scales, each with 1–24 notes. Notes and repeat are in cents; 1,200 cents is an octave. Removing a selected scale falls back to Off.'); note.className = 'note';
     const problem = node('p'); problem.id = 'scale-error'; problem.className = 'error'; problem.setAttribute('role', 'alert');
-    root.replaceChildren(head, about, list, actions, note, problem);
+    body.replaceChildren(head, list, actions, note, problem);
     const scale = bank.find((s) => s.id === chosen);
-    if (!scale) { root.append(node('p', 'No scales in the cycle. Add one or restore the factory set.')); return; }
+    if (!scale) { body.append(node('p', 'No scales in the cycle. Add one or restore the default set.')); return; }
     const form = node('form'); form.id = 'scale-form'; form.className = 'scale-form';
     const field = (label, name, value, type = 'text') => {
       const wrap = node('label', label);
@@ -141,6 +144,6 @@ export function scaleEditor(root, { get, set, error, releaseKey }) {
         notes: tokens.map(number), color: [1, 3, 5].map((i) => parseInt(color.value.slice(i, i + 2), 16)), pulses: Number(pulses.value) };
       apply(bank.map((s) => s.id === scale.id ? updated : s), `${updated.name} updated.`);
     };
-    root.append(form);
+    body.append(form);
   };
 }
