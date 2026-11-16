@@ -10,6 +10,7 @@ const base = process.env.BASE || 'http://127.0.0.1:8080/';
 const site = process.env.SITE || '/site';
 const until = async (test) => { for (let i = 0; i < 100; ++i) { if (await test()) return; await new Promise((done) => setTimeout(done, 100)); } throw new Error('Timed out waiting for editor.'); };
 const published = JSON.parse(readFileSync(`${site}/manifest.json`));
+published.releases = published.releases.filter((r) => r.slug === 'beta-2-fog'); // Beta 2's four pages.
 // The synthetic release is listed after Beta 2, so it opens first.
 const seven = structuredClone(published);
 const synthetic = structuredClone(published.releases[0]);
@@ -83,6 +84,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
         assert.match(await page.textContent('#status'), /Pages compacted: 6 → 5\./);
         // Phone tabs wrap around all seven pages.
         await page.setViewportSize({ width: 390, height: 900 });
+        assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'seven tabs fit a phone');
         await page.click('#tab-7');
         await page.keyboard.press('ArrowRight');
         assert.equal(await page.evaluate(() => document.activeElement.id), 'tab-1');

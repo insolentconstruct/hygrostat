@@ -42,6 +42,7 @@ const files = (json, at = path) => (p) => {
 // A development entry built from Beta 2 plus the fixtures, with costs cleared so the import must fill them.
 const development = (refs = [{ path }]) => {
   const m = structuredClone(manifest);
+  m.releases.splice(1); // Beta 2 only.
   const r = m.releases[0];
   Object.assign(r, { tag: 'drizzlet-dev-beta3-costs', development: true, source_commit: '0'.repeat(40) });
   r.profile.features = [...r.profile.features.filter((f) => !replaced.some((g) => g.id === f.id)),
@@ -67,6 +68,11 @@ assert.match(release.cpu.release_note, /measured on the Beads module, each namin
 assert.equal(createHash('sha256').update(tableBytes).digest('hex'), tableSha256);
 assert.equal(JSON.stringify(costTable), historical, 'the historical table is never rewritten');
 checkReleaseCosts(release, files(source));
+// Beta 3's committed source is exactly this file.
+for (const candidate of manifest.releases.filter((r) => r.cpu.costs.module_sources)) {
+  const [pinned] = candidate.cpu.costs.module_sources;
+  assert.deepEqual(readFileSync(new URL(`../${pinned.path}`, import.meta.url)), files(source, pinned.path)(pinned.path));
+}
 
 // Module CPU limits: the 48 kHz clean edge is the ceiling; other rates and heavy peaks are measured reference.
 assert.deepEqual([release.cpu.ceiling, release.cpu.warning, release.cpu.ceiling_kind], [90.8, 90.8, 'measured']);
@@ -79,7 +85,7 @@ assert.deepEqual(release.cpu.limits.heavy.map((h) => [h.quality, h.khz, h.peak.p
 assert.deepEqual(release.cpu.limits.provenance, source.limits.provenance);
 assert.equal(release.cpu.limits.measured_on, 'Beads module');
 assert.match(release.cpu.release_note, /clean edge measured on the Beads module at 48 kHz, 90\.8% of the block/);
-assert.deepEqual([beta2.cpu.ceiling, beta2.cpu.limits], [92, undefined], 'Beta 2 keeps its historical policy');
+assert.deepEqual([beta2.cpu.ceiling, beta2.cpu.warning, beta2.cpu.limits], [90.8, 90.8, undefined], 'Beta 2 stores the module edge');
 for (const change of [(r) => { r.cpu.ceiling = 92; }, (r) => { r.cpu.warning = 91; }, (r) => { delete r.cpu.limits; }]) {
   const moved = structuredClone(release); change(moved);
   assert.throws(() => checkReleaseCosts(moved, files(source)));
