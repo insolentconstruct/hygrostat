@@ -134,16 +134,17 @@ for (const engine of engines) {
   maxima.push(`${engine} ${estimate.toFixed(1)}% (delta ${maximum.toFixed(3)} points)`);
   const result = cpuUsage(entries, release).engines.find((e) => e.engine === engine);
   assert.equal(result.percent, estimate);
-  assert.equal(result.warning, estimate >= 91);
-  assert.equal(result.blocked, estimate > 92);
-  for (const percent of [90, 91, 91.5, 92, 92.5]) {
+  const { warning: warnAt, ceiling } = release.cpu;
+  assert.equal(result.warning, estimate >= warnAt);
+  assert.equal(result.blocked, estimate > ceiling);
+  for (const percent of [warnAt - 1, warnAt, (warnAt + ceiling) / 2, ceiling, ceiling + 0.5].map(round)) {
     const measured = structuredClone(release);
     measured.cpu.combinations = [{ profile: profileKey(entries, profile), synth: percent, granular: percent }];
     const usage = cpuUsage(entries, measured);
     assert.equal(usage.percent, percent);
     assert.equal(usage.kind, 'measured');
-    assert.equal(usage.warning, percent >= 91);
-    assert.equal(usage.blocked, percent > 92);
+    assert.equal(usage.warning, percent >= warnAt);
+    assert.equal(usage.blocked, percent > ceiling);
     assert(usage.engines.every((e) => e.measured && e.percent === percent));
     // Exercise an override below a higher estimate on either engine.
     measured.cpu.baselines[engine].percent = 99;

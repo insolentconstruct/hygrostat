@@ -65,8 +65,8 @@ Any future estimator needs separately qualified workloads and policy.
 - Baselines are worst-case module measurements: synth 83.4% (with Clouds-style reverb, measured on the codec-fix Beta 2 timing build), granular 83.0% (an October build, before profiles). Each feature adds its cost minus its default's cost, so moving a control between slots doesn't change the estimate.
 - Per-feature costs on the development board predict module changes within about half a point on the granular engine; setting combinations still need module measurement.
 - Exact module measurements of a complete profile (`cpu.combinations[].profile`, hex) take precedence over estimates.
-- The historical helper rounds each engine to 0.1%, warns from 91% and marks values above the provisional 92% policy as blocked. This policy was not a measured failure threshold. These results no longer control the page or its downloads.
-- Measured on a module since, the clean edge at 48 kHz is 90.8% of the block, with the first late load at 91.3%: the 92% policy is above the module's limit. Beta 2's entry keeps it as history; from Beta 3 the module limits below replace it.
+- The historical helper rounds each engine to 0.1%, warns from the release's `cpu.warning` and marks values above its `cpu.ceiling` as blocked. These results no longer control the page or its downloads.
+- Beta 2 first stored a provisional 92% policy (warning 91%), which was not a measured failure threshold. Measured on a module since, the clean edge at 48 kHz is 90.8% of the block, with the first late load at 91.3%, so Beta 2 now stores 90.8% for both. The audio driver is unchanged from Beta 2 to the measured Beta 3 test build. From Beta 3 the module limits below set them.
 
 ### Module-measured costs
 

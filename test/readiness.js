@@ -127,6 +127,7 @@ const measuredCosts = (r) => {
   delete fixture.cpu.default_measured;
   delete fixture.cpu.estimated_default_delta;
   fixture.cpu.baselines.synth.percent = 87.2; // Former synth baseline these thresholds were set against.
+  Object.assign(fixture.cpu, { warning: 91, ceiling: 92 }); // Synthetic thresholds for the synthetic costs.
   const costs = JSON.parse(readFileSync(new URL('fixtures/synthetic-costs.json', import.meta.url)));
   for (const f of fixture.profile.features) f.cpu = costs[f.id];
   return fixture;

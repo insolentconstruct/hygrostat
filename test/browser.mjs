@@ -583,13 +583,13 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     measured.cpu.combinations = [{ profile: profileKey(chosen, release.profile), synth: 90.4, granular: 89 }];
     const measuredRoute = (route) => route.fulfill({ json: measuredManifest });
     await context.route(manifestURL, measuredRoute);
-    for (const percent of [90.4, 92, 92.1]) {
+    for (const percent of [90.4, measured.cpu.ceiling, Math.round(measured.cpu.ceiling * 10 + 1) / 10]) {
       phase = `measured CPU fixture ${percent}`;
       measured.cpu.combinations[0].synth = percent;
       await page.evaluate((hash) => history.replaceState(null, '', hash), '#' + share(release, customBlock));
       await page.reload();
       await waitFingerprint(customFP);
-      assert.equal(cpuUsage(chosen, measured).blocked, percent > 92, 'fixture exercises the historical threshold');
+      assert.equal(cpuUsage(chosen, measured).blocked, percent > measured.cpu.ceiling, 'fixture exercises the stored threshold');
       await noCPU();
       assert.equal(await page.isDisabled('#build'), false);
       assert.equal(await page.isDisabled('#local'), false);

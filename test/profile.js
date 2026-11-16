@@ -161,13 +161,15 @@ const withMeasuredCosts = (r) => {
 };
 {
   const release = withMeasuredCosts(manifest.releases[0]);
-  for (const [percent, warning, blocked] of [[90.94, false, false], [90.99, true, false], [92.04, true, false], [92.06, true, true]]) {
+  const { warning: warnAt, ceiling } = release.cpu;
+  for (const [percent, warning, blocked] of [[warnAt - 0.06, false, false], [warnAt - 0.01, true, false],
+    [ceiling + 0.04, true, false], [ceiling + 0.06, true, true]]) {
     const r = structuredClone(release);
     for (const f of r.profile.features) for (const cpu of Object.values(f.cpu.engines)) cpu.off = 0;
     for (const baseline of Object.values(r.cpu.baselines)) baseline.percent = percent;
     const result = cpuUsage([], r); assert.equal(result.warning, warning); assert.equal(result.blocked, blocked);
   }
-  for (const [percent, blocked] of [[92, false], [92.1, true]]) {
+  for (const [percent, blocked] of [[ceiling, false], [Math.round(ceiling * 10 + 1) / 10, true]]) {
     const r = structuredClone(release); r.cpu.combinations = [{ profile: profileKey([], profile), synth: percent, granular: percent }];
     const result = cpuUsage([], r); assert.equal(result.kind, 'measured'); assert.equal(result.blocked, blocked);
   }
@@ -175,7 +177,7 @@ const withMeasuredCosts = (r) => {
     const r = structuredClone(release);
     for (const f of r.profile.features) for (const cpu of Object.values(f.cpu.engines)) cpu.off = 0;
     for (const baseline of Object.values(r.cpu.baselines)) baseline.percent = 80;
-    r.cpu.baselines[engine].percent = 92.1;
+    r.cpu.baselines[engine].percent = r.cpu.ceiling + 0.1;
     const usage = cpuUsage([], r);
     assert(usage.blocked && usage.warning, `${engine} independently gates the profile`);
     assert(usage.engines.find((e) => e.engine === engine).blocked);
@@ -201,7 +203,7 @@ const withMeasuredCosts = (r) => {
     assert(!cpuUsage(defaults(r.profile), highDefault).blocked, 'default is always allowed');
     for (const [name, candidate] of Object.entries(templates(r.profile))) {
       const result = cpuUsage(candidate, r);
-      assert.equal(result.blocked, result.kind !== 'measured' && result.engines.some((e) => e.percent > 92), name);
+      assert.equal(result.blocked, result.kind !== 'measured' && result.engines.some((e) => e.percent > r.cpu.ceiling), name);
       assert(!result.blocked, `shipped template ${name} builds or warns`);
     }
     const heavy = defaults(r.profile).map((e) => e.slice());
@@ -224,7 +226,7 @@ const withMeasuredCosts = (r) => {
   for (const f of release.profile.features) f.cpu = null;
   const chosen = defaults(profile);
   chosen.find((e) => e[0] === 2)[2] = 1;
-  for (const [percent, blocked] of [[90.4, false], [92, false], [92.1, true]]) {
+  for (const [percent, blocked] of [[90.4, false], [release.cpu.ceiling, false], [Math.round(release.cpu.ceiling * 10 + 1) / 10, true]]) {
     const r = structuredClone(release);
     r.cpu.combinations = [{ profile: profileKey(chosen, profile), synth: percent, granular: 89 }];
     const result = cpuUsage(chosen, r);

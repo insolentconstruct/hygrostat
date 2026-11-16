@@ -79,7 +79,7 @@ assert.deepEqual(release.cpu.limits.heavy.map((h) => [h.quality, h.khz, h.peak.p
 assert.deepEqual(release.cpu.limits.provenance, source.limits.provenance);
 assert.equal(release.cpu.limits.measured_on, 'Beads module');
 assert.match(release.cpu.release_note, /clean edge measured on the Beads module at 48 kHz, 90\.8% of the block/);
-assert.deepEqual([beta2.cpu.ceiling, beta2.cpu.limits], [92, undefined], 'Beta 2 keeps its historical policy');
+assert.deepEqual([beta2.cpu.ceiling, beta2.cpu.warning, beta2.cpu.limits], [90.8, 90.8, undefined], 'Beta 2 stores the module edge');
 for (const change of [(r) => { r.cpu.ceiling = 92; }, (r) => { r.cpu.warning = 91; }, (r) => { delete r.cpu.limits; }]) {
   const moved = structuredClone(release); change(moved);
   assert.throws(() => checkReleaseCosts(moved, files(source)));
