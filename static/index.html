@@ -10,7 +10,7 @@
 <meta name="description" content="Build custom Drizzlet firmware for Mutable Instruments Beads in your browser: choose features, control layout and defaults.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <title>Drizzlet Hygrostat</title>
-<script src="js/theme.js?v=9ab9aaf9d2a7a4a4"></script>
+<script src="js/theme.js?v=02b0c3dc4662ffd9"></script>
 <style>
   /* Brushed panel greys, with the module's own LED colours as the only accents. */
   :root {
@@ -467,7 +467,17 @@
           <dt>App image (SHA-256)</dt><dd id="app-hash">After building</dd>
           <dt>Update file (SHA-256)</dt><dd id="wav-hash">After building</dd>
           <dt>Release update file (SHA-256)</dt><dd id="expected-hash"></dd>
+          <dt>Combo HEX (SHA-256)</dt><dd id="combo-hex-hash">After building</dd>
+          <dt>Combo BIN (SHA-256)</dt><dd id="combo-bin-hash">After building</dd>
         </dl>
+      </section>
+      <section aria-labelledby="combo-title">
+        <h3 id="combo-title">ST-Link combo</h3>
+        <p>Bootloader and this firmware, for an ST-Link programmer instead of the WAV. Back up calibration first; see <a id="recovery" href="https://github.com/insolentconstruct/eurorack/blob/drizzlet/beads/build/docs/RECOVERY.md">recovery</a>.</p>
+        <p class="warn">Never use a full-chip or mass erase: it wipes calibration and settings.</p>
+        <p>The combo writes bank 1 only; erase just the sectors it writes. The HEX carries its address; write the BIN at 0x08000000.</p>
+        <p id="combo-status">After building</p>
+        <div id="combo-files" hidden><div class="result-actions"><a id="combo-hex" href="#">Combo HEX</a><a id="combo-bin" href="#">Combo BIN</a></div></div>
       </section>
     </div>
   </details>
@@ -517,6 +527,6 @@
   </div>
   <div id="library-body"></div>
 </dialog>
-<script type="module" src="js/app.js?v=9ab9aaf9d2a7a4a4"></script>
+<script type="module" src="js/app.js?v=02b0c3dc4662ffd9"></script>
 </body>
 </html>

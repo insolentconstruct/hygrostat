@@ -9,12 +9,18 @@ const read = (p) => readFileSync(new URL(p, root), 'utf8');
 const clean = (s) => s.replace(/\?v=[a-f0-9]+/g, '');
 const manifest = JSON.parse(read('manifest.json'));
 delete manifest.asset_version;
-for (const release of manifest.releases) release.app = clean(release.app);
+for (const release of manifest.releases) {
+  release.app = clean(release.app);
+  if (release.combo) release.combo.bootloader = clean(release.combo.bootloader);
+}
 const files = readdirSync(new URL('js/', root)).filter((p) => p.endsWith('.js')).sort();
 const version = createHash('sha256').update(JSON.stringify(manifest) +
     files.map((p) => clean(read('js/' + p))).join('')).digest('hex').slice(0, 16);
 manifest.asset_version = version;
-for (const release of manifest.releases) release.app += '?v=' + release.app_sha256;
+for (const release of manifest.releases) {
+  release.app += '?v=' + release.app_sha256;
+  if (release.combo) release.combo.bootloader += '?v=' + release.combo.bootloader_sha256;
+}
 writeFileSync(new URL('manifest.json', root), JSON.stringify(manifest, null, 2) + '\n');
 for (const file of files) {
   const source = clean(read('js/' + file)).replace(/(['"])((?:\.\/|js\/)[^'"\n]+\.js|manifest\.json)\1/g,

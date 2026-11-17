@@ -18,6 +18,7 @@ const layout = await import(pathToFileURL(resolve(site, 'js/layout.js')).href);
 const { guide } = await import(pathToFileURL(resolve(site, 'js/guide.js')).href);
 const { factoryScales } = await import(pathToFileURL(resolve(site, 'js/scales.js')).href);
 const { decode } = await import(pathToFileURL(resolve(site, 'js/decoder.js')).href);
+const { parseHex } = await import(pathToFileURL(resolve(site, 'js/combo.js')).href);
 const hashOf = (entries) => '#' + share(release, encodeProfile(entries, release.profile));
 async function checkThemes(browser) {
   const context = await browser.newContext({ colorScheme: 'dark', viewport: { width: 1280, height: 900 } });
@@ -562,6 +563,8 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
       assert.equal(await page.evaluate(() => window.appBoundary.hashes), hashes);
       assert((await page.textContent('#status')).includes(hashes ? 'does not match' : 'must be'));
       assert.equal(await page.isVisible('#result'), false);
+      assert.equal(await page.evaluate(() => document.getElementById('combo-files').hidden), true);
+      assert.equal(await page.textContent('#combo-bin-hash'), 'After building');
     }
     await page.evaluate(() => {
       crypto.subtle.digest = window.appBoundary.digest;
@@ -578,6 +581,13 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
       assert.equal(await page.textContent('#wav-hash'), release.wav_sha256);
       assert.equal(await page.textContent('#app-hash'), release.app_sha256);
       assert.equal(await page.getAttribute('#download', 'download'), `${release.tag}.wav`);
+      // ST-Link combo files: the release's names and hashes.
+      await until(async () => (await page.textContent('#combo-status')).startsWith('Ready'));
+      assert.equal(await page.evaluate(() => document.getElementById('combo-files').hidden), false);
+      assert.equal(await page.textContent('#combo-hex-hash'), release.combo.hex_sha256);
+      assert.equal(await page.textContent('#combo-bin-hash'), release.combo.bin_sha256);
+      assert.equal(await page.getAttribute('#combo-hex', 'download'), `${release.tag}-combo.hex`);
+      assert.equal(await page.getAttribute('#combo-bin', 'download'), `${release.tag}-combo.bin`);
       assert(await page.isVisible('#guide'));
       assert(await page.isVisible('#guide-mobile'));
       assert.equal(await page.evaluate(() => document.activeElement.id), 'result-title');
@@ -624,6 +634,25 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
       assert((await page.getAttribute('#download', 'download')).includes(customFP));
       assert((await page.getAttribute('#guide', 'download')).includes(customFP));
       assert((await page.getAttribute('#guide-mobile', 'download')).includes(customFP));
+      // The custom combo: the pinned bootloader then the downloaded firmware, with its hashes shown.
+      await until(async () => (await page.textContent('#combo-status')).startsWith('Ready'));
+      await page.click('#advanced > summary');
+      const combo = {};
+      for (const kind of ['bin', 'hex']) {
+        assert.equal(await page.getAttribute(`#combo-${kind}`, 'download'), `${release.tag}-${customFP}-combo.${kind}`);
+        const file = page.waitForEvent('download');
+        await page.click(`#combo-${kind}`);
+        const parts = [];
+        for await (const chunk of await (await file).createReadStream()) parts.push(chunk);
+        combo[kind] = Buffer.concat(parts);
+        assert.equal(await page.textContent(`#combo-${kind}-hash`), createHash('sha256').update(combo[kind]).digest('hex'));
+      }
+      const bootloader = readFileSync(`${site}/${release.combo.bootloader.split('?')[0]}`);
+      assert(combo.bin.equals(Buffer.concat([bootloader, customApp])), 'combo .bin is the bootloader then the custom app');
+      const parsed = parseHex(combo.hex.toString('latin1'));
+      assert.equal(parsed.address, 0x08000000);
+      assert(Buffer.from(parsed.bytes).equals(combo.bin), 'combo .hex programs the combo .bin');
+      await page.click('#advanced > summary');
       await noCPU();
     }
     phase = 'phone layout';

@@ -57,6 +57,7 @@ jobs:
           node test/module_costs.js
           node test/scales_firmware.js
           node test/downloads.js
+          node test/combo.js
           node test/help.js
           node test/layout.js
           node test/option_pages.js
