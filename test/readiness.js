@@ -216,7 +216,10 @@ const version = manifest.asset_version;
 assert.match(version, /^[a-f0-9]{16}$/);
 const unversion = (s) => s.replace(/\?v=[a-f0-9]+/g, '');
 const bare = structuredClone(manifest); delete bare.asset_version;
-for (const r of bare.releases) r.app = unversion(r.app);
+for (const r of bare.releases) {
+  r.app = unversion(r.app);
+  if (r.combo) r.combo.bootloader = unversion(r.combo.bootloader);
+}
 const modules = readdirSync(new URL('js/', root)).filter((p) => p.endsWith('.js')).sort();
 assert.equal(version, createHash('sha256').update(JSON.stringify(bare) +
   modules.map((p) => unversion(read('js/' + p))).join('')).digest('hex').slice(0, 16),
@@ -228,7 +231,12 @@ for (const file of readdirSync(new URL('js/', root)).filter((f) => f.endsWith('.
 }
 assert(paths.length > 10);
 for (const path of paths) assert.equal(new URL(path, 'https://local.invalid/').searchParams.get('v'), version, path);
-for (const r of manifest.releases) assert.equal(new URL(r.app, 'https://local.invalid/').searchParams.get('v'), r.app_sha256);
+for (const r of manifest.releases) {
+  assert.equal(new URL(r.app, 'https://local.invalid/').searchParams.get('v'), r.app_sha256);
+  if (r.combo || !r.development) {
+    assert.equal(new URL(r.combo.bootloader, 'https://local.invalid/').searchParams.get('v'), r.combo.bootloader_sha256);
+  }
+}
 const workflow = readFileSync('.github/workflows/pages.yml', 'utf8');
 assert(workflow.includes('  pull_request:'));
 assert(workflow.includes("github.event_name != 'pull_request' && github.ref == 'refs/heads/main'"));

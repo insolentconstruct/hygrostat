@@ -10,6 +10,7 @@ The page checks the pinned base `app.bin` against its SHA-256 and patches only t
 - `static/js/glibc_sincos.js`: sine and cosine ported from glibc 2.36. The release WAV is encoded by numpy on glibc, and one last bit of a sine decides between samples 32766 and 32767; the browser's `Math.sin` differs in about 636,000 samples of the Beta 2 file.
 - `static/js/decoder.js`: QPSK demodulator for generated WAVs (packet headers, CRCs, descrambling, padding). It checks generated files, not recorded audio.
 - `static/js/worker.js`: encoding and the decode-back check run in a worker.
+- `static/js/combo.js`: the ST-Link combo files in Advanced. The `.bin` is the pinned padded bootloader (`static/images/bootloader-padded.bin`, checked against its SHA-256 before use) followed by the app. The `.hex` reproduces stmlib's merge: objcopy's app HEX, then the bootloader's, then one end-of-file record. Each part's ranges and start address come from the manifest's `combo.hex`, taken from the release HEX. It must parse back to the `.bin` at 0x08000000; the untouched default must match the release's hashes.
 - Images are served with the page because GitHub release downloads can't be fetched from another site.
 
 ## Profiles

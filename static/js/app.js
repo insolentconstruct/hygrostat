@@ -9,17 +9,18 @@
 // in the browser, check the .wav, offer it for download.
 
 import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, normalise,
-  pageLeds } from './profile.js?v=9ab9aaf9d2a7a4a4';
-import { effectiveScales, validateScales } from './scales.js?v=9ab9aaf9d2a7a4a4';
-import { scaleEditor } from './scale_editor.js?v=9ab9aaf9d2a7a4a4';
-import { guide } from './guide.js?v=9ab9aaf9d2a7a4a4';
-import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=9ab9aaf9d2a7a4a4';
-import { featureHelp, actionHelp } from './help.js?v=9ab9aaf9d2a7a4a4';
+  pageLeds } from './profile.js?v=02b0c3dc4662ffd9';
+import { effectiveScales, validateScales } from './scales.js?v=02b0c3dc4662ffd9';
+import { scaleEditor } from './scale_editor.js?v=02b0c3dc4662ffd9';
+import { guide } from './guide.js?v=02b0c3dc4662ffd9';
+import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=02b0c3dc4662ffd9';
+import { featureHelp, actionHelp } from './help.js?v=02b0c3dc4662ffd9';
 import { KNOBS, KINDS, GROUPS, EXTRA_GROUPS, extraGroup, ACTION_DOES, placeName, pageOf, entryOf, occupant, places, valueLabel, stateLabel,
   summary, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, fits, placeable, bankWarning, slotCount,
-  usedPages, compaction, compact } from './layout.js?v=9ab9aaf9d2a7a4a4';
-import { drawPanel, highlight } from './panel.js?v=9ab9aaf9d2a7a4a4';
-import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=9ab9aaf9d2a7a4a4';
+  usedPages, compaction, compact } from './layout.js?v=02b0c3dc4662ffd9';
+import { drawPanel, highlight } from './panel.js?v=02b0c3dc4662ffd9';
+import { comboImages } from './combo.js?v=02b0c3dc4662ffd9';
+import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=02b0c3dc4662ffd9';
 
 const $ = (id) => document.getElementById(id);
 const cap = (text) => text.replace(/^./, (c) => c.toUpperCase());
@@ -42,7 +43,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=9ab9aaf9d2a7a4a4', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=02b0c3dc4662ffd9', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.ready) return;
       if (data.progress !== undefined) {
@@ -66,6 +67,7 @@ let entries;
 let scales = null;
 let revision = 0;
 const guideURLs = [];
+const comboURLs = [];
 // The preset the change count is measured from, the selected destination
 // ({ kind, slot }) or feature ({ id }), and the page shown on phones.
 let preset = 'Drizzlet';
@@ -98,6 +100,7 @@ const held = new Set(); // Keys of refused drafts that could not be set aside; s
 
 async function build(release, app) {
   if (download) URL.revokeObjectURL(download);
+  clearCombo();
   $('result').hidden = true;
   $('progress').value = 0;
   $('progress').hidden = false;
@@ -146,6 +149,7 @@ async function build(release, app) {
   $('result').hidden = false;
   status(isDefault ? 'Ready. Matches the release; audio checked.' : `Ready. Profile ${fp}; audio checked.`, 'ok');
   await updateGuides(release, chosen, fp, names, chosenScales);
+  await updateCombo(release, app, isDefault, fp, names);
   $('download').onclick = () => recordDownload(release);
   recordBuild(release);
   $('result-title').focus({ preventScroll: true });
@@ -214,6 +218,46 @@ async function fetchApp(release) {
   const response = await fetch(release.app, { cache: 'no-cache' });
   if (!response.ok) throw new Error(`could not download the app image (${response.status})`);
   return new Uint8Array(await response.arrayBuffer());
+}
+
+function clearCombo() {
+  comboURLs.splice(0).forEach((url) => URL.revokeObjectURL(url));
+  $('combo-files').hidden = true;
+  $('combo-status').textContent = $('combo-hex-hash').textContent = $('combo-bin-hash').textContent = 'After building';
+  $('combo-status').className = '';
+}
+
+// ST-Link files are optional: a refusal is shown with them and keeps the WAV.
+async function updateCombo(release, app, isDefault, fp, names) {
+  if (!release.combo) {
+    $('combo-status').textContent = 'Not available for this release.';
+    return;
+  }
+  $('recovery').href = `https://github.com/insolentconstruct/eurorack/blob/${encodeURIComponent(release.tag)}/beads/build/docs/RECOVERY.md`;
+  try {
+    const response = await fetch(release.combo.bootloader, { cache: 'no-cache' });
+    if (!response.ok) throw new Error(`could not download the bootloader (${response.status})`);
+    const { bin, hex } = await comboImages(release, new Uint8Array(await response.arrayBuffer()), app);
+    const binHash = await sha256(bin);
+    const hexHash = await sha256(hex);
+    if (isDefault && (binHash !== release.combo.bin_sha256 || hexHash !== release.combo.hex_sha256)) {
+      throw new Error('the combo files do not match the release: do not install them');
+    }
+    $('combo-bin-hash').textContent = binHash;
+    $('combo-hex-hash').textContent = hexHash;
+    for (const [id, bytes, name, type] of [['combo-hex', hex, names.comboHex, 'text/plain'],
+      ['combo-bin', bin, names.comboBin, 'application/octet-stream']]) {
+      const url = URL.createObjectURL(new Blob([bytes], { type }));
+      comboURLs.push(url);
+      const a = $(id);
+      a.href = url; a.download = name; a.title = name;
+    }
+    $('combo-status').textContent = isDefault ? 'Ready. Matches the release combo files.' : `Ready. Profile ${fp}; HEX checked against the BIN.`;
+    $('combo-files').hidden = false;
+  } catch (error) {
+    $('combo-status').textContent = `Combo files refused: ${error.message}`;
+    $('combo-status').className = 'warn';
+  }
 }
 
 async function updateGuides(release, chosen, fp, names, chosenScales = scales) {
@@ -873,6 +917,7 @@ function render() {
 async function refresh() {
   const token = ++revision;
   $('result').hidden = true;
+  clearCombo();
   const release = selected();
   const block = encodeProfile(entries, release.profile, scales);
   if (drafts.save(release, block, preset, Date.now(), manifest.releases.at(-1)) === 'failed' && !notice.failed) {
@@ -1082,7 +1127,7 @@ async function checkCapabilities() {
   }
   // A constructor alone does not establish support for module workers.
   await new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=9ab9aaf9d2a7a4a4', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=02b0c3dc4662ffd9', { type: 'module' });
     const done = (error) => {
       clearTimeout(timer); worker.terminate();
       error ? reject(error) : resolve();
@@ -1111,7 +1156,7 @@ async function init() {
   }
   $('compatibility').hidden = true;
   try {
-    const response = await fetch('manifest.json?v=9ab9aaf9d2a7a4a4', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=02b0c3dc4662ffd9', { cache: 'no-cache' });
     manifest = await response.json();
   } catch {
     status('Could not load the release list.', 'error');

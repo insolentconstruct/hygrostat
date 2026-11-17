@@ -1705,6 +1705,48 @@
       "app_sha256": "2558dd77768fb4538ab7a574b19283f55a129ab6859e3f53fcc2fad1690b1cce",
       "app_size": 649308,
       "wav_sha256": "28e28efa8264664d667ecba4a2e478675851367d274b472efd2d263d47fd0ec1",
+      "combo": {
+        "bootloader": "images/bootloader-padded.bin?v=014564367cf482122183c6e63c39f20cefed39c194c8a4b55dbe31a8855165de",
+        "bootloader_sha256": "014564367cf482122183c6e63c39f20cefed39c194c8a4b55dbe31a8855165de",
+        "bin_sha256": "e2008f1cdbc62d877e679ae12c2f4b8c5785c0914905a34af8106d0cdd76cb2b",
+        "hex_sha256": "07c1fa053b31bd7eda4523ae9a391b786faf8d10db9a510b72c260cc7a739d52",
+        "hex": [
+          {
+            "ranges": [
+              [
+                "08020000",
+                664
+              ],
+              [
+                "08020400",
+                647096
+              ],
+              [
+                "080BE3B8",
+                1188
+              ]
+            ],
+            "start": "08075ED1"
+          },
+          {
+            "ranges": [
+              [
+                "08000000",
+                664
+              ],
+              [
+                "08000298",
+                31848
+              ],
+              [
+                "08007F00",
+                684
+              ]
+            ],
+            "start": "08007805"
+          }
+        ]
+      },
       "slug": "beta-2-fog",
       "date": "2026-11-10"
     },
@@ -4071,9 +4113,55 @@
       "app_sha256": "e0546edb39278d76571bfb7c67505acdf1f910d4cc590fafb66775ea92ffc011",
       "app_size": 660124,
       "wav_sha256": "664acbf4a52a37f41483229a7f1b7a18008425f4ffbe52948084d32defb52d29",
+      "combo": {
+        "bootloader": "images/bootloader-padded.bin?v=014564367cf482122183c6e63c39f20cefed39c194c8a4b55dbe31a8855165de",
+        "bootloader_sha256": "014564367cf482122183c6e63c39f20cefed39c194c8a4b55dbe31a8855165de",
+        "bin_sha256": "e8f171f7731deddad626642f333bd42f691c76c9a60b2fe0964cb247e73e3727",
+        "hex_sha256": "fc69a0d23f3c7cc66d7ddc41997bb89de3b75f0e932ea8d9e9ba90b370d8fced",
+        "hex": [
+          {
+            "ranges": [
+              [
+                "08020000",
+                664
+              ],
+              [
+                "08020400",
+                657900
+              ],
+              [
+                "080C0DEC",
+                8
+              ],
+              [
+                "080C0DF4",
+                1192
+              ]
+            ],
+            "start": "08078889"
+          },
+          {
+            "ranges": [
+              [
+                "08000000",
+                664
+              ],
+              [
+                "08000298",
+                31848
+              ],
+              [
+                "08007F00",
+                684
+              ]
+            ],
+            "start": "08007805"
+          }
+        ]
+      },
       "slug": "beta-3-smirr",
       "date": "2026-11-16"
     }
   ],
-  "asset_version": "9ab9aaf9d2a7a4a4"
+  "asset_version": "02b0c3dc4662ffd9"
 }

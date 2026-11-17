@@ -22,7 +22,7 @@
 //
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
-import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=9ab9aaf9d2a7a4a4';
+import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=02b0c3dc4662ffd9';
 
 // Six-byte entries are kept in wire order: id, state, value, page, amount, action.
 const STATES = ['Off', 'Fixed', 'Adjustable'];
@@ -162,7 +162,7 @@ export const fingerprint = async (block) => (await sha256(block)).slice(0, 8);
 export function filenames(release, fp, isDefault) {
   const suffix = isDefault ? '' : `-${fp}`;
   const date = release.tag.replace(/^drizzlet-/, '');
-  return { wav: `${release.tag}${suffix}.wav`,
+  return { wav: `${release.tag}${suffix}.wav`, comboHex: `${release.tag}${suffix}-combo.hex`, comboBin: `${release.tag}${suffix}-combo.bin`,
     desktop: isDefault ? `options-guide${release.development ? '-dev' : ''}.svg` : `options-guide-${date}${suffix}.svg`,
     mobile: isDefault ? `options-guide${release.development ? '-dev' : ''}-mobile.svg` : `options-guide-${date}${suffix}-mobile.svg` };
 }

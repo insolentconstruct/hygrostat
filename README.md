@@ -2,7 +2,7 @@
 
 **https://hygrostat.insolentconstruct.net/**
 
-Hygrostat builds a [Drizzlet](https://github.com/insolentconstruct/eurorack/tree/drizzlet) firmware update for Mutable Instruments Beads in your browser. You pick which features your firmware has, where their controls sit and their defaults. You then download the update file (`.wav`) and a printable guide to your layout. Nothing is uploaded.
+Hygrostat builds a [Drizzlet](https://github.com/insolentconstruct/eurorack/tree/drizzlet) firmware update for Mutable Instruments Beads in your browser. You pick which features your firmware has, where their controls sit and their defaults. You then download the update file (`.wav`) and a printable guide to your layout. Nothing is uploaded. Advanced also offers the matching ST-Link combo files (`.hex` and `.bin`).
 
 It works with Drizzlet Beta 2 and later. Firmware releases are on the [eurorack releases page](https://github.com/insolentconstruct/eurorack/releases).
 
@@ -47,7 +47,7 @@ The tests check the page against the firmware it offers. They need a supported N
 ```sh
 git clone --branch drizzlet https://github.com/insolentconstruct/eurorack.git firmware
 git -C firmware submodule update --init stmlib
-for t in manifest profile draft scales scales_firmware event_costs module_costs downloads help layout option_pages readiness costs idle_timeout recent_notes beta3_options; do node test/$t.js; done
+for t in manifest profile draft scales scales_firmware event_costs module_costs downloads combo help layout option_pages readiness costs idle_timeout recent_notes beta3_options; do node test/$t.js; done
 ```
 
 `test/browser.mjs` and `test/scales_browser.mjs` run the page in Chromium, Firefox and WebKit (CI runs it in the Playwright 1.65.0 image). It needs Playwright with its browsers and the page served locally: `SITE=static BASE=http://localhost:8000/ node test/browser.mjs` (and the same command with `test/scales_browser.mjs`, `test/draft_browser.mjs`, `test/beta3_browser.mjs` and `test/pages_browser.mjs`). The scale, Beta 3 and page browser tests use synthetic release lists and never build or offer a synthetic firmware image. `test/option_pages.js` checks options pages 5–7 with a synthetic seven-page release. `test/idle_timeout.js`, `test/recent_notes.js`, `test/beta3_options.js` and `test/option_pages.js` check against the final Beta 3 firmware commit (override with `BETA3_FIRMWARE_REF`); the firmware clone needs its branches. `test/scales_firmware.js` checks the V2 codec against the current firmware parser; it needs firmware with scale-bank support.
@@ -59,7 +59,7 @@ After changing anything in `static/js/` or `static/manifest.json`, run `node too
 ## Adding a release
 
 1. After the firmware is tagged, copy the tag's `app.bin` to `static/images/<tag>/` and delete the development image.
-2. Replace the development entry in `static/manifest.json` with the release: tag, name, date, hashes, profile format and catalogue. Preserve historical measurement data. Add the tag's `options-guide.svg` and `options-guide-mobile.svg` to `RELEASE_GUIDES` in `static/js/release_guides.js`.
+2. Replace the development entry in `static/manifest.json` with the release: tag, name, date, hashes, profile format and catalogue. Preserve historical measurement data. Add `combo`: the padded bootloader's and the tag's `combo.bin` hashes from `beads/build/expected-hashes.sha256`, the `-combo.hex` hash from the release's `SHA256SUMS`, and `hex` from `node tools/combo-layout.js <tag>-combo.hex`. Add the tag's `options-guide.svg` and `options-guide-mobile.svg` to `RELEASE_GUIDES` in `static/js/release_guides.js`.
 3. Add the release's module-measured costs as `costs/<tag>-module.json` and run `node tools/import-costs.js` (see [module-measured costs](docs/DESIGN.md#module-measured-costs)). Then remove `development` and `source_commit`.
 4. Run `node tools/version-assets.js` and the tests.
 5. Merge to `main`. CI tests, builds and deploys the page.
