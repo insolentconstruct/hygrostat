@@ -9,18 +9,18 @@
 // in the browser, check the .wav, offer it for download.
 
 import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, normalise,
-  pageLeds } from './profile.js?v=02b0c3dc4662ffd9';
-import { effectiveScales, validateScales } from './scales.js?v=02b0c3dc4662ffd9';
-import { scaleEditor } from './scale_editor.js?v=02b0c3dc4662ffd9';
-import { guide } from './guide.js?v=02b0c3dc4662ffd9';
-import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=02b0c3dc4662ffd9';
-import { featureHelp, actionHelp } from './help.js?v=02b0c3dc4662ffd9';
+  pageLeds } from './profile.js?v=fd2a7468ff7256b6';
+import { effectiveScales, validateScales } from './scales.js?v=fd2a7468ff7256b6';
+import { scaleEditor } from './scale_editor.js?v=fd2a7468ff7256b6';
+import { guide } from './guide.js?v=fd2a7468ff7256b6';
+import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=fd2a7468ff7256b6';
+import { featureHelp, actionHelp } from './help.js?v=fd2a7468ff7256b6';
 import { KNOBS, KINDS, GROUPS, EXTRA_GROUPS, extraGroup, ACTION_DOES, placeName, pageOf, entryOf, occupant, places, valueLabel, stateLabel,
   summary, edit, place, unplace, afterUnplace, canSwap, freeSlot, changes, fits, placeable, bankWarning, slotCount,
-  usedPages, compaction, compact } from './layout.js?v=02b0c3dc4662ffd9';
-import { drawPanel, highlight } from './panel.js?v=02b0c3dc4662ffd9';
-import { comboImages } from './combo.js?v=02b0c3dc4662ffd9';
-import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=02b0c3dc4662ffd9';
+  usedPages, compaction, compact } from './layout.js?v=fd2a7468ff7256b6';
+import { drawPanel, highlight } from './panel.js?v=fd2a7468ff7256b6';
+import { comboImages } from './combo.js?v=fd2a7468ff7256b6';
+import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=fd2a7468ff7256b6';
 
 const $ = (id) => document.getElementById(id);
 const cap = (text) => text.replace(/^./, (c) => c.toUpperCase());
@@ -43,7 +43,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=02b0c3dc4662ffd9', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=fd2a7468ff7256b6', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.ready) return;
       if (data.progress !== undefined) {
@@ -1127,7 +1127,7 @@ async function checkCapabilities() {
   }
   // A constructor alone does not establish support for module workers.
   await new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=02b0c3dc4662ffd9', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=fd2a7468ff7256b6', { type: 'module' });
     const done = (error) => {
       clearTimeout(timer); worker.terminate();
       error ? reject(error) : resolve();
@@ -1156,7 +1156,7 @@ async function init() {
   }
   $('compatibility').hidden = true;
   try {
-    const response = await fetch('manifest.json?v=02b0c3dc4662ffd9', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=fd2a7468ff7256b6', { cache: 'no-cache' });
     manifest = await response.json();
   } catch {
     status('Could not load the release list.', 'error');

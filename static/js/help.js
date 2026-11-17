@@ -35,7 +35,8 @@ const descriptions = {
   30: ['Turn PITCH smoothly between its intervals, without notches; PITCH CV unchanged.', 'pitch-knob'],
   31: ['Which eight Plaits models the synth starts with: green, red or yellow. While Plaits plays, [A] + FREEZE steps the bank and FEEDBACK picks a model in it.', 'plaits-bank'],
   32: ['How fast DRY/WET brings in the grains: at 9 o’clock they sit 2.5 dB under the dry (stock) or 7.6 dB (Gentle; Clouds 8.8 dB).', 'mix-law'],
-  33: ['Reverb the whole mix, as stock, or only the grains before DRY/WET, as on Clouds: fully dry has no reverb.', 'reverb-input']
+  33: ['Reverb the whole mix, as stock, or only the grains before DRY/WET, as on Clouds: fully dry has no reverb.', 'reverb-input'],
+  34: ['Which playing grain a new one replaces: as the 2021 and 2024 firmware did (default), or as the 2026 source does.', 'grain-stealing']
 };
 
 export function featureHelp(feature, release) {
@@ -44,7 +45,8 @@ export function featureHelp(feature, release) {
   const details = feature.id === 10 ? 'Around C, the steps are C and G across octaves, including G below C (a fourth down). Pitch scale applies afterwards and can change these intervals. Works on granular and Beads wavetable grains, not the continuous oscillator, Plaits or Spectral.' + recent :
     feature.id === 31 ? 'While the Plaits synth plays, hold [A] and press FREEZE to step green, red, yellow; the bank is saved. Other modes keep that gesture.' :
     feature.id === 32 ? 'The dry level and both ends of the knob stay stock; DRY/WET CV follows the same law. Granular, delay and spectral; the synths keep their own DRY/WET.' :
-    feature.id === 33 ? 'Turning DRY/WET down cuts the tail too. In Scorched cassette the wow and flutter comes after the reverb. Granular, delay and spectral; the synths keep the stock routing.' : '';
+    feature.id === 33 ? 'Turning DRY/WET down cuts the tail too. In Scorched cassette the wow and flutter comes after the reverb. Granular, delay and spectral; the synths keep the stock routing.' :
+    feature.id === 34 ? 'Only dense textures change. 2026 is slightly quieter there and uses about 3.5 points less peak CPU; Drizzlet Betas 1 to 3 used it. Granular and the Beads wavetable synth.' : '';
   return { description, details, url: docs.replace('{TAG}', encodeURIComponent(release.development ? release.source_commit : release.tag)) + '#' + section };
 }
 

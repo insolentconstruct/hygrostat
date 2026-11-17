@@ -160,9 +160,14 @@ assert.deepEqual([0, 1, 2].map((s) => stateLabel(features[0], s)),
   ['Use stock behaviour', 'Always use this value', 'Change on the module']);
 assert.equal(summary(features[0], [1, 2, 3, 1, 0, 0]), 'Starts Major');
 assert.equal(summary(features[4], [5, 1, 2, 0, 0, 0]), 'Always No limiter');
+// Grain stealing (Beta 4) is Off at the 2021/2024 stealing, not the 2026 source's.
+const stealing = { id: 34, values: ['2021/2024 (default)', '2026'] };
+assert.equal(stateLabel(stealing, 0), 'Use the 2021/2024 default');
+assert.equal(summary(stealing, [34, 0, 0, 0, 0, 0]), '2021/2024');
+assert.equal(summary(stealing, [34, 1, 1, 0, 0, 0]), 'Always 2026');
 const grouped = GROUPS.flatMap(([, ids]) => ids);
 assert.equal(new Set(grouped).size, grouped.length, 'features occur in one group only');
-assert(grouped.every((id) => features.some((f) => f.id === id) || (id >= 24 && id <= 33)), 'only the known later profile-only features may be absent from an older release');
+assert(grouped.every((id) => features.some((f) => f.id === id) || (id >= 24 && id <= 34)), 'only the known later profile-only features may be absent from an older release');
 assert.deepEqual(grouped.filter((id) => features.some((f) => f.id === id)).sort((a, b) => a - b), features.map((f) => f.id));
 for (const f of features.filter((f) => f.action)) assert(ACTION_DOES[f.id], f.name);
 // Extras groups: every release's extras listed once by ID; an unknown ID shows under Sound.
@@ -174,5 +179,5 @@ for (const release of manifest.releases) {
 }
 assert.deepEqual([15, 27, 29].map((id) => extraGroup({ id })), ['Startup', 'Startup', 'Startup']);
 assert.deepEqual([17, 19, 20, 22, 25].map((id) => extraGroup({ id })), Array(5).fill('Indicators and interface'));
-assert.deepEqual([16, 23, 24, 26, 28, 30, 31, 32, 33, 99].map((id) => extraGroup({ id })), Array(10).fill('Sound'));
+assert.deepEqual([16, 23, 24, 26, 28, 30, 31, 32, 33, 34, 99].map((id) => extraGroup({ id })), Array(11).fill('Sound'));
 console.log(`PASS layout: ${edits} edits match the previous editor, ${placements} placements and swaps valid and local, removals keep values`);
