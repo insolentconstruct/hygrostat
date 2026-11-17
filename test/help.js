@@ -29,6 +29,11 @@ assert.match(actionHelp({ id: 13 }), /Always.*no gesture/);
 assert.match(actionHelp({ id: 14 }), /Always On or Change on the module.*gesture/);
 assert.match(actionHelp({ id: 9 }), /Manual.*gesture/);
 assert.equal(actionHelp({ id: 18 }), '');
+// Grain stealing joins with Beta 4; its section is checked once a release carries it.
+const stealing = featureHelp({ id: 34 }, manifest.releases[0]);
+assert.match(stealing.description, /2021 and 2024 firmware did \(default\).*2026 source/);
+assert(stealing.description.length < 180 && stealing.url.endsWith('#grain-stealing'));
+assert.match(stealing.details, /2026 is slightly quieter.*3\.5 points less peak CPU.*Betas 1 to 3/);
 assert.match(featureHelp({ id: 16 }, manifest.releases[0]).description, /automatic gain unchanged/);
 assert.match(featureHelp({ id: 22 }, manifest.releases[0]).description, /ignoring CV/);
 assert.match(featureHelp({ id: 23 }, manifest.releases[0]).description, /granular.*TIME CV is unplugged/);

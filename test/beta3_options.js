@@ -89,7 +89,7 @@ assert.deepEqual(additions.find((f) => f.id === 28).values, ['Normal (default)',
 assert.equal(featureHelp({ id: 26 }, shipped[0]).url.split('#')[1], 'delay-seed-latch-fade');
 assert.equal(featureHelp({ id: 30 }, shipped[0]).url.split('#')[1], 'pitch-knob');
 assert.deepEqual([32, 33].map((id) => featureHelp({ id }, shipped[0]).url.split('#')[1]), ['mix-law', 'reverb-input']);
-assert.deepEqual(GROUPS.find(([name]) => name === 'Sound')[1].slice(-2), [32, 33], 'mix law and reverb input are Sound');
+assert.deepEqual(GROUPS.find(([name]) => name === 'Sound')[1].slice(-3), [32, 33, 34], 'mix law, reverb input and grain stealing are Sound');
 assert.deepEqual(additions.filter((f) => f.id >= 32).map((f) => f.values), [['Stock', 'Gentle'], ['Mix (stock)', 'Grains']]);
 assert.match(featureHelp({ id: 32 }, shipped[0]).description, /9 o’clock.*2\.5 dB.*7\.6 dB.*Clouds 8\.8 dB/);
 assert.match(featureHelp({ id: 33 }, shipped[0]).description, /grains before DRY\/WET.*fully dry has no reverb/);
