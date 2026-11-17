@@ -7,7 +7,7 @@
 // Editor rules for the layout view: where each feature sits on the module and
 // how a placement, swap or removal changes the six-byte entries. Every result
 // goes through normalise(), so the validator stays the final gate.
-import { normalise, initialEntry, pageLeds, pageSlots } from './profile.js?v=50f95e24c2d9b67c';
+import { normalise, initialEntry, pageLeds, pageSlots } from './profile.js?v=fd2a7468ff7256b6';
 
 export const KNOBS = ['FEEDBACK', 'DRY/WET', 'REVERB'];
 // Entry byte for each kind of destination, and how many there are; a
@@ -31,7 +31,7 @@ export const GROUPS = [
 ];
 // Extras by what they change; an unlisted ID shows under Sound.
 export const EXTRA_GROUPS = [
-  ['Sound', [16, 23, 24, 26, 28, 30, 31, 32, 33, 34]],
+  ['Sound', [16, 23, 24, 26, 28, 30, 31, 32, 33]],
   ['Startup', [15, 27, 29]],
   ['Indicators and interface', [17, 19, 20, 22, 25]]
 ];
