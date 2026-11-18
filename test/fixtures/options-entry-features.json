@@ -1,0 +1,50 @@
+[
+  {
+    "id": 37,
+    "default_in_block": false,
+    "default": [37, 0, 0, 0, 0, 0],
+    "name": "Options page preview",
+    "values": ["Each knob in turn", "First setting only"],
+    "states": ["Off", "Fixed"],
+    "field": null,
+    "page": false,
+    "amount": false,
+    "action": false,
+    "stateless": false,
+    "synth_path": false,
+    "cpu": {
+      "kind": "zero",
+      "source": "synthetic fixture: no per-block work (code inspection)",
+      "engines": {
+        "synth": { "off": 0, "fixed": [0, 0], "adjustable": [0, 0] },
+        "granular": { "off": 0, "fixed": [0, 0], "adjustable": [0, 0] }
+      },
+      "uncertainty": { "points": 0 },
+      "note": "options-page UI only; not a release measurement"
+    }
+  },
+  {
+    "id": 38,
+    "default_in_block": false,
+    "default": [38, 0, 0, 0, 0, 0],
+    "name": "Options page on opening",
+    "values": ["Last used", "First page"],
+    "states": ["Off", "Fixed"],
+    "field": null,
+    "page": false,
+    "amount": false,
+    "action": false,
+    "stateless": false,
+    "synth_path": false,
+    "cpu": {
+      "kind": "zero",
+      "source": "synthetic fixture: no per-block work (code inspection)",
+      "engines": {
+        "synth": { "off": 0, "fixed": [0, 0], "adjustable": [0, 0] },
+        "granular": { "off": 0, "fixed": [0, 0], "adjustable": [0, 0] }
+      },
+      "uncertainty": { "points": 0 },
+      "note": "options-page UI only; not a release measurement"
+    }
+  }
+]

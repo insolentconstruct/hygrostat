@@ -154,13 +154,14 @@ export function guide(entries, release, fp, mobile = false, scales = null) {
       effectiveScales(scales).find((s) => s.id === id)?.name || 'Off (scale removed)') });
   const feature = (e) => features.find((f) => f.id === e[0]);
   const idle = entries.find((e) => e[0] === 25 && e[1] === 1 && e[2]);
+  const fixed = (id) => entries.some((e) => e[0] === id && e[1] === 1 && e[2]);
   d.text(margin, 35, 'Drizzlet Hidden Options', 24, 'bold');
   d.text(margin, 61, `Profile ${fp} · ${release.tag}`, 15);
   let y = 90;
   for (const line of (entries.some((e) => e[3]) ? [
-    'Open: hold [M] 3 seconds; all three mix LEDs pulse. Release.',
+    `Open: hold [M] 3 seconds; all three mix LEDs pulse. Release.${fixed(38) ? ' Opens on the first page.' : ''}`,
     ...pageSteps(entries, release.profile),
-    '[A] shows stored values. Turn knobs to change; changes save automatically.',
+    `[A] shows ${fixed(37) ? 'the page’s first setting' : 'stored values'}. Turn knobs to change; changes save automatically.`,
     `Close: hold [M] 3 seconds or press another button${idle ? `, or leave all buttons and knobs for ${feature(idle).values[idle[2]]}` : ''}; release before normal use. On the Pitch scale page with Scale selected, tap SEED to step.`,
     'Move knobs more than a tenth of their travel to engage. Wait before powering off.'
   ] : ['This profile has no options pages. Hold [M] does nothing.'])) y = d.lines(margin, y, line, mobile ? 43 : 140) + 3;
