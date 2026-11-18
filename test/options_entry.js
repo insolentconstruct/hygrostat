@@ -14,7 +14,7 @@ import { featureHelp } from '../static/js/help.js';
 const text = (svg) => [...svg.matchAll(/<text\b[^>]*>(.*?)<\/text>/g)].map((m) => m[1]).join(' ');
 const read = (file) => readFileSync(new URL(file, import.meta.url), 'utf8');
 // The firmware pull request's commit; bump it (or set OPTIONS_ENTRY_FIRMWARE_REF) when that branch moves.
-const ref = process.env.OPTIONS_ENTRY_FIRMWARE_REF || '61df61b40c98944b3c7c97cce86e2f716965f25e';
+const ref = process.env.OPTIONS_ENTRY_FIRMWARE_REF || '6a171e6efaaaf89002de3be0209789e9c8129cc9';
 const manifest = JSON.parse(read('../static/manifest.json'));
 const additions = JSON.parse(read('fixtures/options-entry-features.json'));
 assert.deepEqual(additions.map((f) => f.id), [37, 38]);
