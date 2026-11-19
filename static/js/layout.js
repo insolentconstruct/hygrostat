@@ -7,7 +7,7 @@
 // Editor rules for the layout view: where each feature sits on the module and
 // how a placement, swap or removal changes the six-byte entries. Every result
 // goes through normalise(), so the validator stays the final gate.
-import { normalise, initialEntry, pageLeds, pageSlots } from './profile.js?v=02b0c3dc4662ffd9';
+import { normalise, initialEntry, pageLeds, pageSlots } from './profile.js?v=a51a7e96671fba78';
 
 export const KNOBS = ['FEEDBACK', 'DRY/WET', 'REVERB'];
 // Entry byte for each kind of destination, and how many there are; a
@@ -37,6 +37,10 @@ export const EXTRA_GROUPS = [
 ];
 export const extraGroup = (f) => EXTRA_GROUPS.find(([, ids]) => ids.includes(f.id))?.[0] ?? 'Sound';
 export const fits = (f, kind) => Boolean(f[kind]);
+// With hold_rules, only Synth start goes on the [A] hold, and it keeps a gesture.
+const holdRules = (profile) => profile.hold_rules === true;
+export const fitsSlot = (profile, f, kind, slot) => fits(f, kind) &&
+  !(holdRules(profile) && kind === 'action' && slot === 3 && f.id !== 9);
 // A setting with no destination, such as the Plaits bank, has its own gesture.
 export const placeable = (f) => Object.keys(KINDS).some((kind) => fits(f, kind));
 // In Plaits synth play [A] + FREEZE steps the bank, unless Synth start is there.
@@ -81,12 +85,24 @@ export function edit(entries, profile, f, k, value) {
 
 const feature = (profile, id) => profile.features.find((f) => f.id === id);
 
+// Several bytes of one entry at once, so no step in between has to be valid.
+function set(entries, profile, f, changes) {
+  const candidate = entries.map((e) => e.slice());
+  let edited = candidate.find((e) => e[0] === f.id);
+  if (!edited) { edited = initialEntry(f); candidate.push(edited); }
+  for (const [k, value] of Object.entries(changes)) edited[k] = value;
+  return normalise(candidate, profile);
+}
+
 // Take a feature off one destination. If nothing else controls it, it keeps
 // its value as Fixed, or goes back to Off at value 0. A gesture-only setting
 // (Fixed and stateless) does nothing without its gesture, so it goes Off.
 export function unplace(entries, profile, id, kind) {
   const f = feature(profile, id);
-  if (kind === 'action' && entryOf(entries, f)[1] === 1 && f.stateless) return edit(entries, profile, f, 1, 0);
+  // Synth start without its gesture goes Off, page included.
+  if (kind === 'action' && ((entryOf(entries, f)[1] === 1 && f.stateless) || (holdRules(profile) && id === 9))) {
+    return edit(entries, profile, f, 1, 0);
+  }
   const next = edit(entries, profile, f, KINDS[kind].index, 0);
   const e = entryOf(next, f);
   if (e[1] !== 2 || places(e).length) return next;
@@ -111,12 +127,12 @@ export function afterUnplace(entries, profile, id, kind) {
 export function place(entries, profile, id, kind, slot, mode = 'replace') {
   const f = feature(profile, id);
   const index = KINDS[kind].index;
-  if (!fits(f, kind) || slot < 1 || slot > slotCount(kind, profile)) throw new Error(`${f.name} cannot go on ${placeName(kind, slot)}.`);
+  if (!fitsSlot(profile, f, kind, slot) || slot < 1 || slot > slotCount(kind, profile)) throw new Error(`${f.name} cannot go on ${placeName(kind, slot)}.`);
   let next = entries.map((e) => e.slice());
   const own = entryOf(next, f);
   if (own[index] === slot) return normalise(next, profile);
   const taken = occupant(next, kind, slot);
-  if (taken && mode === 'swap' && own[index]) {
+  if (taken && mode === 'swap' && own[index] && fitsSlot(profile, feature(profile, taken[0]), kind, own[index])) {
     // Both already fit this kind; change the two slots together.
     taken[index] = own[index];
     own[index] = slot;
@@ -124,16 +140,35 @@ export function place(entries, profile, id, kind, slot, mode = 'replace') {
   }
   if (taken) next = unplace(next, profile, taken[0], kind);
   const e = entryOf(next, f);
-  if (!(kind === 'action' && e[1] === 1 && e[2] && f.stateless) && e[1] !== 2) next = edit(next, profile, f, 1, 2);
-  return edit(next, profile, f, index, slot);
+  const changes = { [index]: slot };
+  if (!(kind === 'action' && e[1] === 1 && e[2] && f.stateless) && e[1] !== 2) changes[1] = 2;
+  // Synth start on a page also takes the [A] hold, which only it can use.
+  if (holdRules(profile) && f.id === 9 && kind !== 'action' && !e[5]) changes[5] = 3;
+  return set(next, profile, f, changes);
+}
+// Change on the module: the first free control if it has none, and Synth
+// start's gesture.
+export function adjust(entries, profile, f) {
+  const e = entryOf(entries, f);
+  const changes = { 1: 2 };
+  if (!places(e).length) {
+    const kind = Object.keys(KINDS).find((k) => freeSlot(entries, k, profile, f));
+    if (kind) changes[KINDS[kind].index] = freeSlot(entries, kind, profile, f);
+  }
+  if (holdRules(profile) && f.id === 9 && !e[5] && !changes[5]) changes[5] = 3;
+  return set(entries, profile, f, changes);
 }
 export const canSwap = (entries, profile, id, kind, slot) => {
   const own = entryOf(entries, feature(profile, id));
-  return Boolean(own[KINDS[kind].index]) && own[KINDS[kind].index] !== slot && Boolean(occupant(entries, kind, slot));
+  const taken = occupant(entries, kind, slot);
+  return Boolean(own[KINDS[kind].index]) && own[KINDS[kind].index] !== slot && Boolean(taken) &&
+    fitsSlot(profile, feature(profile, taken[0]), kind, own[KINDS[kind].index]);
 };
-// First free destination of a kind, or 0.
-export function freeSlot(entries, kind, profile) {
-  for (let slot = 1; slot <= slotCount(kind, profile); ++slot) if (!occupant(entries, kind, slot)) return slot;
+// First free destination of a kind, or 0; with f, the first f can take.
+export function freeSlot(entries, kind, profile, f = null) {
+  for (let slot = 1; slot <= slotCount(kind, profile); ++slot) {
+    if (!occupant(entries, kind, slot) && (!f || fitsSlot(profile, f, kind, slot))) return slot;
+  }
   return 0;
 }
 
