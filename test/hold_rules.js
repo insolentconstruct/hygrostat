@@ -10,8 +10,8 @@ import { firmwareRepo, firmwareShow } from './firmware.js';
 import { validate, encodeProfile, decodeProfile, defaults, templates, crc32, modes } from '../static/js/profile.js';
 import { KINDS, edit, place, adjust, unplace, afterUnplace, canSwap, freeSlot, fits, fitsSlot, entryOf, occupant,
   places } from '../static/js/layout.js';
-// The firmware pull request's commit; bump it (or set HOLD_RULES_FIRMWARE_REF) when that branch moves.
-const ref = process.env.HOLD_RULES_FIRMWARE_REF || '3619f9bb368c89afe2571618a3c9b4f0840335e0';
+// The firmware merge of the hold rules (#296); bump it (or set HOLD_RULES_FIRMWARE_REF) when that branch moves.
+const ref = process.env.HOLD_RULES_FIRMWARE_REF || '2bc895366b143db0f79b97a0ed92071bdb5c4757';
 const manifest = JSON.parse(readFileSync(new URL('../static/manifest.json', import.meta.url), 'utf8'));
 assert(manifest.releases.every((r) => !r.profile.hold_rules), 'no release has the hold rules yet');
 const beta3 = manifest.releases.find((r) => r.slug === 'beta-3-smirr');
