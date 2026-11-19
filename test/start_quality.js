@@ -14,7 +14,7 @@ import { featureHelp } from '../static/js/help.js';
 const text = (svg) => [...svg.matchAll(/<text\b[^>]*>(.*?)<\/text>/g)].map((m) => m[1]).join(' ');
 const read = (file) => readFileSync(new URL(file, import.meta.url), 'utf8');
 // The firmware pull request's commit; bump it (or set START_QUALITY_FIRMWARE_REF) when that branch moves.
-const ref = process.env.START_QUALITY_FIRMWARE_REF || '1afcb551bbf0d59c7bd615b89354de27cecb689b';
+const ref = process.env.START_QUALITY_FIRMWARE_REF || 'daee27cfe4c89531d59da50c98ed582e30e89c4c';
 const manifest = JSON.parse(read('../static/manifest.json'));
 const additions = JSON.parse(read('fixtures/start-quality-feature.json'));
 assert.deepEqual(additions.map((f) => f.id), [39]);
