@@ -22,7 +22,7 @@
 //
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
-import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=02b0c3dc4662ffd9';
+import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=a51a7e96671fba78';
 
 // Six-byte entries are kept in wire order: id, state, value, page, amount, action.
 const STATES = ['Off', 'Fixed', 'Adjustable'];
@@ -46,7 +46,10 @@ export function pageLeds(profile) {
 }
 export const pageSlots = (profile) => pageLeds(profile).length * 3;
 
+// Firmware with hold_rules refuses an adjustable Synth start without its
+// gesture, and anything else on the [A] hold (3), which restarts automatic gain.
 export function validate(entries, profile) {
+  const holdRules = profile.hold_rules === true;
   const slots = pageSlots(profile);
   if (!Array.isArray(entries) || entries.length > 82) throw new Error('Too many features.');
   const seen = new Set();
@@ -65,7 +68,8 @@ export function validate(entries, profile) {
         (page && (!f.page || state !== 2)) ||
         (amount && (!f.amount || state !== 2)) ||
         (action && (!f.action || !state || (state === 1 && (!value || !f.stateless)))) ||
-        (id === 9 && state === 1 && value && !action)) {
+        (id === 9 && state === 1 && value && !action) ||
+        (holdRules && ((id === 9 && state === 2 && !action) || (action === 3 && id !== 9)))) {
       throw new Error(`${f.name}: this setting or placement is not allowed.`);
     }
     [page, amount, action].forEach((slot, k) => {
