@@ -1,0 +1,26 @@
+[
+  {
+    "id": 39,
+    "default_in_block": false,
+    "default": [39, 0, 0, 0, 0, 0],
+    "name": "Start in quality",
+    "values": ["Keep current", "Bright digital", "Cold digital", "Sunny tape", "Scorched cassette"],
+    "states": ["Off", "Fixed"],
+    "field": null,
+    "page": false,
+    "amount": false,
+    "action": false,
+    "stateless": false,
+    "synth_path": false,
+    "cpu": {
+      "kind": "zero",
+      "source": "synthetic fixture: no per-block work (code inspection)",
+      "engines": {
+        "synth": { "off": 0, "fixed": [0, 0, 0, 0, 0], "adjustable": [0, 0, 0, 0, 0] },
+        "granular": { "off": 0, "fixed": [0, 0, 0, 0, 0], "adjustable": [0, 0, 0, 0, 0] }
+      },
+      "uncertainty": { "points": 0 },
+      "note": "start-up settings only; not a release measurement"
+    }
+  }
+]

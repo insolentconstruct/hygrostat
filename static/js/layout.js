@@ -7,7 +7,7 @@
 // Editor rules for the layout view: where each feature sits on the module and
 // how a placement, swap or removal changes the six-byte entries. Every result
 // goes through normalise(), so the validator stays the final gate.
-import { normalise, initialEntry, pageLeds, pageSlots } from './profile.js?v=a51a7e96671fba78';
+import { normalise, initialEntry, pageLeds, pageSlots } from './profile.js?v=c0ff9183ad3694a7';
 
 export const KNOBS = ['FEEDBACK', 'DRY/WET', 'REVERB'];
 // Entry byte for each kind of destination, and how many there are; a
@@ -24,7 +24,7 @@ export function placeName(kind, slot) {
 // What an action does, by feature.
 export const ACTION_DOES = { 9: 'Start the synth', 13: 'Switch monophonic grains', 14: 'Trim the buffer' };
 export const GROUPS = [
-  ['Sound', [2, 4, 5, 6, 7, 11, 12, 24, 31, 32, 33]],
+  ['Sound', [2, 4, 5, 6, 7, 11, 12, 24, 39, 31, 32, 33]],
   ['Playback', [1, 3, 8, 10, 13, 14, 23, 26, 28]],
   ['Controls', [9, 16, 21, 25, 27, 29, 30]],
   ['Indicators', [15, 17, 18, 19, 20, 22]]
@@ -32,7 +32,7 @@ export const GROUPS = [
 // Extras by what they change; an unlisted ID shows under Sound.
 export const EXTRA_GROUPS = [
   ['Sound', [16, 23, 24, 26, 28, 30, 31, 32, 33]],
-  ['Startup', [15, 27, 29]],
+  ['Startup', [15, 27, 29, 39]],
   ['Indicators and interface', [17, 19, 20, 22, 25]]
 ];
 export const extraGroup = (f) => EXTRA_GROUPS.find(([, ids]) => ids.includes(f.id))?.[0] ?? 'Sound';
@@ -61,11 +61,20 @@ export function valueLabel(f, value) {
 }
 export function stateLabel(f, state) {
   if (state === 0) return f.id === 12 ? 'No diffusion' : 'Use stock behaviour';
+  if (f.id === 39) return 'Start in this quality';
   return state === 1 ? 'Always use this value' : 'Change on the module';
+}
+// The hint under each state choice.
+export function stateHint(f, state) {
+  if (state === 0) return f.id === 12 ? 'Grains go to the reverb unsoftened.' : 'As in Mutable Instruments’ firmware.';
+  if (state === 1) return f.id === 39 ? 'On the first start-up after installing; [A] still changes it and your choice is saved.' : 'No control on the module.';
+  return placeable(f) ? 'On a control; your changes are saved.' : 'Its own gesture changes it; your changes are saved.';
 }
 // One line for a feature's current setting.
 export function summary(f, e) {
   if (!e[1]) return f.id === 12 ? 'No diffusion' : 'Stock';
+  // Start in quality is a first start-up value, kept until the user saves.
+  if (f.id === 39) return e[2] ? 'Starts in ' + valueLabel(f, e[2]) : valueLabel(f, 0);
   return (e[1] === 1 ? 'Always ' : 'Starts ') + valueLabel(f, e[2]);
 }
 
