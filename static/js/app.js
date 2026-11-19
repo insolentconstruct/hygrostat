@@ -9,18 +9,18 @@
 // in the browser, check the .wav, offer it for download.
 
 import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, normalise,
-  pageLeds } from './profile.js?v=a51a7e96671fba78';
-import { effectiveScales, validateScales } from './scales.js?v=a51a7e96671fba78';
-import { scaleEditor } from './scale_editor.js?v=a51a7e96671fba78';
-import { guide } from './guide.js?v=a51a7e96671fba78';
-import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=a51a7e96671fba78';
-import { featureHelp, actionHelp } from './help.js?v=a51a7e96671fba78';
+  pageLeds } from './profile.js?v=fa04cab46b62c9b5';
+import { effectiveScales, validateScales } from './scales.js?v=fa04cab46b62c9b5';
+import { scaleEditor } from './scale_editor.js?v=fa04cab46b62c9b5';
+import { guide } from './guide.js?v=fa04cab46b62c9b5';
+import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=fa04cab46b62c9b5';
+import { featureHelp, actionHelp } from './help.js?v=fa04cab46b62c9b5';
 import { KNOBS, KINDS, GROUPS, EXTRA_GROUPS, extraGroup, ACTION_DOES, placeName, pageOf, entryOf, occupant, places, valueLabel, stateLabel,
-  summary, edit, place, adjust, unplace, afterUnplace, canSwap, freeSlot, changes, fitsSlot, placeable, bankWarning, slotCount,
-  usedPages, compaction, compact } from './layout.js?v=a51a7e96671fba78';
-import { drawPanel, highlight } from './panel.js?v=a51a7e96671fba78';
-import { comboImages } from './combo.js?v=a51a7e96671fba78';
-import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=a51a7e96671fba78';
+  summary, stateHint, edit, place, adjust, unplace, afterUnplace, canSwap, freeSlot, changes, fitsSlot, placeable, bankWarning, slotCount,
+  usedPages, compaction, compact } from './layout.js?v=fa04cab46b62c9b5';
+import { drawPanel, highlight } from './panel.js?v=fa04cab46b62c9b5';
+import { comboImages } from './combo.js?v=fa04cab46b62c9b5';
+import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=fa04cab46b62c9b5';
 
 const $ = (id) => document.getElementById(id);
 const cap = (text) => text.replace(/^./, (c) => c.toUpperCase());
@@ -43,7 +43,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=a51a7e96671fba78', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=fa04cab46b62c9b5', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.ready) return;
       if (data.progress !== undefined) {
@@ -607,7 +607,7 @@ function extra(f) {
   const name = el('span', { class: 'extra-name', id: `extra-${f.id}-name`, text: title });
   const about = el('small', { id: `extra-${f.id}-about`, text: help.description });
   // A value the module itself can change is only where it starts.
-  const start = e[1] === 2 && !placeable(f) ? el('small', { class: 'start', id: `extra-${f.id}-start`, text: `Starting value. ${STATE_HINTS[2](f)}` }) : null;
+  const start = e[1] === 2 && !placeable(f) ? el('small', { class: 'start', id: `extra-${f.id}-start`, text: `Starting value. ${stateHint(f, 2)}` }) : null;
   const described = [about, start].filter(Boolean).map((part) => part.id).join(' ');
   const more = el('details', { class: 'extra-more', id: `extra-${f.id}-more` }, el('summary', {}, 'More', el('span', { class: 'sr-only', text: ` about ${title}` })),
     help.details ? el('p', { id: `extra-${f.id}-details`, text: help.details }) : null,
@@ -699,11 +699,6 @@ function confirmChoices(id, kind, slot, done, back) {
     el('div', { class: 'options' }, ...options));
 }
 
-const STATE_HINTS = [
-  (f) => f.id === 12 ? 'Grains go to the reverb unsoftened.' : 'As in Mutable Instruments’ firmware.',
-  () => 'No control on the module.',
-  (f) => placeable(f) ? 'On a control; your changes are saved.' : 'Its own gesture changes it; your changes are saved.'
-];
 
 function renderInspector() {
   const kind = selection.kind, slot = selection.slot;
@@ -736,7 +731,7 @@ function renderInspector() {
         onchange: () => setState(f, state) });
       input.checked = e[1] === state;
       return el('label', { class: 'choice', for: `state-${state}` }, input,
-        el('span', {}, stateLabel(f, state), el('small', { text: STATE_HINTS[state](f) })));
+        el('span', {}, stateLabel(f, state), el('small', { text: stateHint(f, state) })));
     })));
   if (e[1]) {
     const label = e[1] === 1 ? 'Value' : 'Starting value';
@@ -1120,7 +1115,7 @@ async function checkCapabilities() {
   }
   // A constructor alone does not establish support for module workers.
   await new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=a51a7e96671fba78', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=fa04cab46b62c9b5', { type: 'module' });
     const done = (error) => {
       clearTimeout(timer); worker.terminate();
       error ? reject(error) : resolve();
@@ -1149,7 +1144,7 @@ async function init() {
   }
   $('compatibility').hidden = true;
   try {
-    const response = await fetch('manifest.json?v=a51a7e96671fba78', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=fa04cab46b62c9b5', { cache: 'no-cache' });
     manifest = await response.json();
   } catch {
     status('Could not load the release list.', 'error');

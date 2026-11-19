@@ -35,7 +35,8 @@ const descriptions = {
   30: ['Turn PITCH smoothly between its intervals, without notches; PITCH CV unchanged.', 'pitch-knob'],
   31: ['Which eight Plaits models the synth starts with: green, red or yellow. While Plaits plays, [A] + FREEZE steps the bank and FEEDBACK picks a model in it.', 'plaits-bank'],
   32: ['How fast DRY/WET brings in the grains: at 9 o’clock they sit 2.5 dB under the dry (stock) or 7.6 dB (Gentle; Clouds 8.8 dB).', 'mix-law'],
-  33: ['Reverb the whole mix, as stock, or only the grains before DRY/WET, as on Clouds: fully dry has no reverb.', 'reverb-input']
+  33: ['Reverb the whole mix, as stock, or only the grains before DRY/WET, as on Clouds: fully dry has no reverb.', 'reverb-input'],
+  39: ['The quality the module starts in after this firmware is installed and after a settings reset, at each start-up until something is saved; once anything is saved, your choice wins.', 'start-in-quality']
 };
 
 export function featureHelp(feature, release) {

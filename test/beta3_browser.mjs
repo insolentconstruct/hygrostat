@@ -41,7 +41,8 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     const extras = release.profile.features.filter((f) => f.default_in_block === false || !placeable(f));
     assert.deepEqual(await page.locator('#extras .extra-group h3').allTextContents(), ['Sound', 'Startup', 'Indicators and interface']);
     const groups = { Sound: [16, 23, 24, 26, 28, 30, 31, 32, 33], Startup: [15, 27, 29], 'Indicators and interface': [17, 19, 20, 22, 25] };
-    assert.deepEqual(Object.fromEntries(EXTRA_GROUPS), groups);
+    // Start in quality (39) is Beta 4's, after this release.
+    assert.deepEqual(Object.fromEntries(EXTRA_GROUPS.map(([group, ids]) => [group, ids.filter((id) => id !== 39)])), groups);
     for (const [group, ids] of Object.entries(groups)) {
       const shown = page.locator('#extras .extra-group').filter({ has: page.locator('h3', { hasText: group }) });
       const controls = await shown.locator('.extra > select, .extra input[role=switch]').evaluateAll((list) => list.map((c) => Number(c.id.slice(6))));
