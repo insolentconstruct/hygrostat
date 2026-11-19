@@ -67,13 +67,13 @@ export function stateLabel(f, state) {
 // The hint under each state choice.
 export function stateHint(f, state) {
   if (state === 0) return f.id === 12 ? 'Grains go to the reverb unsoftened.' : 'As in Mutable Instruments’ firmware.';
-  if (state === 1) return f.id === 39 ? 'On the first start-up after installing; [A] still changes it and your choice is saved.' : 'No control on the module.';
+  if (state === 1) return f.id === 39 ? 'Each start-up until something is saved; [A] still changes it, and once saved your choice wins.' : 'No control on the module.';
   return placeable(f) ? 'On a control; your changes are saved.' : 'Its own gesture changes it; your changes are saved.';
 }
 // One line for a feature's current setting.
 export function summary(f, e) {
   if (!e[1]) return f.id === 12 ? 'No diffusion' : 'Stock';
-  // Start in quality is a first start-up value, kept until the user saves.
+  // Start in quality applies at each start-up until something is saved.
   if (f.id === 39) return e[2] ? 'Starts in ' + valueLabel(f, e[2]) : valueLabel(f, 0);
   return (e[1] === 1 ? 'Always ' : 'Starts ') + valueLabel(f, e[2]);
 }
