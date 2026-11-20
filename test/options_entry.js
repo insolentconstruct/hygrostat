@@ -13,8 +13,8 @@ import { guide } from '../static/js/guide.js';
 import { featureHelp } from '../static/js/help.js';
 const text = (svg) => [...svg.matchAll(/<text\b[^>]*>(.*?)<\/text>/g)].map((m) => m[1]).join(' ');
 const read = (file) => readFileSync(new URL(file, import.meta.url), 'utf8');
-// The firmware pull request's commit; bump it (or set OPTIONS_ENTRY_FIRMWARE_REF) when that branch moves.
-const ref = process.env.OPTIONS_ENTRY_FIRMWARE_REF || '6a171e6efaaaf89002de3be0209789e9c8129cc9';
+// The firmware merge commit of #286 (override with OPTIONS_ENTRY_FIRMWARE_REF).
+const ref = process.env.OPTIONS_ENTRY_FIRMWARE_REF || 'af6ca9f8fa4116904c38e4c5701d8f9f563ad52d';
 const manifest = JSON.parse(read('../static/manifest.json'));
 const additions = JSON.parse(read('fixtures/options-entry-features.json'));
 assert.deepEqual(additions.map((f) => f.id), [37, 38]);
