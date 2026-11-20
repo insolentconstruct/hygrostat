@@ -67,6 +67,7 @@ jobs:
           node test/beta3_options.js
           node test/hold_rules.js
           node test/start_quality.js
+          node test/options_entry.js
           node --input-type=module -e '
             import { readFileSync } from "node:fs";
             import { fileURLToPath } from "node:url";
