@@ -47,6 +47,10 @@ for (const release of manifest.releases) {
   let pagesMatch;
   try { pagesMatch = Boolean(pageBound) && pageSlots(release.profile) === Number(pageBound[1]) - 1; } catch { pagesMatch = false; }
   check(pagesMatch, `${release.tag}: options page capacity matches the firmware`);
+  // The [A] + FEEDBACK slot (feedback_slot) must match the firmware's amount slots.
+  check((release.profile.feedback_slot === true) === /\bAMOUNT_FEEDBACK\b/.test(header) &&
+      (release.profile.feedback_slot === true) === release.profile.features.some((f) => f.id === 40),
+      `${release.tag}: [A] + FEEDBACK slot matches the firmware`);
   if (release.development) {
     check(/^drizzlet-dev-[0-9a-f]+$/.test(release.tag) && release.app.includes('-dev-') &&
         /unreleased/i.test(release.name), `${release.tag}: explicitly unreleased development entry`);

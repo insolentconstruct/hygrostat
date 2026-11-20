@@ -8,8 +8,8 @@
 // highlighted. Centres and sizes in mm are the printable guide's geometry
 // (Mutable Instruments Beads panel file, geometry only, CC BY-SA 3.0); the
 // drawing is plain SVG with no artwork.
-import { pageOf, pageLedName, KNOBS } from './layout.js?v=89db4198af86c8a2';
-import { pageLeds } from './profile.js?v=89db4198af86c8a2';
+import { pageOf, pageLedName, KNOBS } from './layout.js?v=0939db1ba3378a2d';
+import { pageLeds } from './profile.js?v=0939db1ba3378a2d';
 
 const SVG = 'http://www.w3.org/2000/svg';
 const WIDTH = 70.8, HEIGHT = 128.52;
@@ -129,8 +129,9 @@ export function highlight(svg, kind, slot, profile) {
     const leds = pageLedName(profile, page);
     text = `Hold [M] 3 s, tap to page ${page} (${leds} ${leds.endsWith('LEDs') ? 'pulse' : 'pulses'}), turn ${KNOBS[knob]}. [A] shows the value.`;
   } else if (kind === 'amount' && slot) {
-    on.add('a'); on.add(`knob-${slot}`);
-    text = `Hold [A] and turn ${KNOBS[slot]}.`;
+    // Amount slot 3 is FEEDBACK, knob 0.
+    on.add('a'); on.add(`knob-${slot % 3}`);
+    text = `Hold [A] and turn ${KNOBS[slot % 3]}.`;
   } else if (kind === 'action' && slot) {
     on.add('a');
     if (slot === 1) on.add('seed');

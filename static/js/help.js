@@ -1,6 +1,7 @@
 // Copyright 2026 Insolent Construct.
 // MIT licence: see encoder.js.
 // Links follow the selected release, including its source revision during development.
+import { TOGGLES } from './profile.js?v=0939db1ba3378a2d';
 const docs = 'https://github.com/insolentconstruct/eurorack/blob/{TAG}/beads/build/docs/FEATURES.md';
 const descriptions = {
   1: ['Snap final pitch, including PITCH, CV and randomness, to a scale.', 'drizzlet-options'],
@@ -38,7 +39,8 @@ const descriptions = {
   33: ['Reverb the whole mix, as stock, or only the grains before DRY/WET, as on Clouds: fully dry has no reverb.', 'reverb-input'],
   37: ['When an options page opens, show each knob’s stored value in turn on [A], or only the page’s first setting at once.', 'options-page-preview'],
   38: ['Open the options pages on the page last used, or always on the first page.', 'options-page-on-opening'],
-  39: ['The quality the module starts in after this firmware is installed and after a settings reset, at each start-up until something is saved; once anything is saved, your choice wins.', 'start-in-quality']
+  39: ['The quality the module starts in after this firmware is installed and after a settings reset, at each start-up until something is saved; once anything is saved, your choice wins.', 'start-in-quality'],
+  40: ['Which knob sets the manual input gain while [A] is held: FEEDBACK as stock, DRY/WET, REVERB, or none.', 'a-gestures-in-profiles']
 };
 
 export function featureHelp(feature, release) {
@@ -55,5 +57,10 @@ export function actionHelp(feature) {
   if (feature.id === 13) return 'Change on the module: an [A] gesture switches it; there is no page knob. Always: on or off, no gesture.';
   if (feature.id === 14) return 'Always On or Change on the module turns on the trim gesture.';
   if (feature.id === 9) return 'Manual needs an [A] gesture to start the synth, also when always Manual.';
+  if (feature.action && TOGGLES.includes(feature.id)) {
+    return 'On [A] + SEED or [A] + FREEZE, the gesture switches between its two values and [A] shows the new colour.' +
+      (feature.id === 4 ? ' Switching clears the recording.' : '') +
+      (feature.id === 7 ? ' Synth goes on [A] + SEED only: [A] + FREEZE steps the Plaits bank.' : ' In Plaits synth play [A] + FREEZE steps the bank instead.');
+  }
   return '';
 }
