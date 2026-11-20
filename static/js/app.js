@@ -8,19 +8,19 @@
 // check the release's app image against the manifest, encode the update .wav
 // in the browser, check the .wav, offer it for download.
 
-import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, normalise,
-  pageLeds } from './profile.js?v=89db4198af86c8a2';
-import { effectiveScales, validateScales } from './scales.js?v=89db4198af86c8a2';
-import { scaleEditor } from './scale_editor.js?v=89db4198af86c8a2';
-import { guide } from './guide.js?v=89db4198af86c8a2';
-import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=89db4198af86c8a2';
-import { featureHelp, actionHelp } from './help.js?v=89db4198af86c8a2';
+import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, normalise, GAIN,
+  pageLeds, gestureFirmware } from './profile.js?v=b4b7f54caf3ed6e5';
+import { effectiveScales, validateScales } from './scales.js?v=b4b7f54caf3ed6e5';
+import { scaleEditor } from './scale_editor.js?v=b4b7f54caf3ed6e5';
+import { guide } from './guide.js?v=b4b7f54caf3ed6e5';
+import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=b4b7f54caf3ed6e5';
+import { featureHelp, actionHelp } from './help.js?v=b4b7f54caf3ed6e5';
 import { KNOBS, KINDS, GROUPS, EXTRA_GROUPS, extraGroup, ACTION_DOES, placeName, pageOf, entryOf, occupant, places, valueLabel, stateLabel,
   summary, stateHint, edit, place, adjust, unplace, afterUnplace, canSwap, freeSlot, changes, fitsSlot, placeable, bankWarning, slotCount,
-  usedPages, compaction, compact } from './layout.js?v=89db4198af86c8a2';
-import { drawPanel, highlight } from './panel.js?v=89db4198af86c8a2';
-import { comboImages } from './combo.js?v=89db4198af86c8a2';
-import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=89db4198af86c8a2';
+  usedPages, compaction, compact } from './layout.js?v=b4b7f54caf3ed6e5';
+import { drawPanel, highlight } from './panel.js?v=b4b7f54caf3ed6e5';
+import { comboImages } from './combo.js?v=b4b7f54caf3ed6e5';
+import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=b4b7f54caf3ed6e5';
 
 const $ = (id) => document.getElementById(id);
 const cap = (text) => text.replace(/^./, (c) => c.toUpperCase());
@@ -43,7 +43,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=89db4198af86c8a2', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=b4b7f54caf3ed6e5', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.ready) return;
       if (data.progress !== undefined) {
@@ -562,7 +562,7 @@ function gridDrag() {
 
 function renderSlots() {
   for (const kind of ['amount', 'action']) {
-    $(kind === 'amount' ? 'amounts' : 'actions').replaceChildren(...Array.from({ length: KINDS[kind].count }, (_, i) => {
+    $(kind === 'amount' ? 'amounts' : 'actions').replaceChildren(...Array.from({ length: slotCount(kind, profile()) }, (_, i) => {
       const slot = i + 1;
       const [does, what] = cellText(kind, slot);
       return el('button', {
@@ -585,13 +585,15 @@ function renderSlots() {
       `${f.name} (${entryOf(entries, f)[1] === 2 ? 'not placed' : summary(f, entryOf(entries, f)).toLowerCase()})`)]));
   $('bank-warning').textContent = bankWarning(entries, profile());
   $('bank-warning').hidden = !$('bank-warning').textContent;
+  $('gesture-firmware').textContent = gestureFirmware(entries);
+  $('gesture-firmware').hidden = !$('gesture-firmware').textContent;
 }
 
 // Extras that read better under another name here.
 const EXTRA_NAMES = { 31: 'Starting bank' };
 
 function renderExtras() {
-  const extras = profile().features.filter((f) => f.default_in_block === false || !placeable(f));
+  const extras = profile().features.filter((f) => (f.default_in_block === false && !f.amount) || !placeable(f));
   $('extras').replaceChildren(...EXTRA_GROUPS.map(([group], n) => {
     const members = extras.filter((f) => extraGroup(f) === group);
     return members.length && el('section', { class: 'extra-group', 'aria-labelledby': `extras-group-${n}` },
@@ -726,14 +728,14 @@ function renderInspector() {
   if (actionHelp(f)) body.push(el('p', { class: 'note', id: 'action-help', text: actionHelp(f) }));
   const change = (k, value, message) => commit(() => edit(entries, profile(), f, k, value), message);
   body.push(el('fieldset', { class: 'choices' }, el('legend', { text: 'How it works' }),
-    ...modes(f).map(([state]) => {
+    ...modes(f).filter(([state]) => state || f.id !== GAIN).map(([state]) => {
       const input = el('input', { type: 'radio', name: 'state', id: `state-${state}`, value: state,
         onchange: () => setState(f, state) });
       input.checked = e[1] === state;
       return el('label', { class: 'choice', for: `state-${state}` }, input,
         el('span', {}, stateLabel(f, state), el('small', { text: stateHint(f, state) })));
     })));
-  if (e[1]) {
+  if (e[1] && f.id !== GAIN) {
     const label = e[1] === 1 ? 'Value' : 'Starting value';
     if (f.values) {
       const select = el('select', { id: 'value', 'aria-label': `${f.name}: ${label}` });
@@ -1115,7 +1117,7 @@ async function checkCapabilities() {
   }
   // A constructor alone does not establish support for module workers.
   await new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=89db4198af86c8a2', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=b4b7f54caf3ed6e5', { type: 'module' });
     const done = (error) => {
       clearTimeout(timer); worker.terminate();
       error ? reject(error) : resolve();
@@ -1144,7 +1146,7 @@ async function init() {
   }
   $('compatibility').hidden = true;
   try {
-    const response = await fetch('manifest.json?v=89db4198af86c8a2', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=b4b7f54caf3ed6e5', { cache: 'no-cache' });
     manifest = await response.json();
   } catch {
     status('Could not load the release list.', 'error');

@@ -23,15 +23,22 @@
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
 // Knob cards port options_guide.py: 270-degree arcs and the same LED ladder.
-import { effectiveScales, PULSE_NAMES } from './scales.js?v=89db4198af86c8a2';
-import { defaults, equal, encodeProfile, pageLeds, PAGE_LEDS } from './profile.js?v=89db4198af86c8a2';
-import { pageLedName, usedPages } from './layout.js?v=89db4198af86c8a2';
-import { RELEASE_GUIDES } from './release_guides.js?v=89db4198af86c8a2';
-import { placeable, bankWarning } from './layout.js?v=89db4198af86c8a2';
+import { effectiveScales, PULSE_NAMES } from './scales.js?v=b4b7f54caf3ed6e5';
+import { defaults, equal, encodeProfile, pageLeds, PAGE_LEDS, GAIN } from './profile.js?v=b4b7f54caf3ed6e5';
+import { pageLedName, usedPages } from './layout.js?v=b4b7f54caf3ed6e5';
+import { RELEASE_GUIDES } from './release_guides.js?v=b4b7f54caf3ed6e5';
+import { placeable, bankWarning } from './layout.js?v=b4b7f54caf3ed6e5';
 
 const KNOBS = ['FEEDBACK', 'DRY/WET', 'REVERB'];
 export const ACTIONS = ['None', '[A]+SEED', '[A]+FREEZE', '[A] hold'];
-export const AMOUNTS = ['None', '[A]+DRY/WET', '[A]+REVERB'];
+export const AMOUNTS = ['None', '[A]+DRY/WET', '[A]+REVERB', '[A]+FEEDBACK'];
+// Manual gain's knob: FEEDBACK unless feature 40 moves it, or none.
+function gainLine(entries) {
+  const gain = entries.find((e) => e[0] === GAIN && e[1]);
+  if (gain?.[1] === 1) return 'Manual gain: on no knob. [A] hold resets gain when no hold action runs.';
+  const knob = gain ? KNOBS[gain[4] % 3] : 'FEEDBACK';
+  return `Manual gain: hold [A] and turn ${knob}. [A] hold resets gain when no hold action runs.`;
+}
 export const pageName = (slot) => slot ? `[M] page ${Math.ceil(slot / 3)} · ${KNOBS[(slot - 1) % 3]}` : 'None';
 // Valid UTF-8 scale names can contain these XML 1.0 noncharacters.
 const escape = (s) => String(s).replace(/[\ufffe\uffff]/g, '\ufffd').replace(/[&<>"']/g, (c) =>
@@ -190,17 +197,19 @@ export function guide(entries, release, fp, mobile = false, scales = null) {
   }
   y += 20;
   d.text(margin, y, 'OFF THE PAGES', 20, 'bold'); y += 34;
-  for (const e of entries.filter((e) => e[4])) {
+  for (const e of entries.filter((e) => e[4] && e[0] !== GAIN)) {
     y += d.card(margin, y, mobile ? width - margin * 2 : 325,
         feature(e), e, `${AMOUNTS[e[4]]}: ${feature(e).name}`, mobile) + 15;
   }
-  y = d.lines(margin, y, 'Manual gain: hold [A] and turn FEEDBACK. [A] hold resets gain when no hold action runs.', mobile ? 43 : 140);
+  y = d.lines(margin, y, gainLine(entries), mobile ? 43 : 140);
   for (const e of entries.filter((e) => e[5])) {
+    const f = feature(e);
     const extra = e[0] === 9 ? ' With Synth start on Manual, both inputs unplugged and FREEZE off.' :
-        e[0] === 13 ? ' Toggle monophonic grains.' : ' Start a fresh recording window.';
+        e[0] === 13 ? ' Toggle monophonic grains.' : e[0] === 14 ? ' Start a fresh recording window.' :
+        ` Switch ${f.values[0]} / ${f.values[1]}; [A] shows the new colour.${e[0] === 4 ? ' Switching clears the recording.' : ''}`;
     y = d.lines(margin, y + 10, `${ACTIONS[e[5]]}: ${feature(e).name}.${e[5] === 3 ? ' Both inputs unplugged.' : ''}${extra}`, mobile ? 43 : 140);
   }
-  for (const e of entries.filter((e) => e[1] === 1 && !e[5])) {
+  for (const e of entries.filter((e) => e[1] === 1 && !e[5] && e[0] !== GAIN)) {
     const f = feature(e);
     y = d.lines(margin, y + 10, `${f.name}: Fixed · ${f.values ? f.values[e[2]] : e[2]}`, mobile ? 43 : 140);
   }

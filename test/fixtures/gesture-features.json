@@ -1,0 +1,26 @@
+[
+  {
+    "id": 40,
+    "default_in_block": false,
+    "default": [40, 0, 0, 0, 0, 0],
+    "name": "Manual gain knob",
+    "values": ["Not on a knob"],
+    "states": ["Off", "Fixed", "Adjustable"],
+    "field": null,
+    "page": false,
+    "amount": true,
+    "action": false,
+    "stateless": false,
+    "synth_path": false,
+    "cpu": {
+      "kind": "zero",
+      "source": "synthetic fixture: no per-block work (code inspection)",
+      "engines": {
+        "synth": { "off": 0, "fixed": [0], "adjustable": [0] },
+        "granular": { "off": 0, "fixed": [0], "adjustable": [0] }
+      },
+      "uncertainty": { "points": 0 },
+      "note": "chooses the knob [A] turns into manual gain; not a release measurement"
+    }
+  }
+]

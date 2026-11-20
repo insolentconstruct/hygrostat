@@ -22,7 +22,7 @@
 //
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
-import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=89db4198af86c8a2';
+import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=b4b7f54caf3ed6e5';
 
 // Six-byte entries are kept in wire order: id, state, value, page, amount, action.
 const STATES = ['Off', 'Fixed', 'Adjustable'];
@@ -46,6 +46,13 @@ export function pageLeds(profile) {
 }
 export const pageSlots = (profile) => pageLeds(profile).length * 3;
 
+// Firmware with feedback_slot (Beta 4 on) has [A] + FEEDBACK as amount slot 3,
+// which manual gain (feature 40) keeps while that feature is Off.
+export const GAIN = 40;
+export const FEEDBACK_SLOT = 3;
+export const amountSlots = (profile) => profile.feedback_slot === true ? 3 : 2;
+const gainMoved = (entries) => entries.some((e) => e[0] === GAIN && e[1]);
+
 // Firmware with hold_rules refuses an adjustable Synth start without its
 // gesture, and anything else on the [A] hold (3), which restarts automatic gain.
 export function validate(entries, profile) {
@@ -64,11 +71,12 @@ export function validate(entries, profile) {
     if (!f || seen.has(id)) throw new Error('Unknown or repeated feature.');
     seen.add(id);
     if (state > 2 || (f.states && !f.states.includes(STATES[state])) || (f.values && value >= f.values.length) ||
-        page > slots || amount > 2 || action > 3 ||
+        page > slots || amount > amountSlots(profile) || action > 3 ||
         (page && (!f.page || state !== 2)) ||
         (amount && (!f.amount || state !== 2)) ||
         (action && (!f.action || !state || (state === 1 && (!value || !f.stateless)))) ||
         (id === 9 && state === 1 && value && !action) ||
+        (id >= 15 && state === 2 && !f.page && f.field == null && !amount) ||
         (holdRules && ((id === 9 && state === 2 && !action) || (action === 3 && id !== 9)))) {
       throw new Error(`${f.name}: this setting or placement is not allowed.`);
     }
@@ -77,8 +85,19 @@ export function validate(entries, profile) {
       if (slot) used[k].add(slot);
     });
   }
+  if (profile.feedback_slot === true && used[1].has(FEEDBACK_SLOT) && !gainMoved(entries)) {
+    throw new Error('[A] + FEEDBACK has manual gain: move it or take it off the knobs first.');
+  }
   return entries;
 }
+
+// Beta 4 [A] gestures: a toggle on [A] + SEED or [A] + FREEZE, anything on
+// [A] + FEEDBACK, or manual gain moved. Earlier firmware refuses them.
+export const TOGGLES = [2, 4, 6, 7, 23];
+export const newGestures = (entries) => entries.some((e) => e[4] === FEEDBACK_SLOT ||
+  (e[0] === GAIN && e[1]) || (e[5] && TOGGLES.includes(e[0])));
+export const gestureFirmware = (entries) => newGestures(entries) ?
+  'These [A] gestures need Drizzlet Beta 4 or later; earlier firmware refuses them.' : '';
 
 function validatePitchDefault(entries, scales) {
   const pitch = entries.find((e) => e[0] === 1);
@@ -151,10 +170,11 @@ export const decodeScaleBank = (b, profile) => decodeSettings(b, profile).scales
 export const defaults = (profile) => profile.features.filter((f) => f.default_in_block !== false).map((f) => f.default.slice());
 // Canonical editor entries: omitted catalogue defaults stay absent when Off.
 // Keep the codec lossless for independently supplied firmware blocks.
+// Manual gain on [A] + FEEDBACK is its Off state, as stock.
 export function normalise(entries, profile) {
   validate(entries, profile);
-  return entries.filter((e) => e[1] !== 0 ||
-    profile.features.find((f) => f.id === e[0]).default_in_block !== false)
+  return entries.map((e) => e[0] === GAIN && e[1] === 2 && e[4] === FEEDBACK_SLOT ? [GAIN, 0, 0, 0, 0, 0] : e)
+    .filter((e) => e[1] !== 0 || profile.features.find((f) => f.id === e[0]).default_in_block !== false)
     .map((e) => e[1] === 0 ? [e[0], 0, 0, 0, 0, 0] : e.slice());
 }
 export const equal = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
