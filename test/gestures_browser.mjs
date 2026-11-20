@@ -63,6 +63,11 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     assert.match(await page.textContent('#action-2'), /Switch processor/);
     assert.match(await page.textContent('#action-help'), /clears the recording/);
     assert.equal(await page.locator('#where-action option[value="3"]').count(), 0, 'toggles never take the hold');
+    // The Synth toggle is offered [A] + SEED only.
+    await page.click('#browse');
+    await page.click('#lib-7');
+    assert.equal(await page.locator('#where-action option[value="1"]').count(), 1);
+    assert.equal(await page.locator('#where-action option[value="2"]').count(), 0);
     assert.equal(await page.isDisabled('#build'), false);
     assert.deepEqual(errors, []);
     await context.close();

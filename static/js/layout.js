@@ -7,7 +7,7 @@
 // Editor rules for the layout view: where each feature sits on the module and
 // how a placement, swap or removal changes the six-byte entries. Every result
 // goes through normalise(), so the validator stays the final gate.
-import { normalise, initialEntry, pageLeds, pageSlots, amountSlots, GAIN, FEEDBACK_SLOT } from './profile.js?v=b4b7f54caf3ed6e5';
+import { normalise, initialEntry, pageLeds, pageSlots, amountSlots, GAIN, FEEDBACK_SLOT, SYNTH } from './profile.js?v=0939db1ba3378a2d';
 
 export const KNOBS = ['FEEDBACK', 'DRY/WET', 'REVERB'];
 // Entry byte for each kind of destination, and how many there are; a
@@ -43,7 +43,7 @@ export const fits = (f, kind) => Boolean(f[kind]);
 // With hold_rules, only Synth start goes on the [A] hold, and it keeps a gesture.
 const holdRules = (profile) => profile.hold_rules === true;
 export const fitsSlot = (profile, f, kind, slot) => fits(f, kind) &&
-  !(holdRules(profile) && kind === 'action' && slot === 3 && f.id !== 9);
+  !(holdRules(profile) && kind === 'action' && slot === 3 && f.id !== 9) && !(kind === 'action' && slot === 2 && f.id === SYNTH);
 // A setting with no destination, such as the Plaits bank, has its own gesture.
 export const placeable = (f) => Object.keys(KINDS).some((kind) => fits(f, kind));
 // In Plaits synth play [A] + FREEZE steps the bank, unless Synth start is there.

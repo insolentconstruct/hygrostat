@@ -16,7 +16,7 @@ import { featureHelp, actionHelp } from '../static/js/help.js';
 const read = (file) => readFileSync(new URL(file, import.meta.url), 'utf8');
 const text = (svg) => [...svg.matchAll(/<text\b[^>]*>(.*?)<\/text>/g)].map((m) => m[1]).join(' ');
 // The firmware pull request's commit, and the parser before it; bump them (or set the variables) when that branch moves.
-const ref = process.env.GESTURES_FIRMWARE_REF || '6e07b65fd20c1f0bfda52a872ea1302d3ea43dad';
+const ref = process.env.GESTURES_FIRMWARE_REF || '13bf966c838edde1401ae45deaeb29292d21d1d9';
 const before = process.env.GESTURES_BASE_FIRMWARE_REF || 'f5f9212b55d0aec33f1e8c0ae1a1808d4cf88789';
 const manifest = JSON.parse(read('../static/manifest.json'));
 assert(manifest.releases.every((r) => !r.profile.feedback_slot && !r.profile.features.some((f) => f.id === GAIN)),
@@ -38,17 +38,20 @@ const factory = defaults(profile);
 for (const id of TOGGLES) {
   for (let action = 1; action <= 3; ++action) {
     const e = [id, 2, 0, 0, 0, action];
-    if (action === 3) assert.throws(() => validate([e], profile), /not allowed/);
+    // The Synth toggle goes on [A] + SEED only.
+    if (action === 3 || (id === 7 && action === 2)) assert.throws(() => validate([e], profile), /not allowed/);
     else validate([e], profile);
     assert.throws(() => validate([e], beta3.profile), /not allowed/);
     assert.throws(() => validate([[id, 1, 1, 0, 0, action]], profile), /not allowed/);
   }
-  assert(fitsSlot(profile, byId(id), 'action', 1) && fitsSlot(profile, byId(id), 'action', 2));
+  assert(fitsSlot(profile, byId(id), 'action', 1) && fitsSlot(profile, byId(id), 'action', 2) === (id !== 7));
   assert(!fitsSlot(profile, byId(id), 'action', 3));
   assert(ACTION_DOES[id] && actionHelp(byId(id)).includes('two values'));
   assert.equal(actionHelp(beta3.profile.features.find((f) => f.id === id)), '');
 }
 assert.match(actionHelp(byId(4)), /clears the recording/);
+assert.match(actionHelp(byId(7)), /\[A\] \+ SEED only/);
+assert.throws(() => place(defaults(profile), profile, 7, 'action', 2), /cannot go on \[A\] \+ FREEZE/);
 
 // Manual gain: Off is FEEDBACK; a moved gain or another FEEDBACK amount needs the slot.
 const W = 11, D = 12;
@@ -145,7 +148,7 @@ const row = catalogue.features.find((c) => c.id === GAIN);
 assert.equal(row.name, gain.name);
 assert.deepEqual([row.values, row.states, row.field, row.default_state], [gain.values, gain.states, gain.field, 'Off']);
 assert.deepEqual([row.page_slots, row.amount_slots, row.actions], [[], [1, 2, 3], []]);
-for (const id of TOGGLES) assert.deepEqual(catalogue.features.find((c) => c.id === id).actions, [1, 2]);
+for (const id of TOGGLES) assert.deepEqual(catalogue.features.find((c) => c.id === id).actions, id === 7 ? [1] : [1, 2]);
 for (const id of [W, D]) assert.deepEqual(catalogue.features.find((c) => c.id === id).amount_slots, [1, 2, 3]);
 assert(docs.includes('\n### [A] gestures in profiles\n'));
 assert(/\bAMOUNT_FEEDBACK\b/.test(firmwareShow(ref, 'beads/profile.h', { encoding: 'utf8' })));
@@ -157,7 +160,8 @@ const listing = (entries) => {
   entries.forEach((e, i) => b.set(e, 16 + 6 * i));
   return reseal(b);
 };
-const cases = [encodeProfile(factory, profile), encodeProfile(swapped, profile), encodeProfile(fixed, profile)];
+const cases = [encodeProfile(factory, profile), encodeProfile(swapped, profile), encodeProfile(fixed, profile),
+  listing([[7, 2, 0, 0, 0, 1]]), listing([[7, 2, 0, 0, 0, 2]])];
 for (const id of [...TOGGLES, 9, 11, 12, 13, 14, GAIN]) {
   for (let state = 0; state <= 3; ++state) for (const value of [0, 1, 2]) for (const page of [0, 1]) {
     for (let amount = 0; amount <= 4; ++amount) for (let action = 0; action <= 4; ++action) {
@@ -184,6 +188,9 @@ const oracle = (commit) => {
 };
 const answers = oracle(ref);
 const old = oracle(before);
+// The firmware takes the Synth toggle on [A] + SEED and refuses it on [A] + FREEZE; the parser before it refuses both.
+assert.deepEqual([3, 4].map((i) => answers[i * (answers.length / cases.length)]), [1, 0]);
+assert.deepEqual([3, 4].map((i) => old[i * (old.length / cases.length)]), [0, 0]);
 const stride = answers.length / cases.length;
 assert(Number.isInteger(stride) && stride > 6 && old.length === answers.length);
 let accepted = 0, unchanged = 0;

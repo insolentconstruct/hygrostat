@@ -1,7 +1,7 @@
 // Copyright 2026 Insolent Construct.
 // MIT licence: see encoder.js.
 // Links follow the selected release, including its source revision during development.
-import { TOGGLES } from './profile.js?v=b4b7f54caf3ed6e5';
+import { TOGGLES } from './profile.js?v=0939db1ba3378a2d';
 const docs = 'https://github.com/insolentconstruct/eurorack/blob/{TAG}/beads/build/docs/FEATURES.md';
 const descriptions = {
   1: ['Snap final pitch, including PITCH, CV and randomness, to a scale.', 'drizzlet-options'],
@@ -59,7 +59,8 @@ export function actionHelp(feature) {
   if (feature.id === 9) return 'Manual needs an [A] gesture to start the synth, also when always Manual.';
   if (feature.action && TOGGLES.includes(feature.id)) {
     return 'On [A] + SEED or [A] + FREEZE, the gesture switches between its two values and [A] shows the new colour.' +
-      (feature.id === 4 ? ' Switching clears the recording.' : '') + ' In Plaits synth play [A] + FREEZE steps the bank instead.';
+      (feature.id === 4 ? ' Switching clears the recording.' : '') +
+      (feature.id === 7 ? ' Synth goes on [A] + SEED only: [A] + FREEZE steps the Plaits bank.' : ' In Plaits synth play [A] + FREEZE steps the bank instead.');
   }
   return '';
 }

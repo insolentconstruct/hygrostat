@@ -22,7 +22,7 @@
 //
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
-import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=b4b7f54caf3ed6e5';
+import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=0939db1ba3378a2d';
 
 // Six-byte entries are kept in wire order: id, state, value, page, amount, action.
 const STATES = ['Off', 'Fixed', 'Adjustable'];
@@ -77,7 +77,8 @@ export function validate(entries, profile) {
         (action && (!f.action || !state || (state === 1 && (!value || !f.stateless)))) ||
         (id === 9 && state === 1 && value && !action) ||
         (id >= 15 && state === 2 && !f.page && f.field == null && !amount) ||
-        (holdRules && ((id === 9 && state === 2 && !action) || (action === 3 && id !== 9)))) {
+        (holdRules && ((id === 9 && state === 2 && !action) || (action === 3 && id !== 9))) ||
+        (id === SYNTH && action === 2)) {
       throw new Error(`${f.name}: this setting or placement is not allowed.`);
     }
     [page, amount, action].forEach((slot, k) => {
@@ -94,6 +95,8 @@ export function validate(entries, profile) {
 // Beta 4 [A] gestures: a toggle on [A] + SEED or [A] + FREEZE, anything on
 // [A] + FEEDBACK, or manual gain moved. Earlier firmware refuses them.
 export const TOGGLES = [2, 4, 6, 7, 23];
+// Plaits play keeps [A] + FREEZE for its bank, so the Synth toggle goes on [A] + SEED.
+export const SYNTH = 7;
 export const newGestures = (entries) => entries.some((e) => e[4] === FEEDBACK_SLOT ||
   (e[0] === GAIN && e[1]) || (e[5] && TOGGLES.includes(e[0])));
 export const gestureFirmware = (entries) => newGestures(entries) ?
