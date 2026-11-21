@@ -69,6 +69,8 @@ jobs:
           node test/start_quality.js
           node test/options_entry.js
           node test/configurable_gestures.js
+          # Skips only the firmware agreement until the blob firmware commit is published.
+          BLOB_FIRMWARE_OPTIONAL=1 node test/region.js
           node --input-type=module -e '
             import { readFileSync } from "node:fs";
             import { fileURLToPath } from "node:url";

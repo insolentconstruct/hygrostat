@@ -22,7 +22,7 @@
 //
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
-import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=0939db1ba3378a2d';
+import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=6af54c48c8b913e6';
 
 // Six-byte entries are kept in wire order: id, state, value, page, amount, action.
 const STATES = ['Off', 'Fixed', 'Adjustable'];
@@ -53,9 +53,57 @@ export const FEEDBACK_SLOT = 3;
 export const amountSlots = (profile) => profile.feedback_slot === true ? 3 : 2;
 const gainMoved = (entries) => entries.some((e) => e[0] === GAIN && e[1]);
 
+// Profile version 3 (blob firmware) adds Plaits banks of 8 model IDs and the
+// region directory; only a release whose profile.region declares it takes one.
+export const PLAITS_BANK = 31;
+export const BANK_SIZE = 8;
+export const MAX_BANKS = 15;
+export const MAX_SECTIONS = 3;
+// Section kinds in their required order: WAVE, TERR, PLTS.
+export const SECTION_KINDS = [0x45564157, 0x52524554, 0x53544c50];
+export const MIN_SECTION_SIZE = 36;
+// profile-features.json plaits_models: 0-23 stock, 28-99 Palette; 24-27 never assigned.
+export const knownModel = (id) => Number.isInteger(id) && ((id >= 0 && id < 24) || (id >= 28 && id <= 99));
+const u32 = (v) => Number.isInteger(v) && v >= 0 && v <= 0xffffffff;
+export function regionSupport(profile) {
+  const region = profile.region;
+  if (region === undefined) return null;
+  if (region?.profile_version !== 3 || profile.version !== 2 || !u32(region.release) || !region.release ||
+      !Number.isInteger(region.services_version) || region.services_version < 1) {
+    throw new Error('Unsupported region metadata.');
+  }
+  return region;
+}
+
+// Banks the writer accepts, and a directory the module's region reader can lay out.
+export function validatePlaits(plaits) {
+  const { banks, directory } = plaits ?? {};
+  if (!Array.isArray(banks) || banks.length > MAX_BANKS ||
+      banks.some((bank) => !Array.isArray(bank) || bank.length !== BANK_SIZE || !bank.every(knownModel))) {
+    throw new Error('Plaits banks need up to 15 banks of 8 known model IDs.');
+  }
+  if (!Array.isArray(directory) || directory.length > MAX_SECTIONS ||
+      directory.some((e) => !e || !['kind', 'offset', 'size', 'crc'].every((k) => u32(e[k])))) {
+    throw new Error('The region directory needs up to 3 sections.');
+  }
+  let previous = -1, next = 0;
+  for (const { kind, offset, size } of directory) {
+    const index = SECTION_KINDS.indexOf(kind);
+    if (index <= previous || offset % 32 || offset < next || size < MIN_SECTION_SIZE || size % 4) {
+      throw new Error('Region sections must be WAVE, TERR, PLTS in order, aligned and apart.');
+    }
+    previous = index;
+    next = offset + size;
+  }
+  return { banks: banks.map((bank) => bank.slice()),
+    directory: directory.map(({ kind, offset, size, crc }) => ({ kind, offset, size, crc })) };
+}
+// The start bank must be below a version 3 profile's bank count; 0 banks means the stock three.
+const valueCount = (f, banks) => f.id === PLAITS_BANK && banks ? banks : f.values.length;
+
 // Firmware with hold_rules refuses an adjustable Synth start without its
 // gesture, and anything else on the [A] hold (3), which restarts automatic gain.
-export function validate(entries, profile) {
+export function validate(entries, profile, banks = 0) {
   const holdRules = profile.hold_rules === true;
   const slots = pageSlots(profile);
   if (!Array.isArray(entries) || entries.length > 82) throw new Error('Too many features.');
@@ -70,7 +118,7 @@ export function validate(entries, profile) {
     const f = profile.features.find((f) => f.id === id);
     if (!f || seen.has(id)) throw new Error('Unknown or repeated feature.');
     seen.add(id);
-    if (state > 2 || (f.states && !f.states.includes(STATES[state])) || (f.values && value >= f.values.length) ||
+    if (state > 2 || (f.states && !f.states.includes(STATES[state])) || (f.values && value >= valueCount(f, banks)) ||
         page > slots || amount > amountSlots(profile) || action > 3 ||
         (page && (!f.page || state !== 2)) ||
         (amount && (!f.amount || state !== 2)) ||
@@ -111,27 +159,39 @@ function validatePitchDefault(entries, scales) {
 
 const validFormat = (format) => Number.isInteger(format) && format > 0 && format <= 0xffffffff;
 
-export function encodeProfile(entries, profile, scales = null) {
-  validate(entries, profile);
+// plaits ({ banks, directory }) writes version 3; null keeps the release's own version.
+export function encodeProfile(entries, profile, scales = null, plaits = null) {
+  if (plaits !== null && !regionSupport(profile)) {
+    throw new Error('This release cannot take Plaits banks or a region: its firmware would refuse the profile.');
+  }
+  const blobs = plaits === null ? null : validatePlaits(plaits);
+  validate(entries, profile, blobs?.banks.length);
   const version = profile.version || 1;
   if (![1, 2].includes(version) || profile.size !== (version === 2 ? 4096 : 512) ||
       !validFormat(profile.format)) throw new Error('Unsupported profile format.');
   if (version === 1 && scales !== null) throw new Error('This release cannot customize scales.');
   const bank = validateScales(scales);
   validatePitchDefault(entries, bank);
-  const payload = entries.length * 6 + (bank?.length || 0) * SCALE_RECORD_SIZE;
+  const scalesEnd = 16 + entries.length * 6 + (bank?.length || 0) * SCALE_RECORD_SIZE;
+  const end = scalesEnd + (blobs ? blobs.banks.length * BANK_SIZE + blobs.directory.length * 16 : 0);
   const b = new Uint8Array(profile.size).fill(255);
   const v = new DataView(b.buffer);
   v.setUint32(0, 0x46505a44, true);
-  b[4] = version;
+  b[4] = blobs ? 3 : version;
   b[5] = entries.length;
-  v.setUint16(6, payload, true);
+  v.setUint16(6, end - 16, true);
   v.setUint32(8, profile.format, true);
   v.setUint32(12, 0, true);
   if (version === 2) { b[12] = bank === null ? 0 : 1; b[13] = bank?.length || 0; }
+  if (blobs) { b[14] = blobs.banks.length; b[15] = blobs.directory.length; }
   entries.forEach((e, i) => b.set(e, 16 + i * 6));
   if (bank) writeScales(b, 16 + entries.length * 6, bank);
-  const end = 16 + payload;
+  if (blobs) {
+    const at = scalesEnd + blobs.banks.length * BANK_SIZE;
+    blobs.banks.forEach((ids, i) => b.set(ids, scalesEnd + i * BANK_SIZE));
+    blobs.directory.forEach((e, i) => ['kind', 'offset', 'size', 'crc'].forEach((k, j) =>
+      v.setUint32(at + i * 16 + j * 4, e[k], true)));
+  }
   v.setUint32(end, crc32(b.subarray(0, end)), true);
   return b;
 }
@@ -145,26 +205,40 @@ export function decodeSettings(b, profile) {
   const version = b[4];
   // V2 firmware also reads V1 records, bounded to their original 512 bytes.
   // Share links still require the release's own version before reaching here.
-  const compatible = version === profile.version || (profile.version === 2 && version === 1);
+  const blobs = version === 3 && regionSupport(profile) !== null;
+  const compatible = version === profile.version || (profile.version === 2 && version === 1) || blobs;
   const limit = version === 1 ? 512 : b.length;
   const count = b[5];
-  const custom = version === 2 ? b[12] : 0;
-  const scaleCount = version === 2 ? b[13] : 0;
-  const payload = count * 6 + scaleCount * SCALE_RECORD_SIZE;
-  const end = 16 + payload;
-  if (count > 82 || scaleCount > 14 || custom > 1 || (!custom && scaleCount) ||
-      end + 4 > limit || v.getUint16(6, true) !== payload ||
+  const custom = version >= 2 ? b[12] : 0;
+  const scaleCount = version >= 2 ? b[13] : 0;
+  const bankCount = blobs ? b[14] : 0;
+  const sectionCount = blobs ? b[15] : 0;
+  const scalesEnd = 16 + count * 6 + scaleCount * SCALE_RECORD_SIZE;
+  const end = scalesEnd + bankCount * BANK_SIZE + sectionCount * 16;
+  if (count > 82 || scaleCount > 14 || bankCount > MAX_BANKS || sectionCount > MAX_SECTIONS ||
+      custom > 1 || (!custom && scaleCount) ||
+      end + 4 > limit || v.getUint16(6, true) !== end - 16 ||
       v.getUint32(0, true) !== 0x46505a44 || !compatible ||
-      !validFormat(profile.format) || v.getUint32(8, true) !== profile.format || b[14] || b[15] ||
+      !validFormat(profile.format) || v.getUint32(8, true) !== profile.format || (!blobs && (b[14] || b[15])) ||
       (version === 1 && v.getUint32(12, true) !== 0) ||
       v.getUint32(end, true) !== crc32(b.subarray(0, end))) {
     throw new Error('Invalid profile header or checksum.');
   }
-  const entries = validate(Array.from({ length: count }, (_, i) =>
-    Array.from(b.subarray(16 + i * 6, 22 + i * 6))), profile);
   const scales = custom ? readScales(b, 16 + count * 6, scaleCount) : null;
+  const banks = Array.from({ length: bankCount }, (_, i) =>
+    Array.from(b.subarray(scalesEnd + i * BANK_SIZE, scalesEnd + (i + 1) * BANK_SIZE)));
+  if (!banks.every((ids) => ids.every(knownModel))) throw new Error('Unknown Plaits model in a bank.');
+  const entries = validate(Array.from({ length: count }, (_, i) =>
+    Array.from(b.subarray(16 + i * 6, 22 + i * 6))), profile, bankCount);
   validatePitchDefault(entries, scales);
-  return { entries, scales };
+  if (!blobs) return { entries, scales };
+  // The firmware keeps any directory here; its region reader checks the layout.
+  const at = scalesEnd + bankCount * BANK_SIZE;
+  const directory = Array.from({ length: sectionCount }, (_, i) => {
+    const [kind, offset, size, crc] = [0, 4, 8, 12].map((k) => v.getUint32(at + i * 16 + k, true));
+    return { kind, offset, size, crc };
+  });
+  return { entries, scales, plaits: { banks, directory } };
 }
 
 export const decodeProfile = (b, profile) => decodeSettings(b, profile).entries;
@@ -174,8 +248,8 @@ export const defaults = (profile) => profile.features.filter((f) => f.default_in
 // Canonical editor entries: omitted catalogue defaults stay absent when Off.
 // Keep the codec lossless for independently supplied firmware blocks.
 // Manual gain on [A] + FEEDBACK is its Off state, as stock.
-export function normalise(entries, profile) {
-  validate(entries, profile);
+export function normalise(entries, profile, banks = 0) {
+  validate(entries, profile, banks);
   return entries.map((e) => e[0] === GAIN && e[1] === 2 && e[4] === FEEDBACK_SLOT ? [GAIN, 0, 0, 0, 0, 0] : e)
     .filter((e) => e[1] !== 0 || profile.features.find((f) => f.id === e[0]).default_in_block !== false)
     .map((e) => e[1] === 0 ? [e[0], 0, 0, 0, 0, 0] : e.slice());
@@ -208,8 +282,9 @@ export function unshare(text, releases) {
   if (hex.length !== release.profile.size * 2) throw new Error('Invalid share link size.');
   const block = Uint8Array.from(hex.match(/../g), (v) => parseInt(v, 16));
   const header = new DataView(block.buffer);
+  const version = block[4] === 3 && regionSupport(release.profile) ? 3 : release.profile.version;
   if (header.getUint32(0, true) === 0x46505a44 &&
-      (block[4] !== release.profile.version || header.getUint32(8, true) !== release.profile.format)) {
+      (block[4] !== version || header.getUint32(8, true) !== release.profile.format)) {
     throw new Error('Share link version mismatch. Use its original page or start again.');
   }
   try {
