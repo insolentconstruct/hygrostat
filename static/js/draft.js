@@ -3,7 +3,7 @@
 // The setup kept in this browser so a reload reopens it. No DOM; storage is passed in.
 // A draft is the share fragment plus a little context; see docs/DESIGN.md.
 
-import { defaults, encodeProfile, equal, normalise, share, templates, unshare } from './profile.js?v=0939db1ba3378a2d';
+import { defaults, encodeProfile, equal, normalise, share, templates, unshare } from './profile.js?v=fab96bf6e9647e2b';
 
 export const DRAFT = 'hygrostat-draft';
 export const BEFORE_LINK = 'hygrostat-draft-before-link';
@@ -58,9 +58,11 @@ export function readDraft(storage, releases, key = DRAFT) {
     params.set('release', release.tag);
     const shared = unshare(params.toString(), releases);
     const scales = shared.scales ?? null;
-    if (!equal(encodeProfile(shared.entries, release.profile, scales), Uint8Array.from(
+    const plaits = shared.plaits ?? null;
+    if (!equal(encodeProfile(shared.entries, release.profile, scales, plaits), Uint8Array.from(
       params.get('profile').match(/../g), (v) => parseInt(v, 16)))) throw new Error('Draft bytes differ.');
-    return { release, entries: normalise(shared.entries, release.profile), scales,
+    return { release, entries: normalise(shared.entries, release.profile, plaits?.banks.length), scales,
+      ...plaits ? { plaits } : {},
       preset: Object.hasOwn(templates(release.profile), draft.preset) ? draft.preset : 'Drizzlet',
       saved: draft.saved, moved, from: draft.name, link: draft.link === true, raw };
   } catch (error) {

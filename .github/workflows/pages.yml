@@ -69,6 +69,7 @@ jobs:
           node test/start_quality.js
           node test/options_entry.js
           node test/configurable_gestures.js
+          node test/region.js
           node --input-type=module -e '
             import { readFileSync } from "node:fs";
             import { fileURLToPath } from "node:url";
