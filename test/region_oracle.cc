@@ -49,6 +49,8 @@ int main() {
   static uint8_t block[kProfileSize];
   static Profile profile;
   static PlaitsRegion region;
+  // No flash ECC flag on the host.
+  region.set_flash_check(NULL);
   uint8_t type[4];
   while (fread(type, 1, sizeof(type), stdin) == sizeof(type)) {
     ReadAll(block, sizeof(block));

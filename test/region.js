@@ -41,7 +41,7 @@ import { encode } from '../static/js/encoder.js';
 import { decode } from '../static/js/decoder.js';
 
 // The phase 1 blob firmware (override with BLOB_FIRMWARE_REF).
-const ref = process.env.BLOB_FIRMWARE_REF || '5430345c05b7af94f3ffd1e5fc4bd3778d2b8c86';
+const ref = process.env.BLOB_FIRMWARE_REF || 'affe5e61ceca48ec760f41f31c3e660be2444bb5';
 const RELEASE = 20261121;
 const manifest = JSON.parse(readFileSync(new URL('../static/manifest.json', import.meta.url)));
 assert(manifest.releases.every((r) => r.profile.region === undefined), 'no release declares a region yet');
@@ -95,7 +95,7 @@ assert(plts.subarray(80, 96).every((v) => v === 255) && region.subarray(100396, 
 const good = readRegion(region, RELEASE, directory);
 assert.deepEqual(good, { directory: 'ok', sections: { WAVE: 'ok', TERR: 'ok', PLTS: 'ok' }, blobs: ['ok', 'ok', 'ok'] });
 assert.equal(readRegion(region, RELEASE + 1, directory).sections.TERR, 'release');
-assert.equal(STATUS.length, 19);
+assert.equal(STATUS.length, 20);
 assert.deepEqual(writeRegion({ release: RELEASE, blobs: [blobs[0]] }).directory.map((e) => e.offset), [0]);
 const refusals = [
   [{ release: 0, blobs }, /release/], [{ release: RELEASE }, /at least one/],
@@ -205,12 +205,8 @@ assert(image.subarray(app.length, regionStart(app.length) - APP_START).every((v)
 assert(equal(decode(encode(image), image.length), image), 'image WAV decodes byte for byte');
 
 // The pinned firmware: its writer, catalogue, parser and region reader.
-const has = spawnSync('git', ['-C', firmwareRepo, 'cat-file', '-e', `${ref}^{commit}`]);
-if (has.status !== 0) {
-  if (process.env.BLOB_FIRMWARE_OPTIONAL !== '1') throw new Error(`FIRMWARE_REPO lacks the blob firmware ${ref}.`);
-  console.log(`SKIP firmware agreement: ${ref} is not in FIRMWARE_REPO yet`);
-  console.log('PASS region writer, limits, profile version 3, share, draft and WAV round trip');
-  process.exit(0);
+if (spawnSync('git', ['-C', firmwareRepo, 'cat-file', '-e', `${ref}^{commit}`]).status !== 0) {
+  throw new Error(`FIRMWARE_REPO lacks the blob firmware ${ref}; it needs the firmware branches.`);
 }
 const scratch = mkdtempSync(join(tmpdir(), 'hygrostat-region-'));
 try {
@@ -248,6 +244,17 @@ try {
     const layout = JSON.parse(readFileSync(out + '.json', 'utf8'));
     assert.deepEqual(written.directory, layout.sections.map((s) => ({ kind: KINDS[s.kind], offset: s.offset,
       size: s.size, crc: Number(s.crc) })));
+  }
+  // Both writers refuse the same malformed inputs: release 0, a bad CRC, a library, IDs past 255, a shared ID.
+  const badCrc = makeBlob(5); badCrc[100] ^= 1;
+  const library = makeBlob(5); put32(library, 16, 2); put32(library, 252, crc32(library.subarray(0, 252)));
+  for (const [release, bad] of [[0, [blobs[0]]], [RELEASE, [badCrc]], [RELEASE, [library]],
+    [RELEASE, [makeBlob(255, { ids: 2 })]], [RELEASE, [makeBlob(2, { ids: 3 }), makeBlob(4)]]]) {
+    const paths = bad.map((b, i) => { const f = join(scratch, `bad${i}.bin`); writeFileSync(f, b); return f; });
+    const python = spawnSync('python3', ['-I', join(scratch, 'beads/build/tools/blob_sections.py'),
+      join(scratch, 'bad.bin'), String(release), ...paths], { encoding: 'utf8' });
+    assert.notEqual(python.status, 0, `blob_sections.py refuses ${python.stderr}`);
+    assert.throws(() => writeRegion({ release, blobs: bad }));
   }
 
   // The firmware's parser and region reader, compiled from the pinned sources.
@@ -300,6 +307,11 @@ try {
   expect(['ok', 'content', 'ok', ...OK3]);
   { const b = padded.slice(); b[directory[2].offset + 32 + 16 + 1] = 31; regionRecord(raw(resealSection(b, 2)), b); }
   expect(['ok', 'ok', 'model', 'ok', 'model', 'ok']);
+  // Entry IDs must strictly ascend: a repeated ID refuses the table before any blob is read.
+  for (const id of [2, 1]) {
+    const b = padded.slice(); b[directory[2].offset + 32 + 16 + 1] = id; regionRecord(raw(resealSection(b, 2)), b);
+    expect(['ok', 'ok', 'table']);
+  }
   { const b = padded.slice(); put32(b, directory[2].offset + 32 + 16 + 4, 400); regionRecord(raw(resealSection(b, 2)), b); }
   expect(['ok', 'ok', 'table']);
   { const b = padded.slice(); put32(b, directory[2].offset + 8, 2); regionRecord(raw(resealSection(b, 2)), b); }

@@ -24,7 +24,7 @@
 //
 // The region after the app (firmware beads/blob/plaits_region.h): WAVE, TERR
 // and PLTS sections, written as beads/build/tools/blob_sections.py does.
-import { crc32, SECTION_KINDS, MIN_SECTION_SIZE } from './profile.js?v=6af54c48c8b913e6';
+import { crc32, SECTION_KINDS, MIN_SECTION_SIZE } from './profile.js?v=c2a1c28676647266';
 
 export const APP_START = 0x08020000;
 export const REGION_END = 0x08100000;
@@ -39,9 +39,9 @@ const ALIGNMENT = 32;
 const HEADER = 32;
 const BLOB_MAGIC = 0x424d5a44;
 const BLOB_HEADER_SIZES = [0, 64, 96];
-// PlaitsBlobStatus, in the firmware's order.
+// PlaitsBlobStatus, in the firmware's order; 'ecc' (a flash double error) happens only on the module.
 export const STATUS = ['ok', 'placement', 'header', 'abi', 'services', 'layout', 'ram', 'crc', 'digest', 'imports',
-  'no region', 'release', 'selection', 'table', 'model', 'kind', 'library', 'content', 'directory'];
+  'no region', 'release', 'selection', 'table', 'model', 'kind', 'library', 'content', 'directory', 'ecc'];
 
 const align = (n) => Math.ceil(n / ALIGNMENT) * ALIGNMENT;
 const view = (b) => new DataView(b.buffer, b.byteOffset, b.byteLength);
@@ -200,11 +200,13 @@ function readBlobs(data, count) {
   const entries = Array.from({ length: count }, (_, i) => ({ kind: data[HEADER + 16 * i], id: data[HEADER + 16 * i + 1],
     reserved: v.getUint16(HEADER + 16 * i + 2, true), offset: v.getUint32(HEADER + 16 * i + 4, true),
     size: v.getUint32(HEADER + 16 * i + 8, true), crc: v.getUint32(HEADER + 16 * i + 12, true) }));
-  let next = HEADER + count * 16;
+  // By ID, aligned, ascending, apart and inside, before any blob is read.
+  let next = HEADER + count * 16, previousId = -1;
   for (const e of entries) {
     if (e.kind === 2) return { status: 'library', blobs: [] };
-    if (e.kind !== 1 || e.reserved || e.offset % ALIGNMENT || e.offset < next || e.offset > crcAt ||
-        e.size > crcAt - e.offset) return { status: 'table', blobs: [] };
+    if (e.kind !== 1 || e.reserved || e.id <= previousId || e.offset % ALIGNMENT || e.offset < next ||
+        e.offset > crcAt || e.size > crcAt - e.offset) return { status: 'table', blobs: [] };
+    previousId = e.id;
     next = e.offset + e.size;
   }
   const served = new Set();
