@@ -22,8 +22,8 @@
 //
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
-// The region writer and profile version 3 against the blob firmware's own
-// writer (blob_sections.py), parser and region reader, on synthetic blobs.
+// The region writer, library resolver and profile version 3 against the blob
+// firmware's own writer (blob_sections.py), parser and region reader, on synthetic blobs.
 import assert from 'node:assert/strict';
 import { readFileSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { execFileSync, spawnSync } from 'node:child_process';
@@ -34,14 +34,14 @@ import { fileURLToPath } from 'node:url';
 import { firmwareRepo } from './firmware.js';
 import { defaults, encodeProfile, decodeSettings, crc32, equal, share, unshare, normalise, validatePlaits,
   regionSupport, knownModel, SECTION_KINDS } from '../static/js/profile.js';
-import { writeRegion, readRegion, regionStart, regionImage, checkWaves, blobInfo, validateRegionFirmware,
-  APP_START, REGION_END, KINDS, STATUS, WAVE_ROWS, WAVE_ROW } from '../static/js/region.js';
+import { writeRegion, readRegion, regionStart, regionImage, checkWaves, blobInfo, blobDependencies, resolveBlobs,
+  validateRegionFirmware, APP_START, REGION_END, KINDS, STATUS, WAVE_ROWS, WAVE_ROW } from '../static/js/region.js';
 import { draftText, readDraft, DRAFT } from '../static/js/draft.js';
 import { encode } from '../static/js/encoder.js';
 import { decode } from '../static/js/decoder.js';
 
-// The phase 1 blob firmware (override with BLOB_FIRMWARE_REF).
-const ref = process.env.BLOB_FIRMWARE_REF || '5abf2f75c11c5a8bb35c29a2ba1076f831de461a';
+// The phase 2 blob firmware, with libraries (override with BLOB_FIRMWARE_REF).
+const ref = process.env.BLOB_FIRMWARE_REF || 'f0134d4b179e03c57cfab42ab1fe365431241f11';
 const RELEASE = 20261121;
 const manifest = JSON.parse(readFileSync(new URL('../static/manifest.json', import.meta.url)));
 assert(manifest.releases.every((r) => r.profile.region === undefined), 'no release declares a region yet');
@@ -57,18 +57,28 @@ const u32 = (b, at) => new DataView(b.buffer, b.byteOffset, b.byteLength).getUin
 const put32 = (b, at, v) => new DataView(b.buffer, b.byteOffset, b.byteLength).setUint32(at, v, true);
 
 // Synthetic blobs pass the firmware's checks except the digest allowlist, which the oracle is given.
-function makeBlob(first, { abi = 2, ids = 1, size = 256 } = {}) {
+// A library (kind 2) has two exports after its GOT; dependencies are [id, the library blob built against].
+function makeBlob(first, { abi = 2, ids = 1, kind = 1, dependencies = [], size = 256 + 36 * dependencies.length } = {}) {
   const b = new Uint8Array(size);
   const header = abi === 1 ? 64 : 96;
-  for (let i = header; i < size - 4; ++i) b[i] = (i * (first + 3)) & 255;
+  for (let i = header; i < size - 4; ++i) b[i] = (i * (first + 3 + 7 * (kind - 1))) & 255;
+  const list = size - 4 - 36 * dependencies.length;
+  const got = list - (kind === 2 ? 8 : 0);
+  const library = kind === 2;
   const words = abi === 1 ?
     [0x424d5a44, 64, 1, 1, first, size, 36, 0, 0x41, 0x59, 0x5d, size - 4, 0, 0, 0x3f6e147b, 0x3f6e147b] :
-    [0x424d5a44, 96, 2, 2, 1, first, ids, size, 64, 0, 0x61, 0x79, 0x7d, size - 4, 0, 0, 0, 0, 0x3f6e147b,
-      0x3f6e147b, 0, 0, 0, 0];
+    [0x424d5a44, 96, 2, 2, kind, first, ids, size, 64, 0, 0x61, library ? got : 0x79, library ? 2 : 0x7d, got, 0,
+      dependencies.length ? list : 0, dependencies.length, 0, ...(library ? [0, 0] : [0x3f6e147b, 0x3f6e147b]), 0, 0, 0, 0];
   words.forEach((w, i) => put32(b, 4 * i, w));
-  put32(b, size - 4, crc32(b.subarray(0, size - 4)));
+  if (library) [0x60, 0x80].forEach((e, i) => put32(b, got + 4 * i, e));
+  dependencies.forEach(([id, built], i) => { put32(b, list + 36 * i, id); b.set(sha256(built), list + 36 * i + 4); });
+  return seal(b);
+}
+function seal(b) {
+  put32(b, b.length - 4, crc32(b.subarray(0, b.length - 4)));
   return b;
 }
+const makeLibrary = (id, options = {}) => makeBlob(id, { ...options, kind: 2 });
 // Rows like resources/wavetables.py: samples 256-259 repeat 0-3, row 192 repeats 191.
 const waves = new Uint8Array(WAVE_ROWS * WAVE_ROW * 2);
 for (let row = 0; row < WAVE_ROWS; ++row) {
@@ -92,10 +102,11 @@ const plts = region.subarray(directory[2].offset);
 assert.deepEqual([0, 1, 2].map((i) => [plts[32 + 16 * i], plts[33 + 16 * i], u32(plts, 36 + 16 * i)]),
   [[1, 2, 96], [1, 30, 416], [1, 43, 608]], 'PLTS sorted by model ID on 32-byte offsets');
 assert(plts.subarray(80, 96).every((v) => v === 255) && region.subarray(100396, 100416).every((v) => v === 255));
-const good = readRegion(region, RELEASE, directory);
+const good = await readRegion(region, RELEASE, directory);
 assert.deepEqual(good, { directory: 'ok', sections: { WAVE: 'ok', TERR: 'ok', PLTS: 'ok' }, blobs: ['ok', 'ok', 'ok'] });
-assert.equal(readRegion(region, RELEASE + 1, directory).sections.TERR, 'release');
-assert.equal(STATUS.length, 20);
+assert.equal((await readRegion(region, RELEASE + 1, directory)).sections.TERR, 'release');
+assert.equal(STATUS.length, 21);
+assert.equal(STATUS.at(-1), 'dependency');
 assert.deepEqual(writeRegion({ release: RELEASE, blobs: [blobs[0]] }).directory.map((e) => e.offset), [0]);
 const refusals = [
   [{ release: 0, blobs }, /release/], [{ release: RELEASE }, /at least one/],
@@ -108,11 +119,12 @@ const refusals = [
   [{ release: RELEASE, blobs: [blobs[0].subarray(0, 252)] }, /size word/],
   [{ release: RELEASE, blobs: [makeBlob(255, { ids: 2 })] }, /no valid model/]];
 for (const [input, message] of refusals) assert.throws(() => writeRegion(input), message);
-for (const [word, value, status] of [[8, 4353, 'ram'], [4, 2, 'kind'], [15, 96, 'library'], [10, 0x60, 'layout']]) {
+for (const [word, value, status] of [[8, 4353, 'ram'], [4, 3, 'kind'], [4, 2, 'header'], [15, 96, 'layout'],
+  [10, 0x60, 'layout']]) {
   const bad = makeBlob(5);
   put32(bad, 4 * word, value);
   put32(bad, 252, crc32(bad.subarray(0, 252)));
-  assert.throws(() => writeRegion({ release: RELEASE, blobs: [bad] }), new RegExp(`model 5 is refused \\(${status}\\)`));
+  assert.throws(() => writeRegion({ release: RELEASE, blobs: [bad] }), new RegExp(`(model|library) 5 is refused \\(${status}\\)`));
 }
 {
   const bad = makeBlob(5); bad[100] ^= 1;
@@ -122,7 +134,58 @@ for (const [row, offset] of [[0, 0], [7, 2 * 257], [192, 9]]) {
   const bad = waves.slice(); bad[(row * WAVE_ROW) * 2 + offset] ^= 1;
   assert.throws(() => checkWaves(bad), row === 192 && offset === 9 ? /guard row/ : /samples 0-3/);
 }
-assert.deepEqual(blobInfo(blobs[1]), { first: 2, ids: 3, size: 320, crc: u32(blobs[1], 316) });
+assert.deepEqual(blobInfo(blobs[1]), { kind: 1, first: 2, ids: 3, size: 320, crc: u32(blobs[1], 316) });
+
+// Libraries: 1, 5 and 6 (which needs 1); models 13, 82 and 83 need them, 43 needs none.
+const lib1 = makeLibrary(1);
+const lib1b = makeLibrary(1, { size: 288 });
+const lib5 = makeLibrary(5);
+const lib6 = makeLibrary(6, { dependencies: [[1, lib1]] });
+const m13 = makeBlob(13, { dependencies: [[1, lib1]] });
+const m82 = makeBlob(82, { dependencies: [[1, lib1], [5, lib5], [6, lib6]] });
+const m83 = makeBlob(83, { dependencies: [[5, lib5], [6, lib6]] });
+const chain = [m83, lib6, m13, lib1, blobs[0], lib5, m82];
+assert.deepEqual(blobDependencies(m82).map((d) => d.id), [1, 5, 6]);
+assert.equal(blobDependencies(m13)[0].sha256, sha256(lib1).toString('hex'));
+assert.deepEqual(blobInfo(lib6), { kind: 2, first: 6, ids: 1, size: 292, crc: u32(lib6, 288) });
+{
+  const written = writeRegion({ release: RELEASE, blobs: chain });
+  const s = written.region;
+  assert.deepEqual([0, 1, 2, 3, 4, 5, 6].map((i) => [s[32 + 16 * i], s[33 + 16 * i]]),
+    [[2, 1], [2, 5], [2, 6], [1, 13], [1, 43], [1, 82], [1, 83]], 'libraries first by ID, then models');
+  assert.deepEqual(written.blobs.map((b) => [b.kind, b.id, b.size, b.installedWith]), [['library', 1, 256, [13, 82, 83]],
+    ['library', 5, 256, [82, 83]], ['library', 6, 292, [82, 83]], ['model', 13, 292, undefined],
+    ['model', 43, 256, undefined], ['model', 82, 364, undefined], ['model', 83, 328, undefined]]);
+  for (const b of written.blobs) assert.equal(u32(s, b.offset + b.size - 4), u32(s, 44 + 16 * written.blobs.indexOf(b)));
+  assert.deepEqual(await readRegion(s, RELEASE, written.directory),
+    { directory: 'ok', sections: { WAVE: 'no region', TERR: 'no region', PLTS: 'ok' }, blobs: Array(7).fill('ok') });
+  // Model IDs and library IDs are apart: library 1 and model 1 share a region.
+  assert.equal(writeRegion({ release: RELEASE, blobs: [lib1, makeBlob(1)] }).blobs.length, 2);
+}
+const nine = Array.from({ length: 9 }, (_, i) => makeLibrary(i + 1));
+for (const [input, message] of [[[lib1, lib1b], /one library/], [nine, /More than 8 libraries/],
+  [[makeLibrary(0)], /library 0 is refused \(header\)/], [[makeBlob(4, { dependencies: [[0, lib1]] })], /refused \(library\)/]]) {
+  assert.throws(() => writeRegion({ release: RELEASE, blobs: input }), message);
+}
+assert.equal(writeRegion({ release: RELEASE, blobs: nine.slice(1) }).blobs.length, 8);
+// The firmware's library checks (TestLibraryRefusals): [word, value, status], resealed.
+const libraryFaults = [[6, 2, 'header'], [17, 1, 'header'], [18, 1, 'header'], [19, 1, 'header'], [20, 1, 'header'],
+  [12, 0, 'layout'], [12, 17, 'layout'], [12, 3, 'layout'], [11, 240, 'layout'], [11, 246, 'layout'],
+  [13, 248, 'layout'], [10, 0x60, 'layout'], [10, 245, 'layout'], [10, 0x61, 'ok'], [10, 0, 'ok'], [8, 65536, 'ok'],
+  [8, 65537, 'ram'], [9, 16385, 'ram'], [16, 1, 'layout'], [15, 252, 'layout'], [3, 3, 'services'], [61, 0x20, 'layout'],
+  [61, 244, 'layout'], [62, 0x60, 'ok']].map(([word, value, status]) => [[[word, value]], status]);
+// At most 16 exports: the GOT and export table moved to 128 to make room.
+const exports = (n) => [[13, 128], [11, 128], [12, n], ...Array.from({ length: n }, (_, i) => [32 + i, 0x60])];
+libraryFaults.push([exports(16), 'ok'], [exports(17), 'layout']);
+const faulted = (changes) => {
+  const b = makeLibrary(3);
+  for (const [word, value] of changes) put32(b, 4 * word, value);
+  return seal(b);
+};
+for (const [changes, status] of libraryFaults) {
+  if (status === 'ok') assert.equal(writeRegion({ release: RELEASE, blobs: [faulted(changes)] }).blobs.length, 1);
+  else assert.throws(() => writeRegion({ release: RELEASE, blobs: [faulted(changes)] }), new RegExp(`\\(${status}\\)`));
+}
 
 // The region begins on the first 4 KiB boundary after the app, and must end before 0x08100000.
 assert.equal(regionStart(4096), APP_START + 4096);
@@ -215,6 +278,8 @@ try {
     'beads/resources.cc', 'plaits'], { maxBuffer: 1 << 28 }) });
   const source = (file) => readFileSync(join(scratch, file), 'utf8');
   const catalogue = JSON.parse(source('beads/build/profile-features.json'));
+  assert.deepEqual(catalogue.plaits_models.filter((m) => [13, 82, 83].includes(m.id)).map((m) => m.libraries),
+    [[1], [1, 5, 6], [1, 5, 6]], 'the synthetic chain follows the catalogue');
   const models = new Set(catalogue.plaits_models.map((m) => m.id));
   for (let id = 0; id < 256; ++id) assert.equal(knownModel(id), models.has(id), `model ${id}`);
   const sources = { profileHeader: source('beads/profile.h'), catalog: source('beads/blob/plaits_catalog.cc'),
@@ -232,10 +297,13 @@ try {
   values.forEach((v, i) => new DataView(factory.buffer).setInt16(2 * i, v, true));
   writeFileSync(join(scratch, 'terrain.bin'), terrain);
   const files = blobs.map((b, i) => { const f = join(scratch, `blob${i}.bin`); writeFileSync(f, b); return f; });
+  const chainFiles = chain.map((b, i) => { const f = join(scratch, `chain${i}.bin`); writeFileSync(f, b); return f; });
   const configurations = [[{ blobs }, files], [{ wave: factory }, ['--wave', join(scratch, 'beads/resources.cc')]],
     [{ terrain, blobs: blobs.slice(1) }, ['--terrain', join(scratch, 'terrain.bin'), ...files.slice(1)]],
     [{ wave: factory, terrain, blobs }, ['--wave', join(scratch, 'beads/resources.cc'), '--terrain',
-      join(scratch, 'terrain.bin'), ...files]]];
+      join(scratch, 'terrain.bin'), ...files]], [{ blobs: chain }, chainFiles],
+    [{ wave: factory, terrain, blobs: [...chain, blobs[1]] }, ['--wave', join(scratch, 'beads/resources.cc'),
+      '--terrain', join(scratch, 'terrain.bin'), ...chainFiles, files[1]]]];
   for (const [input, args] of configurations) {
     const out = join(scratch, 'region.bin');
     execFileSync('python3', ['-I', join(scratch, 'beads/build/tools/blob_sections.py'), out, String(RELEASE), ...args]);
@@ -244,12 +312,16 @@ try {
     const layout = JSON.parse(readFileSync(out + '.json', 'utf8'));
     assert.deepEqual(written.directory, layout.sections.map((s) => ({ kind: KINDS[s.kind], offset: s.offset,
       size: s.size, crc: Number(s.crc) })));
+    const plts = layout.sections.find((s) => s.kind === 'PLTS');
+    assert.deepEqual(written.blobs.map((b) => [b.kind, b.id, b.offset, b.size]), (plts?.blobs ?? []).map((b) =>
+      [b.library === undefined ? 'model' : 'library', b.library ?? b.model, plts.offset + b.offset, b.size]));
   }
-  // Both writers refuse the same malformed inputs: release 0, a bad CRC, a library, IDs past 255, a shared ID.
+  // Both writers refuse the same malformed inputs: release 0, a bad CRC, a library ID 0, IDs past 255, a
+  // shared model or library ID, nine libraries.
   const badCrc = makeBlob(5); badCrc[100] ^= 1;
-  const library = makeBlob(5); put32(library, 16, 2); put32(library, 252, crc32(library.subarray(0, 252)));
-  for (const [release, bad] of [[0, [blobs[0]]], [RELEASE, [badCrc]], [RELEASE, [library]],
-    [RELEASE, [makeBlob(255, { ids: 2 })]], [RELEASE, [makeBlob(2, { ids: 3 }), makeBlob(4)]]]) {
+  for (const [release, bad] of [[0, [blobs[0]]], [RELEASE, [badCrc]], [RELEASE, [makeLibrary(0)]],
+    [RELEASE, [makeBlob(255, { ids: 2 })]], [RELEASE, [makeBlob(2, { ids: 3 }), makeBlob(4)]], [RELEASE, [lib1, lib1b]],
+    [RELEASE, nine]]) {
     const paths = bad.map((b, i) => { const f = join(scratch, `bad${i}.bin`); writeFileSync(f, b); return f; });
     const python = spawnSync('python3', ['-I', join(scratch, 'beads/build/tools/blob_sections.py'),
       join(scratch, 'bad.bin'), String(release), ...paths], { encoding: 'utf8' });
@@ -323,7 +395,7 @@ try {
   records.at(-1).allowlist = true;
   // Each blob check: the model 2 blob changed, resealed, its entry and section CRCs updated.
   for (const [status, word, value, reblob = true] of [['header', 0, 0], ['header', 1, 64], ['abi', 2, 3],
-    ['services', 3, 3], ['kind', 4, 2], ['header', 6, 0], ['library', 15, 96], ['layout', 10, 0x60],
+    ['services', 3, 3], ['kind', 4, 3], ['header', 4, 2], ['header', 6, 0], ['layout', 15, 96], ['layout', 10, 0x60],
     ['layout', 13, 318], ['ram', 8, 4353], ['ram', 9, 16385], ['digest', 50, 7, false]]) {
     const b = padded.slice();
     const at = directory[2].offset + 96;
@@ -336,6 +408,54 @@ try {
   // No directory entries: the firmware reads the release's default layout instead.
   regionRecord(encodeProfile(entries, profile, null, { banks, directory: [] }), padded);
   expect(['no region', 'no region', 'no region']);
+  // PLTS alone, its entries in the order given; kinds[i] is entry i's kind.
+  const pltsRegion = (list, kinds = list.map((b) => blobInfo(b).kind)) => {
+    let offset = 32 + 16 * list.length;
+    const places = list.map((b) => { offset = Math.ceil(offset / 32) * 32; offset += b.length; return offset - b.length; });
+    const s = new Uint8Array(offset + 4).fill(255);
+    [0x43535a44, KINDS.PLTS, 1, RELEASE, s.length, list.length, 0, 0].forEach((w, i) => put32(s, 4 * i, w));
+    list.forEach((b, i) => {
+      [kinds[i] | blobInfo(b).first << 8, places[i], b.length, u32(b, b.length - 4)].forEach((w, k) => put32(s, 32 + 16 * i + 4 * k, w));
+      s.set(b, places[i]);
+    });
+    return seal(s);
+  };
+  const pltsRecord = (list, statuses, { kinds, digests = list } = {}) => {
+    const s = pltsRegion(list, kinds);
+    const dir = [{ kind: KINDS.PLTS, offset: 0, size: s.length, crc: u32(s, s.length - 4) }];
+    regionRecord(encodeProfile(entries, profile, null, { banks, directory: dir }), s, { digests });
+    records.at(-1).allowlist = digests !== list;
+    expect(['no region', 'no region', statuses.find((x) => x !== 'ok') ?? 'ok', ...statuses]);
+    return s;
+  };
+  const sortedChain = [lib1, lib5, lib6, m13, blobs[0], m82, m83];
+  assert(equal(pltsRecord(sortedChain, Array(7).fill('ok')), writeRegion({ release: RELEASE, blobs: chain }).region),
+    'the JS writer lays libraries out as the module reads them');
+  pltsRecord([m13, blobs[0]], ['dependency', 'ok']);
+  pltsRecord([lib1b, m13], ['ok', 'dependency']);
+  pltsRecord([lib1, makeBlob(13, { dependencies: [[2, lib1]] })], ['ok', 'dependency']);
+  pltsRecord([lib1, lib6, makeBlob(90, { dependencies: [[6, lib6], [1, lib1]] })], ['ok', 'ok', 'ok']);
+  pltsRecord([lib1, lib6, makeBlob(90, { dependencies: [[6, makeLibrary(6)]] })], ['ok', 'ok', 'dependency']);
+  pltsRecord([lib1, makeBlob(2, { ids: 3, dependencies: [[1, lib1]] })], ['ok', 'ok']);
+  // A refused library refuses its users: here it is missing from the digest allowlist.
+  pltsRecord([lib1, m13], ['digest', 'dependency'], { digests: [m13] });
+  // A cycle, a later library, the library itself: a library needs only libraries before it.
+  const lib5c = makeLibrary(5, { dependencies: [[2, makeLibrary(2)]] });
+  pltsRecord([makeLibrary(2, { dependencies: [[5, lib5c]] }), lib5c], ['dependency', 'dependency']);
+  pltsRecord([makeLibrary(2, { dependencies: [[5, lib5]] }), lib5], ['dependency', 'ok']);
+  pltsRecord([makeLibrary(3, { dependencies: [[3, makeLibrary(3)]] })], ['dependency']);
+  // Table rules: libraries first, at most eight; an entry's kind must be its blob's.
+  pltsRecord([blobs[0], lib1], []);
+  expected[expected.length - 1] = ['no region', 'no region', 'table'];
+  pltsRecord(nine, []);
+  expected[expected.length - 1] = ['no region', 'no region', 'table'];
+  pltsRecord(nine.slice(1), Array(8).fill('ok'));
+  pltsRecord([lib1, m13, blobs[0]], ['ok', 'kind', 'ok'], { kinds: [2, 2, 1] });
+  pltsRecord([lib1, makeBlob(1)], ['ok', 'ok']);
+  pltsRecord([lib1, makeBlob(4, { dependencies: [[0, lib1]] })], ['ok', 'library']);
+  for (const [changes, status] of libraryFaults) pltsRecord([faulted(changes)], [status]);
+  pltsRecord([faulted([[5, 0]])], []);
+  expected[expected.length - 1] = ['no region', 'no region', 'table'];
   const records0 = records.length;
   // Profile refusals: unknown model, start bank past the bank count, counts past their limits.
   profileRecord(block);
@@ -366,7 +486,7 @@ try {
   const lines = execFileSync(oracle, [], { input: Buffer.concat(records.flatMap((r) => r.input.map((b) => Buffer.from(b)))),
     maxBuffer: 1 << 26 }).toString().trim().split('\n');
   assert.equal(lines.length, records.length);
-  lines.forEach((line, i) => {
+  for (const [i, line] of lines.entries()) {
     const [parsed, reader] = line.split(' | ');
     const words = parsed.split(' ').map(Number);
     const accepted = words[0] === 1;
@@ -388,7 +508,7 @@ try {
       assert.deepEqual(fwDirectory, decoded.plaits?.directory ?? [], `record ${i}: directory`);
       for (const e of decoded.entries) assert.deepEqual(fwEntries.slice((e[0] - 1) * 6, e[0] * 6), e, `record ${i}: entry`);
     }
-    if (i >= records0) return;
+    if (i >= records0) continue;
     const statuses = reader.split(' ').map(Number);
     const [services, dir, ...rest] = statuses;
     const named = [dir, rest[0], rest[1], rest[2]].map((s) => STATUS[s]);
@@ -397,14 +517,40 @@ try {
     const want = expected[i];
     const got = want[0] === 'directory' ? named : [...named.slice(1), ...blobStatuses];
     assert.deepEqual(got, want, `record ${i}: firmware statuses`);
-    if (!decoded.plaits?.directory.length) return;
-    const js = readRegion(records[i].bytes, records[i].release, decoded.plaits.directory);
+    if (!decoded.plaits?.directory.length) continue;
+    const js = await readRegion(records[i].bytes, records[i].release, decoded.plaits.directory);
     const jsNamed = [js.directory, js.sections.WAVE, js.sections.TERR, js.sections.PLTS];
     // A valid blob missing from the digest allowlist is refused only on the module.
-    if (records[i].allowlist) assert.deepEqual(jsNamed, ['ok', 'ok', 'ok', 'ok']);
+    if (records[i].allowlist) assert.deepEqual([...jsNamed.slice(0, 3), 'ok'], [...named.slice(0, 3), js.sections.PLTS]);
     else assert.deepEqual([jsNamed, js.blobs], [named, blobStatuses], `record ${i}: JS reader agrees`);
-  });
+  }
   console.log(`PASS ${configurations.length} writer layouts equal blob_sections.py; ${records.length} profiles and regions agree with the firmware`);
+
+  // The resolver: each model's libraries, transitively and by digest, counted and cross-checked with the catalogue.
+  const available = [lib1b, lib1, lib5, lib6, makeLibrary(2)];
+  const resolved = await resolveBlobs([m82, m13], available, catalogue);
+  assert.deepEqual(resolved.blobs, [lib1, lib5, lib6, m82, m13]);
+  assert.deepEqual(resolved.libraries.map((l) => [l.id, l.models, l.count, l.sha256 === sha256(l.blob).toString('hex')]),
+    [[1, [82, 13], 2, true], [5, [82], 1, true], [6, [82], 1, true]]);
+  const installed = writeRegion({ release: RELEASE, blobs: resolved.blobs });
+  assert.deepEqual((await readRegion(installed.region, RELEASE, installed.directory)).blobs, Array(5).fill('ok'));
+  // Library 1 comes with library 6, which model 83 names; each library leaves with its last user.
+  assert.deepEqual((await resolveBlobs([m83], available, catalogue)).blobs, [lib1, lib5, lib6, m83]);
+  assert.deepEqual((await resolveBlobs([m13], available, catalogue)).libraries.map((l) => [l.id, l.count]), [[1, 1]]);
+  assert.deepEqual(await resolveBlobs([], available, catalogue), { blobs: [], libraries: [] });
+  assert.deepEqual((await resolveBlobs([blobs[0]], available, catalogue)).blobs, [blobs[0]]);
+  for (const [models, libraries, message] of [[[m13], [lib5], /needs the missing library 1/],
+    [[m13], [lib1b], /Model 13 needs another build of library 1/], [[m83], [lib5, lib6], /Library 6 needs the missing library 1/],
+    [[m13, makeBlob(5, { dependencies: [[1, lib1b]] })], [lib1, lib1b], /different builds of library 1/],
+    [[makeBlob(30, { dependencies: [[2, makeLibrary(2, { dependencies: [[5, lib5]] })]] })],
+      [lib5, makeLibrary(2, { dependencies: [[5, lib5]] })], /Library 2 needs library 5, which comes after it/],
+    [[lib1], [lib1], /model blob is refused \(kind\)/], [[m13], [m13], /library blob is refused \(kind\)/],
+    [[makeBlob(14, { dependencies: [[1, lib1]] })], [lib1], /Model 14's libraries differ from the catalogue's/],
+    [[makeBlob(2, { ids: 3 })], [], /Model 2's libraries differ/]]) {
+    await assert.rejects(resolveBlobs(models, libraries, catalogue), message);
+  }
+  // Without the catalogue only the blobs' own records count.
+  assert.equal((await resolveBlobs([makeBlob(14, { dependencies: [[1, lib1]] })], [lib1])).libraries.length, 1);
 } finally {
   rmSync(scratch, { recursive: true, force: true });
 }
