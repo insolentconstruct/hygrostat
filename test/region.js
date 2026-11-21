@@ -41,7 +41,7 @@ import { encode } from '../static/js/encoder.js';
 import { decode } from '../static/js/decoder.js';
 
 // The phase 1 blob firmware (override with BLOB_FIRMWARE_REF).
-const ref = process.env.BLOB_FIRMWARE_REF || '323676a0bacc2b1f155f99b4def6edd445053c93';
+const ref = process.env.BLOB_FIRMWARE_REF || '9f9952ca56f526345687fa86063cfc097ed80f2a';
 const RELEASE = 20261121;
 const manifest = JSON.parse(readFileSync(new URL('../static/manifest.json', import.meta.url)));
 assert(manifest.releases.every((r) => r.profile.region === undefined), 'no release declares a region yet');
