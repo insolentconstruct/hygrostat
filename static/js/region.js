@@ -24,7 +24,7 @@
 //
 // The region after the app (firmware beads/blob/plaits_region.h): WAVE, TERR
 // and PLTS sections, written as beads/build/tools/blob_sections.py does.
-import { crc32, SECTION_KINDS, MIN_SECTION_SIZE } from './profile.js?v=c2a1c28676647266';
+import { crc32, SECTION_KINDS, MIN_SECTION_SIZE } from './profile.js?v=fab96bf6e9647e2b';
 
 export const APP_START = 0x08020000;
 export const REGION_END = 0x08100000;
@@ -213,7 +213,8 @@ function readBlobs(data, count) {
   const blobs = entries.map((e) => {
     const blob = data.subarray(e.offset, e.offset + e.size);
     let status = checkBlob(blob);
-    if (status !== 'ok') return status;
+    // The module skips the blob CRC; changed bytes fail its digest allowlist instead.
+    if (status !== 'ok') return status === 'crc' ? 'digest' : status;
     const info = view(blob);
     const abi = info.getUint32(8, true);
     const first = info.getUint32(abi === 1 ? 16 : 20, true);

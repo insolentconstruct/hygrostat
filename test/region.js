@@ -41,7 +41,7 @@ import { encode } from '../static/js/encoder.js';
 import { decode } from '../static/js/decoder.js';
 
 // The phase 1 blob firmware (override with BLOB_FIRMWARE_REF).
-const ref = process.env.BLOB_FIRMWARE_REF || 'affe5e61ceca48ec760f41f31c3e660be2444bb5';
+const ref = process.env.BLOB_FIRMWARE_REF || '323676a0bacc2b1f155f99b4def6edd445053c93';
 const RELEASE = 20261121;
 const manifest = JSON.parse(readFileSync(new URL('../static/manifest.json', import.meta.url)));
 assert(manifest.releases.every((r) => r.profile.region === undefined), 'no release declares a region yet');
@@ -320,10 +320,11 @@ try {
   regionRecord(raw([directory[0], { ...directory[2], offset: Math.ceil(region.length / 32) * 32 + 32, size: 64 }]), padded);
   expect(['ok', 'no region', 'no region']);
   regionRecord(block, padded, { digests: blobs.slice(1) }); expect(['ok', 'ok', 'digest', 'ok', 'ok', 'digest']);
+  records.at(-1).allowlist = true;
   // Each blob check: the model 2 blob changed, resealed, its entry and section CRCs updated.
   for (const [status, word, value, reblob = true] of [['header', 0, 0], ['header', 1, 64], ['abi', 2, 3],
     ['services', 3, 3], ['kind', 4, 2], ['header', 6, 0], ['library', 15, 96], ['layout', 10, 0x60],
-    ['layout', 13, 318], ['ram', 8, 4353], ['ram', 9, 16385], ['crc', 50, 7, false]]) {
+    ['layout', 13, 318], ['ram', 8, 4353], ['ram', 9, 16385], ['digest', 50, 7, false]]) {
     const b = padded.slice();
     const at = directory[2].offset + 96;
     put32(b, at + 4 * word, value);
@@ -399,8 +400,8 @@ try {
     if (!decoded.plaits?.directory.length) return;
     const js = readRegion(records[i].bytes, records[i].release, decoded.plaits.directory);
     const jsNamed = [js.directory, js.sections.WAVE, js.sections.TERR, js.sections.PLTS];
-    // Digest allowlists stay on the module; everything else must agree.
-    if (want.includes('digest')) assert.deepEqual(jsNamed, ['ok', 'ok', 'ok', 'ok']);
+    // A valid blob missing from the digest allowlist is refused only on the module.
+    if (records[i].allowlist) assert.deepEqual(jsNamed, ['ok', 'ok', 'ok', 'ok']);
     else assert.deepEqual([jsNamed, js.blobs], [named, blobStatuses], `record ${i}: JS reader agrees`);
   });
   console.log(`PASS ${configurations.length} writer layouts equal blob_sections.py; ${records.length} profiles and regions agree with the firmware`);
