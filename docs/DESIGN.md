@@ -19,6 +19,16 @@ The page checks the pinned base `app.bin` against its SHA-256 and patches only t
 - `test/profile.js` compiles the firmware's own parser from the release and compares it with the page's on more than 26,000 candidate profiles.
 - The page refuses conflicts and anything the firmware would refuse. Only profile-capable releases (Beta 2 and later) are offered.
 
+## Plaits region and profile version 3
+
+Blob firmware (Beta 4 Palette, phase 1) reads a region after the app: WAVE, TERR and PLTS sections, each found through a directory in the profile. Nothing in the editor writes one yet.
+
+- `static/js/region.js` writes the region as the firmware's `beads/build/tools/blob_sections.py` does, byte for byte: each section on a 32-byte boundary with a 32-byte header and a trailing CRC-32, 0xff padding, PLTS blobs sorted by model ID. It refuses content outside the firmware's limits (193 guarded WAVE rows, 1–16 terrains, up to 128 blobs, overlapping model IDs). `readRegion` checks a region with a directory as the module does; blob digest allowlists, services and imports stay on the module.
+- The region starts on the first 4 KiB boundary after the app and ends before 0x08100000; `regionImage` makes the app-plus-region image the WAV carries.
+- A release's optional `profile.region` (`profile_version: 3`, `release`, `services_version`) declares blob firmware. Its `release` is the firmware's `kPlaitsBlobRelease`, written into every section; `test/manifest.js` checks all three against the firmware.
+- `encodeProfile(entries, profile, scales, { banks, directory })` writes version 3: version 2 plus up to 15 banks of 8 known model IDs (bytes 14 and 15 count banks and sections), then up to 3 directory entries. Hygrostat refuses a version 3 profile for a release without `profile.region`, since its firmware refuses it. The Plaits start bank must be below the bank count (0 banks: the stock three). Version 1 and 2 bytes are unchanged; share links and kept setups carry version 3 blocks as they are.
+- `test/region.js` checks the writer against `blob_sections.py` and the parser and region reader compiled from the pinned blob firmware on good and faulted inputs, with synthetic blobs.
+
 ## Editor
 
 - The page shows the module's destinations: options pages (rows) by FEEDBACK, DRY/WET and REVERB (columns), two [A] amounts and three [A] gestures. Off, Fixed and Adjustable are shown as "Use stock behaviour", "Always use this value" and "Change on the module".

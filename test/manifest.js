@@ -14,7 +14,8 @@ import { createHash } from 'node:crypto';
 import { firmwareShow, firmwareRepo } from './firmware.js';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { decodeProfile, defaults, encodeProfile, equal, validateProfileFormat, pageSlots } from '../static/js/profile.js';
+import { decodeProfile, defaults, encodeProfile, equal, validateProfileFormat, pageSlots, regionSupport } from '../static/js/profile.js';
+import { validateRegionFirmware } from '../static/js/region.js';
 import { decode } from '../static/js/decoder.js';
 import { encode, MAX_APP_SIZE } from '../static/js/encoder.js';
 
@@ -51,6 +52,18 @@ for (const release of manifest.releases) {
   check((release.profile.feedback_slot === true) === /\bAMOUNT_FEEDBACK\b/.test(header) &&
       (release.profile.feedback_slot === true) === release.profile.features.some((f) => f.id === 40),
       `${release.tag}: [A] + FEEDBACK slot matches the firmware`);
+  // A declared region (profile version 3) must match the blob firmware's constants.
+  if (release.profile.region !== undefined) {
+    const source = (file) => firmwareShow(ref, file, { encoding: 'utf8' });
+    let matches;
+    try {
+      regionSupport(release.profile);
+      validateRegionFirmware(release.profile.region, { profileHeader: header,
+        catalog: source('beads/blob/plaits_catalog.cc'), blobHeader: source('beads/blob/plaits_blob.h') });
+      matches = true;
+    } catch { matches = false; }
+    check(matches, `${release.tag}: region metadata matches the firmware`);
+  }
   if (release.development) {
     check(/^drizzlet-dev-[0-9a-f]+$/.test(release.tag) && release.app.includes('-dev-') &&
         /unreleased/i.test(release.name), `${release.tag}: explicitly unreleased development entry`);
