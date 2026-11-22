@@ -51,6 +51,8 @@ int main() {
   static PlaitsRegion region;
   // No flash ECC flag on the host.
   region.set_flash_check(NULL);
+  // Library RAM is the module's budget; the editor leaves it to the module.
+  region.set_library_ram(1 << 20, kPlaitsBlobMaxArenaSize);
   uint8_t type[4];
   while (fread(type, 1, sizeof(type), stdin) == sizeof(type)) {
     ReadAll(block, sizeof(block));
