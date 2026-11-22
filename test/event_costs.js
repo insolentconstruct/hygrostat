@@ -61,11 +61,15 @@ for (const change of [
   (f) => { f.values = ['Keep', 'Clear']; }, (f) => { f.values.reverse(); },
   (f) => { f.states.push('Adjustable'); }, (f) => { f.page = true; },
   (f) => { f.action = true; }, (f) => { f.amount = true; }, (f) => { f.field = 13; },
+  (f) => { f.saved = 24; },
   (f) => { f.default[2] = 1; }, (f) => { f.default_in_block = true; }
 ]) {
   const invalid = structuredClone(feature); change(invalid);
   assert.throws(() => importedCost(invalid));
 }
+// A format 2 release's feature has a record byte (none) instead of a field.
+const format2 = structuredClone(feature); delete format2.field; format2.saved = null;
+assert.deepEqual(importedCost(format2), importedCost(feature));
 assert.throws(() => importedCost(feature, { features: [...costTable.features, { id: 24, name: feature.name, cpu: { kind: 'measured' } }] }));
 assert.throws(() => importedCost({ ...feature, id: 25 }, { features: [{ id: 25, name: feature.name, cpu: { kind: 'inspection' } }] }));
 for (const change of [

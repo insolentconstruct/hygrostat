@@ -92,12 +92,14 @@ deploy without owner approval; the Beta 2 editor follows the firmware tag.
 
 ## Firmware and generated data
 
-Feature IDs, packed settings meanings, release identity, checksums and app/WAV
+Feature IDs and value meanings, release identity, checksums and app/WAV
 pins are contracts. Do not silently reinterpret them or truncate imported
 scales. Keep historical measured CPU data immutable and distinguish measured,
 inspected zero and unmeasured costs. Test fixtures are not performance evidence.
 Generate canonical release drawings from the firmware tools, then verify their
-bytes and customized guides. Keep changes focused and preserve attribution.
+bytes and customized guides. Read firmware catalogues through
+tools/catalogue.js; format 2 must match its feature manifest digest. Keep
+changes focused and preserve attribution.
 
 Tool references: [ESLint flat configuration](https://eslint.org/docs/latest/use/configure/configuration-files),
 [HTMLHint configuration](https://htmlhint.com/configuration/) and
