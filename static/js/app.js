@@ -9,18 +9,18 @@
 // in the browser, check the .wav, offer it for download.
 
 import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, normalise, GAIN,
-  pageLeds, gestureFirmware } from './profile.js?v=e63f4a13f569565c';
-import { effectiveScales, validateScales } from './scales.js?v=e63f4a13f569565c';
-import { scaleEditor } from './scale_editor.js?v=e63f4a13f569565c';
-import { guide } from './guide.js?v=e63f4a13f569565c';
-import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=e63f4a13f569565c';
-import { featureHelp, actionHelp } from './help.js?v=e63f4a13f569565c';
-import { KNOBS, KINDS, GROUPS, EXTRA_GROUPS, extraGroup, ACTION_DOES, placeName, pageOf, entryOf, occupant, places, valueLabel, stateLabel,
+  pageLeds, gestureFirmware, exactPageRule } from './profile.js?v=a318c111dda64df4';
+import { effectiveScales, validateScales } from './scales.js?v=a318c111dda64df4';
+import { scaleEditor } from './scale_editor.js?v=a318c111dda64df4';
+import { guide } from './guide.js?v=a318c111dda64df4';
+import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=a318c111dda64df4';
+import { featureHelp, actionHelp } from './help.js?v=a318c111dda64df4';
+import { KNOBS, KINDS, GROUPS, EXTRA_GROUPS, extraGroup, extraControl, ACTION_DOES, placeName, pageOf, entryOf, occupant, places, valueLabel, stateLabel,
   summary, stateHint, edit, place, adjust, unplace, afterUnplace, canSwap, freeSlot, changes, fitsSlot, placeable, bankWarning, slotCount,
-  usedPages, compaction, compact } from './layout.js?v=e63f4a13f569565c';
-import { drawPanel, highlight } from './panel.js?v=e63f4a13f569565c';
-import { comboImages } from './combo.js?v=e63f4a13f569565c';
-import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=e63f4a13f569565c';
+  usedPages, compaction, compact } from './layout.js?v=a318c111dda64df4';
+import { drawPanel, highlight } from './panel.js?v=a318c111dda64df4';
+import { comboImages } from './combo.js?v=a318c111dda64df4';
+import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=a318c111dda64df4';
 
 const $ = (id) => document.getElementById(id);
 const cap = (text) => text.replace(/^./, (c) => c.toUpperCase());
@@ -43,7 +43,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=e63f4a13f569565c', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=a318c111dda64df4', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.ready) return;
       if (data.progress !== undefined) {
@@ -275,7 +275,7 @@ function commit(change, message = '') {
   templatePreview = presetPending = null;
   compactPreview = false;
   try {
-    entries = change();
+    entries = exactPageRule(change(), profile());
     edited();
     status(message);
   } catch (error) {
@@ -604,7 +604,7 @@ function renderExtras() {
 function extra(f) {
   const e = entryOf(entries, f);
   const help = featureHelp(f, selected());
-  const toggle = f.values?.length === 2 && f.values[0] === 'Off' && !f.page;
+  const control = extraControl(f);
   const title = EXTRA_NAMES[f.id] ?? f.name;
   const name = el('span', { class: 'extra-name', id: `extra-${f.id}-name`, text: title });
   const about = el('small', { id: `extra-${f.id}-about`, text: help.description });
@@ -614,12 +614,29 @@ function extra(f) {
   const more = el('details', { class: 'extra-more', id: `extra-${f.id}-more` }, el('summary', {}, 'More', el('span', { class: 'sr-only', text: ` about ${title}` })),
     help.details ? el('p', { id: `extra-${f.id}-details`, text: help.details }) : null,
     el('a', { class: 'linkish', href: help.url, text: 'Documentation', 'aria-label': `${f.name} documentation` }));
-  if (toggle) {
+  if (control === 'switch') {
     const input = el('input', { type: 'checkbox', role: 'switch', id: `extra-${f.id}`, 'aria-labelledby': `extra-${f.id}-name`,
       'aria-describedby': described, onchange: (event) => commit(() => edit(entries, profile(), f, 1, event.target.checked ? 1 : 0)) });
     input.checked = e[1] === 1 && e[2] === 1;
     return el('div', { class: 'extra' }, el('label', { for: `extra-${f.id}` }, name),
       el('label', { class: 'switch' }, input, el('span')), about, start, more);
+  }
+  if (control === 'number') {
+    // Empty is Off; a whole number from 0 to 255 is Fixed at that byte.
+    const input = el('input', { type: 'number', id: `extra-${f.id}`, min: 0, max: 255, step: 1, placeholder: 'Not set',
+      'aria-labelledby': `extra-${f.id}-name`, 'aria-describedby': described });
+    input.value = e[1] ? e[2] : '';
+    input.onchange = () => {
+      if (input.value.trim() === '') { commit(() => edit(entries, profile(), f, 1, 0)); return; }
+      if (!input.validity.valid) {
+        input.value = e[1] ? e[2] : '';
+        status(`${f.name}: use a whole number from 0 to 255, or leave it empty. Previous value kept.`, 'error');
+        return;
+      }
+      const v = input.valueAsNumber;
+      commit(() => e[1] ? edit(entries, profile(), f, 2, v) : edit(edit(entries, profile(), f, 1, 1), profile(), f, 2, v));
+    };
+    return el('div', { class: 'extra' }, el('label', { for: `extra-${f.id}` }, name), input, about, start, more);
   }
   const select = el('select', { id: `extra-${f.id}`, 'aria-labelledby': `extra-${f.id}-name`, 'aria-describedby': described });
   f.values.forEach((v, i) => select.add(new Option(i === 0 && e[1] !== 2 && !/\b(stock|default)\b/i.test(valueLabel(f, i)) ? `${valueLabel(f, i)} (stock)` : valueLabel(f, i), i)));
@@ -1117,7 +1134,7 @@ async function checkCapabilities() {
   }
   // A constructor alone does not establish support for module workers.
   await new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=e63f4a13f569565c', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=a318c111dda64df4', { type: 'module' });
     const done = (error) => {
       clearTimeout(timer); worker.terminate();
       error ? reject(error) : resolve();
@@ -1146,7 +1163,7 @@ async function init() {
   }
   $('compatibility').hidden = true;
   try {
-    const response = await fetch('manifest.json?v=e63f4a13f569565c', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=a318c111dda64df4', { cache: 'no-cache' });
     manifest = await response.json();
   } catch {
     status('Could not load the release list.', 'error');
