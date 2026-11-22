@@ -11,8 +11,8 @@ import { validate, encodeProfile, decodeProfile, defaults, pageSlots, crc32, exa
 import { edit, place, entryOf, places, extraControl, placeable, summary } from '../static/js/layout.js';
 import { featureHelp } from '../static/js/help.js';
 const read = (file) => readFileSync(new URL(file, import.meta.url), 'utf8');
-// The resonator Materials pull request's head; bump it (or set RESONATOR_FIRMWARE_REF) when that branch moves.
-const RESONATOR_FIRMWARE_REF = process.env.RESONATOR_FIRMWARE_REF || 'bca60dcb0919c4257ebc1d7739bde7bf4e758a99';
+// Beta 4 integration with the resonator's Materials merged; bump it (or set RESONATOR_FIRMWARE_REF) when that branch moves.
+const RESONATOR_FIRMWARE_REF = process.env.RESONATOR_FIRMWARE_REF || '972d961ae708654336dd35a1c75a8b9bf0e7d66b';
 const ref = RESONATOR_FIRMWARE_REF;
 const IDS = [41, 43, 44, 45, 46, 47, 48, 49];
 const EXACT = [45, 46, 47, 48, 49];
