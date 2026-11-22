@@ -11,8 +11,8 @@ import { validate, encodeProfile, decodeProfile, defaults, pageSlots, crc32, exa
 import { edit, place, entryOf, places, extraControl, placeable, summary } from '../static/js/layout.js';
 import { featureHelp } from '../static/js/help.js';
 const read = (file) => readFileSync(new URL(file, import.meta.url), 'utf8');
-// Beta 4 integration with the resonator controls merged; bump it (or set RESONATOR_FIRMWARE_REF) when that branch moves.
-const RESONATOR_FIRMWARE_REF = process.env.RESONATOR_FIRMWARE_REF || 'fd5a17a99a3377f8468b6f49d892007f84df4993';
+// The resonator Materials pull request's head; bump it (or set RESONATOR_FIRMWARE_REF) when that branch moves.
+const RESONATOR_FIRMWARE_REF = process.env.RESONATOR_FIRMWARE_REF || '68b8d3be821116d454396fcd6ee8b8f8fd844b94';
 const ref = RESONATOR_FIRMWARE_REF;
 const IDS = [41, 43, 44, 45, 46, 47, 48, 49];
 const EXACT = [45, 46, 47, 48, 49];
@@ -71,7 +71,7 @@ for (const f of additions) {
   assert.equal(f.default[2], c.default, `${f.name}: default value`);
 }
 assert.deepEqual(additions.filter((f) => f.page).map((f) => [f.id, f.values.length, f.default]),
-  [[41, 3, [41, 2, 0, 13, 0, 0]], [43, 4, [43, 2, 1, 14, 0, 0]], [44, 4, [44, 2, 1, 15, 0, 0]]]);
+  [[41, 3, [41, 2, 0, 13, 0, 0]], [43, 8, [43, 2, 1, 14, 0, 0]], [44, 4, [44, 2, 1, 15, 0, 0]]]);
 for (const id of EXACT) {
   const f = feature(id);
   assert.deepEqual([f.values, f.states, f.page, f.amount, f.action, f.default_in_block], [null, ['Off', 'Fixed'], false, false, false, false]);
@@ -94,6 +94,8 @@ for (const f of additions) {
 
 // (c) Exact structure and brightness take Material off its page; exact damping takes Ring time.
 assert.deepEqual(EXACT_REPLACES, { 45: 43, 46: 43, 47: 44 });
+// Wood to Bell keep their meanings; Drizzlet's own objects follow them.
+assert.deepEqual(feature(43).values, ['Wood', 'String', 'Glass', 'Bell', 'Marimba', 'Drum', 'Bowl', 'Gong']);
 const base = defaults(profile);
 const fixAt = (entries, id, v) => exactPageRule(edit(edit(entries, profile, feature(id), 1, 1), profile, feature(id), 2, v), profile);
 const structure = fixAt(base, 45, 64);
