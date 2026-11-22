@@ -11,8 +11,8 @@ import { validate, encodeProfile, decodeProfile, defaults, pageSlots, crc32, exa
 import { edit, place, entryOf, places, extraControl, placeable, summary } from '../static/js/layout.js';
 import { featureHelp } from '../static/js/help.js';
 const read = (file) => readFileSync(new URL(file, import.meta.url), 'utf8');
-// The firmware resonator controls commit; bump it (or set RESONATOR_FIRMWARE_REF) when that branch moves.
-const RESONATOR_FIRMWARE_REF = process.env.RESONATOR_FIRMWARE_REF || '6dc3fff1da3b7e41a5d51261682088919371ef2d';
+// Beta 4 integration with the resonator controls merged; bump it (or set RESONATOR_FIRMWARE_REF) when that branch moves.
+const RESONATOR_FIRMWARE_REF = process.env.RESONATOR_FIRMWARE_REF || 'fd5a17a99a3377f8468b6f49d892007f84df4993';
 const ref = RESONATOR_FIRMWARE_REF;
 const IDS = [41, 43, 44, 45, 46, 47, 48, 49];
 const EXACT = [45, 46, 47, 48, 49];
@@ -38,7 +38,7 @@ const fromCatalogue = (c) => {
   const placed = factory.find((e) => e[0] === c.id);
   return { id: c.id, default_in_block: Boolean(placed),
     default: placed || [c.id, STATES.indexOf(c.default_state), c.default, 0, 0, 0],
-    name: c.name, values: c.values, states: c.states, field: c.field,
+    name: c.name, values: c.values, states: c.states, field: c.field ?? null,
     page: c.page_slots.length > 0, amount: c.amount_slots.length > 0, action: c.actions.length > 0,
     stateless: c.stateless ?? false, synth_path: c.touches_synth, cpu: null };
 };
@@ -53,7 +53,11 @@ const feature = (id) => profile.features.find((f) => f.id === id);
 // (a) The catalogue rows agree with kFeatureDefinitions; 42 is a reserved placeholder row.
 assert.deepEqual(catalogue.features.map((c) => c.id), Array.from({ length: 49 }, (_, i) => i + 1).filter((id) => id !== RESERVED));
 assert.equal(definitions.length, 49, 'a definition row for every ID up to 49, 42 included');
-assert.deepEqual(definitions[RESERVED - 1].slice(1), ['1', 'kNoField', 'false', 'false', 'false', 'false']);
+assert.deepEqual(definitions[RESERVED - 1].slice(1), ['0', 'kReservedField', 'false', 'false', 'false', 'false']);
+// Catalogue format 2: page 5 has record bytes 24-26; the exact values are not saved.
+assert.equal(catalogue.format, 2);
+assert.deepEqual(IDS.map((id) => catalogue.features.find((c) => c.id === id).saved),
+  IDS.map((id) => ({ 41: 24, 43: 25, 44: 26 })[id] ?? null));
 for (const f of additions) {
   const c = catalogue.features.find((c) => c.id === f.id);
   const d = definitions[f.id - 1];
@@ -136,9 +140,9 @@ for (const id of EXACT) {
   cases.push([listing([[id, 2, 0, 0, 0, 0]]), false, false], [listing([[id, 2, 9, 16, 0, 0]]), false, false],
     [listing([[id, 1, 9, 0, 1, 0]]), false, false]);
 }
-// The firmware takes 42 Off or Fixed at value 0 with no destination (one value, no control); Hygrostat refuses it.
+// The firmware refuses the reserved ID in every form, as Hygrostat does.
 for (let state = 0; state <= 2; ++state) {
-  for (const value of [0, 1]) cases.push([listing([[RESERVED, state, value, 0, 0, 0]]), false, state < 2 && value === 0]);
+  for (const value of [0, 1]) cases.push([listing([[RESERVED, state, value, 0, 0, 0]]), false, false]);
 }
 cases.push([listing([[RESERVED, 2, 0, 16, 0, 0]]), false, false], [listing([[RESERVED, 1, 0, 0, 0, 1]]), false, false]);
 const scratch = mkdtempSync(join(tmpdir(), 'hygrostat-resonator-oracle-'));

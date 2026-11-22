@@ -22,7 +22,7 @@
 //
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
-import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=d62286caca2e468b';
+import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=e2e3353429e6caf9';
 
 // Six-byte entries are kept in wire order: id, state, value, page, amount, action.
 const STATES = ['Off', 'Fixed', 'Adjustable'];
@@ -135,7 +135,7 @@ export function validate(entries, profile, banks = 0) {
         (amount && (!f.amount || state !== 2)) ||
         (action && (!f.action || !state || (state === 1 && (!value || !f.stateless)))) ||
         (id === 9 && state === 1 && value && !action) ||
-        (id >= 15 && state === 2 && !f.page && f.field == null && !amount) ||
+        (id >= 15 && state === 2 && !f.page && f.field == null && f.saved == null && !amount) ||
         (holdRules && ((id === 9 && state === 2 && !action) || (action === 3 && id !== 9))) ||
         (id === SYNTH && action === 2)) {
       throw new Error(`${f.name}: this setting or placement is not allowed.`);
