@@ -14,19 +14,26 @@ export const RECORD_FIRST = 8;
 export const RECORD_SIZE = 56;
 export const MANIFEST = 'beads/resources/features.json';
 export const CATALOGUE = 'beads/build/profile-features.json';
-const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const byte = (v) => Number.isInteger(v) && v >= 0 && v <= 255;
+const flag = (v) => typeof v === 'boolean';
+// Slots are distinct, ascending numbers from 1 up to the control's count.
+const slots = (v, most) => Array.isArray(v) && v.every((s, i) => Number.isInteger(s) && s >= 1 && s <= most &&
+  (!i || s > v[i - 1]));
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
 function checkRow(c, i, offsets) {
   const fail = (what) => { throw new Error(`Catalogue feature ${i + 1}: ${what}.`); };
-  if (!c || !same(Object.keys(c), ROW_KEYS)) fail('unexpected fields');
+  if (!c || typeof c !== 'object' || Object.keys(c).length !== ROW_KEYS.length ||
+      !ROW_KEYS.every((k) => Object.hasOwn(c, k))) fail('unexpected fields');
   if (c.id !== i + 1) fail('IDs must run 1, 2, 3...');
   if (typeof c.name !== 'string' || !c.name) fail('no name');
   if (c.values !== null && (!Array.isArray(c.values) || !c.values.length ||
       !c.values.every((v) => typeof v === 'string'))) fail('invalid values');
   if (!Array.isArray(c.states) || !c.states.length || !c.states.every((s) => STATES.includes(s))) fail('invalid states');
-  if (!c.states.includes(c.default_state) || !byte(c.default)) fail('invalid default');
+  if (!slots(c.page_slots, 255) || !slots(c.amount_slots, 3) || !slots(c.actions, 3)) fail('invalid controls');
+  if (!flag(c.stateless) || !flag(c.touches_synth)) fail('invalid flags');
+  if (!c.states.includes(c.default_state) || !byte(c.default) ||
+      (c.values && c.default >= c.values.length)) fail('invalid default');
   if (c.cpu_cost !== null) fail('costs come from Hygrostat');
   if (c.saved !== null) {
     if (!Number.isInteger(c.saved) || c.saved < RECORD_FIRST || c.saved >= RECORD_SIZE) fail('record byte out of range');
@@ -88,13 +95,27 @@ export function firmwareDefinitions(read) {
       m[3] === 'true', m[4] === 'true', m[5] === 'true', m[6] === 'true']);
 }
 
-// A catalogue row agrees with the firmware's definition; the field becomes a record byte in format 2.
-export function checkDefinitions(catalogue, definitions) {
+// The options record's version and per-feature bytes (0: not saved), generated into settings.*.
+export function firmwareRecord(read) {
+  const version = /\bkOptionsRecordVersion = (\d+);/.exec(read('beads/settings.h'));
+  const table = read('beads/settings.cc').split('kRecordOffsets[FEATURE_LAST] = {')[1]?.split('};')[0];
+  if (!version || !table) throw new Error('No options record layout found.');
+  return { version: Number(version[1]), offsets: [...table.matchAll(/^ {2}(\d+),/gm)].slice(1).map((m) => Number(m[1])) };
+}
+
+// A catalogue row agrees with the firmware's definition; format 2's record
+// bytes and version must also equal the firmware's record layout.
+export function checkDefinitions(catalogue, definitions, record = null) {
   if (catalogue.features.length !== definitions.length) throw new Error('Catalogue and firmware feature counts differ.');
+  if (catalogue.format === 2 && (record?.version !== catalogue.record_version ||
+      record.offsets.length !== definitions.length)) {
+    throw new Error('Catalogue and firmware record layouts differ.');
+  }
   catalogue.features.forEach((c, i) => {
     const [values, field, page, amount, action, stateless] = definitions[i];
     const saved = catalogue.format === 1 ? c.field === field :
-      (field === null || c.saved !== null) && (c.id < 15 || (field === null) === (c.saved === null));
+      (c.saved ?? 0) === record.offsets[i] && (field === null || c.saved !== null) &&
+      (c.id < 15 || (field === null) === (c.saved === null));
     if ((c.values?.length || 0) !== values || (c.page_slots.length > 0) !== page ||
         (c.amount_slots.length > 0) !== amount || (c.actions.length > 0) !== action ||
         (c.stateless ?? false) !== stateless || !saved) {

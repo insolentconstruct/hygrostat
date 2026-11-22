@@ -9,7 +9,7 @@ import { firmwareShow } from './firmware.js';
 import { defaults, encodeProfile, equal, cpuUsage, profileKey, modes,
   validateProfileFormat, initialEntry, pageSlots } from '../static/js/profile.js';
 import { importedCost, tableBytes, tableSha256, importCosts, costTable, moduleCosts } from '../tools/import-costs.js';
-import { readCatalogue, firmwareDefinitions, checkDefinitions, MANIFEST } from '../tools/catalogue.js';
+import { readCatalogue, firmwareDefinitions, firmwareRecord, checkDefinitions, MANIFEST } from '../tools/catalogue.js';
 import './costs.js';
 import './help.js';
 import { guide } from '../static/js/guide.js';
@@ -41,8 +41,9 @@ if (process.env.FIRMWARE_CATALOGUE_REF) {
   assert.deepEqual(catalogueBytes, catalogueAt(process.env.FIRMWARE_CATALOGUE_REF),
     'the prepared firmware catalogue must also match verbatim');
 }
-const definitions = firmwareDefinitions((file) => firmwareShow(firmwareRef, file, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }));
-checkDefinitions(catalogue, definitions);
+const firmwareText = (file) => firmwareShow(firmwareRef, file, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+const definitions = firmwareDefinitions(firmwareText);
+checkDefinitions(catalogue, definitions, catalogue.format === 2 ? firmwareRecord(firmwareText) : null);
 assert.equal(profile.features.length, definitions.length);
 assert.equal(catalogue.features.length, definitions.length);
 for (const [i, definition] of definitions.entries()) {

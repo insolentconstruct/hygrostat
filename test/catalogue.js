@@ -9,7 +9,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { firmwareRepo, firmwareShow } from './firmware.js';
-import { readCatalogue, catalogueAtRef, catalogueFeatures, firmwareDefinitions, checkDefinitions,
+import { readCatalogue, catalogueAtRef, catalogueFeatures, firmwareDefinitions, firmwareRecord, checkDefinitions,
   CATALOGUE, MANIFEST } from '../tools/catalogue.js';
 import { validate, encodeProfile, decodeProfile, defaults, equal, crc32, pageSlots,
   validateProfileFormat } from '../static/js/profile.js';
@@ -35,20 +35,37 @@ for (const [change, message] of [
   [(c) => { c.features[1].id = 3; }, /IDs/],
   [(c) => { c.features[0].factory[2] = 5; }, /factory/],
   [(c) => { c.features[0].states = ['On']; }, /states/],
-  [(c) => { c.features[0].cpu_cost = 1; }, /costs/]
+  [(c) => { c.features[0].cpu_cost = 1; }, /costs/],
+  [(c) => { c.features[0].page_slots = 'bad'; }, /controls/],
+  [(c) => { c.features[0].page_slots.reverse(); }, /controls/],
+  [(c) => { c.features[10].amount_slots.push(4); }, /controls/],
+  [(c) => { c.features[3].actions = [0]; }, /controls/],
+  [(c) => { c.features[0].stateless = 'false'; }, /flags/],
+  [(c) => { c.features[0].touches_synth = 17; }, /flags/],
+  [(c) => { c.features[14].default = 2; }, /default/]
 ]) {
   const forged = JSON.parse(bytes.toString('utf8')); change(forged);
   assert.throws(() => readCatalogue(Buffer.from(JSON.stringify(forged))), message);
 }
+// Property order is not part of the format.
+const reordered = JSON.parse(bytes.toString('utf8'));
+reordered.features = reordered.features.map((c) => Object.fromEntries(Object.entries(c).reverse()));
+assert.deepEqual(readCatalogue(Buffer.from(JSON.stringify(reordered))), catalogue);
 // The page's own copy (Beta 2) is format 1 and still reads.
 assert.equal(readCatalogue(read('../static/profile-features.json')).format, 1);
 
-// Every row agrees with the firmware's definitions; a saved feature has its record byte.
+// Every row agrees with the firmware's definitions and options record layout.
 const definitions = firmwareDefinitions(text);
-checkDefinitions(catalogue, definitions);
-const unsaved = structuredClone(catalogue);
-unsaved.features.find((c) => c.id === 31).saved = null;
-assert.throws(() => checkDefinitions(unsaved, definitions), /31 differs/);
+const record = firmwareRecord(text);
+checkDefinitions(catalogue, definitions, record);
+assert.throws(() => checkDefinitions(catalogue, definitions), /record layouts differ/);
+assert.throws(() => checkDefinitions(catalogue, definitions, { ...record, version: 2 }), /record layouts differ/);
+for (const change of [(c) => { c.features[30].saved = null; },
+  (c) => { [c.features[0].saved, c.features[1].saved] = [c.features[1].saved, c.features[0].saved]; },
+  (c) => { c.features[0].saved = 55; }, (c) => { c.features[23].saved = 24; }]) {
+  const forged = structuredClone(catalogue); change(forged);
+  assert.throws(() => checkDefinitions(forged, definitions, record), /differs from the firmware/);
+}
 
 // A synthetic release built from the catalogue alone; it is never offered.
 const manifest = JSON.parse(read('../static/manifest.json'));
