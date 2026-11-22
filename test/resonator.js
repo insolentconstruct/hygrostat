@@ -12,7 +12,7 @@ import { edit, place, entryOf, places, extraControl, placeable, summary } from '
 import { featureHelp } from '../static/js/help.js';
 const read = (file) => readFileSync(new URL(file, import.meta.url), 'utf8');
 // The firmware resonator controls commit; bump it (or set RESONATOR_FIRMWARE_REF) when that branch moves.
-const RESONATOR_FIRMWARE_REF = process.env.RESONATOR_FIRMWARE_REF || '0d8cf07c9ef9bb935da1a7a1c9bff8d4a5f3aa2f';
+const RESONATOR_FIRMWARE_REF = process.env.RESONATOR_FIRMWARE_REF || '6dc3fff1da3b7e41a5d51261682088919371ef2d';
 const ref = RESONATOR_FIRMWARE_REF;
 const IDS = [41, 43, 44, 45, 46, 47, 48, 49];
 const EXACT = [45, 46, 47, 48, 49];
