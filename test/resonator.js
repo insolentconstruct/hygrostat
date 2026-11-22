@@ -13,7 +13,7 @@ import { featureHelp } from '../static/js/help.js';
 const read = (file) => readFileSync(new URL(file, import.meta.url), 'utf8');
 // Beta 4 integration with the resonator controls merged; bump it (or set RESONATOR_FIRMWARE_REF) when that branch moves.
 // #345 merges Beta 4 integration's resonator; 42 is Rings polyphony there.
-const RESONATOR_FIRMWARE_REF = process.env.RESONATOR_FIRMWARE_REF || '3df1b087a7458e57782741ff8e252f55ddb8a21f';
+const RESONATOR_FIRMWARE_REF = process.env.RESONATOR_FIRMWARE_REF || '29106463e405b92a2997bc38f387d92488656153';
 const ref = RESONATOR_FIRMWARE_REF;
 const IDS = [41, 43, 44, 45, 46, 47, 48, 49];
 const EXACT = [45, 46, 47, 48, 49];

@@ -41,7 +41,7 @@ import { writeRegion, regionItems, droppable, validateRegionFirmware, KINDS } fr
 import { featureHelp } from '../static/js/help.js';
 
 // #345's head (override with RINGS_FIRMWARE_REF).
-const ref = process.env.RINGS_FIRMWARE_REF || '3df1b087a7458e57782741ff8e252f55ddb8a21f';
+const ref = process.env.RINGS_FIRMWARE_REF || '29106463e405b92a2997bc38f387d92488656153';
 const show = (file) => firmwareShow(ref, file, { stdio: ['ignore', 'pipe', 'pipe'] });
 const text = (file) => show(file).toString('utf8');
 const read = (file) => readFileSync(new URL(file, import.meta.url));
