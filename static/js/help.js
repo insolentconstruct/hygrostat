@@ -1,7 +1,7 @@
 // Copyright 2026 Insolent Construct.
 // MIT licence: see encoder.js.
 // Links follow the selected release, including its source revision during development.
-import { TOGGLES } from './profile.js?v=2e137df612bfc50d';
+import { TOGGLES } from './profile.js?v=2f429fcab2a9a7f7';
 const docs = 'https://github.com/insolentconstruct/eurorack/blob/{TAG}/beads/build/docs/FEATURES.md';
 const descriptions = {
   1: ['Snap final pitch, including PITCH, CV and randomness, to a scale.', 'drizzlet-options'],
@@ -40,13 +40,18 @@ const descriptions = {
   37: ['When an options page opens, show each knob’s stored value in turn on [A], or only the page’s first setting at once.', 'options-page-preview'],
   38: ['Open the options pages on the page last used, or always on the first page.', 'options-page-on-opening'],
   39: ['The quality the module starts in after this firmware is installed and after a settings reset, at each start-up until something is saved; once anything is saved, your choice wins.', 'start-in-quality'],
-  40: ['Which knob sets the manual input gain while [A] is held: FEEDBACK as stock, DRY/WET, REVERB, or none.', 'a-gestures-in-profiles']
+  40: ['Which knob sets the manual input gain while [A] is held: FEEDBACK as stock, DRY/WET, REVERB, or none.', 'a-gestures-in-profiles'],
+  42: ['How many voices the Rings synth starts with: 1, 2 or 4. While Rings plays, [A] + FREEZE steps them; the count is saved.', 'synth-and-rings-polyphony']
 };
+// Firmware with the Rings synth offers it as Synth value 2.
+const rings = (feature) => feature.id === 7 && feature.values?.includes('Rings');
 
 export function featureHelp(feature, release) {
-  const [description, section] = descriptions[feature.id];
+  const [description, section] = rings(feature) ? ['Beads, Plaits or Rings synth; only installed synths are offered.',
+    'synth-and-rings-polyphony'] : descriptions[feature.id];
   const recent = feature.values?.includes('Recent notes') ? ' Recent notes: with PITCH patched, each CCW grain plays one of the last 1-8 notes sent to PITCH (more as you turn further CCW); unpatched it plays as Free.' : '';
   const details = feature.id === 10 ? 'Around C, the steps are C and G across octaves, including G below C (a fourth down). Pitch scale applies afterwards and can change these intervals. Works on granular and Beads wavetable grains, not the continuous oscillator, Plaits or Spectral.' + recent :
+    rings(feature) ? 'Rings is Mutable Instruments’ Rings (MIT), a removable part of the update. A Synth action steps over synths that are not installed.' :
     feature.id === 31 ? 'While the Plaits synth plays, hold [A] and press FREEZE to step green, red, yellow; the bank is saved. Other modes keep that gesture.' :
     feature.id === 32 ? 'The dry level and both ends of the knob stay stock; DRY/WET CV follows the same law. Granular, delay and spectral; the synths keep their own DRY/WET.' :
     feature.id === 33 ? 'Turning DRY/WET down cuts the tail too. In Scorched cassette the wow and flutter comes after the reverb. Granular, delay and spectral; the synths keep the stock routing.' : '';

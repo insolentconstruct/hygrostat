@@ -22,14 +22,15 @@
 //
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
-// The region after the app (firmware beads/blob/plaits_region.h): WAVE, TERR
-// and PLTS sections, written as beads/build/tools/blob_sections.py does.
-import { crc32, sha256, SECTION_KINDS, MIN_SECTION_SIZE } from './profile.js?v=2e137df612bfc50d';
+// The region after the app (firmware beads/blob/plaits_region.h): WAVE, TERR,
+// PLTS and RNGS sections, written as beads/build/tools/blob_sections.py does.
+import { crc32, sha256, SECTION_KINDS, SECTION_NAMES, MIN_SECTION_SIZE } from './profile.js?v=2f429fcab2a9a7f7';
+import { sampleCount } from './encoder.js?v=2f429fcab2a9a7f7';
 
 export const APP_START = 0x08020000;
 export const REGION_END = 0x08100000;
 export const SECTION_MAGIC = 0x43535a44;
-export const KINDS = { WAVE: SECTION_KINDS[0], TERR: SECTION_KINDS[1], PLTS: SECTION_KINDS[2] };
+export const KINDS = Object.fromEntries(SECTION_NAMES.map((name, i) => [name, SECTION_KINDS[i]]));
 export const WAVE_ROWS = 193;
 export const WAVE_ROW = 260;
 export const TERRAIN_SIZE = 64 * 64;
@@ -42,6 +43,8 @@ const BLOB_MAGIC = 0x424d5a44;
 const BLOB_HEADER_SIZES = [0, 64, 96];
 const MODEL = 1;
 const LIBRARY = 2;
+const SYNTH = 3;
+const MAX_SYNTH_RAM = 256 * 1024;
 const MAX_EXPORTS = 16;
 const MAX_DEPENDENCIES = 4;
 const DEPENDENCY_SIZE = 36;
@@ -54,6 +57,8 @@ const view = (b) => new DataView(b.buffer, b.byteOffset, b.byteLength);
 const equalBytes = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
 const hex = (b) => Array.from(b, (v) => v.toString(16).padStart(2, '0')).join('');
 const isLibrary = (info) => info.kind === LIBRARY;
+const isSynth = (blob) => blob instanceof Uint8Array && blob.length >= 96 && view(blob).getUint32(8, true) === 2 &&
+  view(blob).getUint32(16, true) === SYNTH;
 
 // The region starts on the first 4 KiB boundary after the app (beads/build/blobs.ld).
 export function regionStart(appSize) {
@@ -222,7 +227,15 @@ export async function resolveBlobs(models, available, catalogue = null) {
   return { blobs: [...libraries.map((l) => l.blob), ...models], libraries };
 }
 
-// The region and its profile directory; wave is 193 rows of int16 LE, terrain 1-16 64 x 64 grids.
+// RNGS: one synth blob (kind 3) right after the header, checked as the module reads it.
+function rings(release, blob) {
+  const status = checkBlob(blob);
+  if (status !== 'ok') throw new Error(`The synth blob is refused (${status}).`);
+  return section('RNGS', release, 1, blob);
+}
+
+// The region and its profile directory; wave is 193 rows of int16 LE, terrain 1-16 64 x 64 grids;
+// blobs are Plaits models and libraries, and at most one synth blob, which goes in RNGS.
 export function writeRegion({ release, wave = null, terrain = null, blobs = [] }) {
   if (!Number.isInteger(release) || release < 1 || release > 0xffffffff) throw new Error('Invalid region release.');
   const sections = [];
@@ -238,8 +251,12 @@ export function writeRegion({ release, wave = null, terrain = null, blobs = [] }
     sections.push(section('TERR', release, count, terrain));
   }
   if (!Array.isArray(blobs)) throw new Error('Blobs must be a list.');
-  const plts = blobs.length ? plaits(release, blobs) : null;
+  const synths = blobs.filter(isSynth);
+  if (synths.length > 1) throw new Error('More than one synth blob.');
+  const models = blobs.filter((b) => !isSynth(b));
+  const plts = models.length ? plaits(release, models) : null;
   if (plts) sections.push(plts.section);
+  if (synths.length) sections.push(rings(release, synths[0]));
   if (!sections.length) throw new Error('A region needs at least one section.');
   const directory = [];
   let size = 0;
@@ -251,9 +268,32 @@ export function writeRegion({ release, wave = null, terrain = null, blobs = [] }
   const region = new Uint8Array(size).fill(0xff);
   sections.forEach((s, i) => region.set(s, directory[i].offset));
   // Byte sizes for a flash meter: sections in the directory, blobs from the region start.
-  const at = plts ? directory.at(-1).offset : 0;
-  return { region, directory, blobs: plts ? plts.blobs.map((b) => ({ ...b, offset: at + b.offset })) : [] };
+  const at = plts ? directory.find((e) => e.kind === KINDS.PLTS).offset : 0;
+  const synth = synths.length ? { id: blobInfo(synths[0]).first, offset: directory.at(-1).offset + HEADER,
+    size: synths[0].length } : null;
+  return { region, directory, blobs: plts ? plts.blobs.map((b) => ({ ...b, offset: at + b.offset })) : [], synth };
 }
+
+// Picker rows: what each section holds, its credit, the region bytes and install seconds removing it saves.
+export const SECTION_ITEMS = { WAVE: { name: 'Beads wavetables' }, TERR: { name: 'Wave terrain grids' },
+  PLTS: { name: 'Plaits models' }, RNGS: { name: 'Rings synth', credit: 'Mutable Instruments (MIT)' } };
+const installSeconds = (appSize, regionSize) =>
+  sampleCount(regionSize ? regionStart(appSize) - APP_START + regionSize : appSize) / 48000;
+export function regionItems(directory, appSize) {
+  const end = (list) => list.reduce((size, e) => align(size) + e.size, 0);
+  const total = end(directory);
+  return directory.map((e) => {
+    const kind = SECTION_NAMES[SECTION_KINDS.indexOf(e.kind)];
+    const without = end(directory.filter((d) => d !== e));
+    return { kind, ...SECTION_ITEMS[kind], bytes: total - without,
+      seconds: installSeconds(appSize, total) - installSeconds(appSize, without) };
+  });
+}
+
+// What a refit may offer to drop when a setup no longer fits: each model and the synth; libraries follow their models.
+export const droppable = (written) => [
+  ...written.blobs.filter((b) => b.kind === 'model').map((b) => ({ kind: 'model', id: b.id, size: b.size })),
+  ...written.synth ? [{ kind: 'synth', name: SECTION_ITEMS.RNGS.name, size: written.synth.size }] : []];
 
 // Either header version, widened to version 2's fields as the firmware's ReadHeader does.
 function readHeader(blob, abi) {
@@ -267,10 +307,10 @@ function readHeader(blob, abi) {
   return blob.length < 96 ? null : { header: word(1), services: word(3), kind: word(4), first: word(5), ids: word(6),
     size: word(7), state: word(8), arena: word(9), init: word(10), reset: word(11), render: word(12), got: word(13),
     gotSize: word(14), dependencies: word(15), dependencyCount: word(16), zero: word(17) | word(18) | word(19),
-    reserved: word(20) | word(21) | word(22) | word(23) };
+    flags: word(17), controls: word(18), block: word(19), reserved: word(20) | word(21) | word(22) | word(23) };
 }
 
-// The firmware's PlaitsBlob::Check without services, digest and import checks, which stay on the module.
+// The firmware's PlaitsBlob::Check (models, libraries, synths) without services, digest and import checks.
 function checkBlob(blob) {
   if (blob.length < 64) return 'placement';
   const v = view(blob);
@@ -282,7 +322,11 @@ function checkBlob(blob) {
   if (h.size % 4 || h.size > blob.length || h.size < h.header + 4) return 'header';
   if (!h.services || h.services > 2 || (abi === 1 && h.services !== 1)) return 'services';
   const library = h.kind === LIBRARY;
-  if (h.kind !== MODEL && !library) return 'kind';
+  const synth = h.kind === SYNTH;
+  if (h.kind !== MODEL && !library && !synth) return 'kind';
+  // A synth: one nonzero ID, both sizes, no arena, flags or libraries.
+  if (synth && (h.ids !== 1 || !h.first || h.arena || h.flags || !h.controls || !h.block ||
+      h.dependencies || h.dependencyCount)) return 'header';
   // A library has one nonzero ID, and no flags or gains.
   if (!h.ids || h.first >= 256 || h.ids > 256 - h.first || (library && (h.ids !== 1 || !h.first || h.zero)) ||
       h.reserved) return 'header';
@@ -312,7 +356,7 @@ function checkBlob(blob) {
     const id = v.getUint32(h.dependencies + i * DEPENDENCY_SIZE, true);
     if (!id || id >= 256) return 'library';
   }
-  if (h.state > (library ? 65536 : abi === 1 ? 256 : 4352) || h.arena > 16384) return 'ram';
+  if (h.state > (library ? 65536 : synth ? MAX_SYNTH_RAM : abi === 1 ? 256 : 4352) || h.arena > 16384) return 'ram';
   if (crc32(blob.subarray(0, crcAt)) !== v.getUint32(crcAt, true)) return 'crc';
   return 'ok';
 }
@@ -396,16 +440,29 @@ async function readSection(index, data, release, expectedCrc) {
   if (index === 1) {
     return { status: count && count <= MAX_TERRAINS && payload === count * TERRAIN_SIZE ? 'ok' : 'content' };
   }
-  return readBlobs(data, count);
+  return index === 3 ? readSynth(data, count) : readBlobs(data, count);
+}
+
+// PlaitsRegion::ReadSynth: one synth blob at offset 32, filling the payload.
+function readSynth(data, count) {
+  if (count !== 1) return { status: 'table' };
+  const blob = data.subarray(HEADER, data.length - 4);
+  const status = checkBlob(blob);
+  // The module skips the blob CRC; changed bytes fail its digest allowlist instead.
+  if (status !== 'ok') return { status: status === 'crc' ? 'digest' : status };
+  const h = readHeader(blob, view(blob).getUint32(8, true));
+  if (h.kind !== SYNTH) return { status: 'kind' };
+  return { status: h.size === blob.length ? 'ok' : 'table' };
 }
 
 // Checks region (the bytes from the region start) against a profile directory, as
-// PlaitsRegion::Read does: { directory, sections: { WAVE, TERR, PLTS }, blobs } statuses.
+// PlaitsRegion::Read does: { directory, sections: { WAVE, TERR, PLTS, RNGS }, blobs } statuses.
 export async function readRegion(region, release, directory) {
   if (!(region instanceof Uint8Array) || !Array.isArray(directory) || !directory.length) {
     throw new Error('Without a directory the module reads the release default layout, which this does not check.');
   }
-  const result = { directory: 'ok', sections: { WAVE: 'no region', TERR: 'no region', PLTS: 'no region' }, blobs: [] };
+  const sections = (status) => Object.fromEntries(SECTION_NAMES.map((name) => [name, status]));
+  const result = { directory: 'ok', sections: sections('no region'), blobs: [] };
   const room = region.length;
   let ok = directory.length <= SECTION_KINDS.length;
   let next = 0, previous = -1;
@@ -416,23 +473,28 @@ export async function readRegion(region, release, directory) {
     previous = index;
     next = offset + size;
   }
-  if (!ok) return { directory: 'directory', sections: { WAVE: 'directory', TERR: 'directory', PLTS: 'directory' }, blobs: [] };
+  if (!ok) return { directory: 'directory', sections: sections('directory'), blobs: [] };
   for (const { kind, offset, size, crc } of directory) {
     const index = SECTION_KINDS.indexOf(kind);
     const read = await readSection(index, region.subarray(offset, offset + size), release, crc);
-    result.sections[Object.keys(KINDS)[index]] = read.status;
+    result.sections[SECTION_NAMES[index]] = read.status;
     if (read.blobs) result.blobs = read.blobs;
   }
   return result;
 }
 
 // The manifest's region fields must match the firmware: profile version 3,
-// kPlaitsBlobRelease and the services table version.
+// kPlaitsBlobRelease, the services table version and the default layout.
 export function validateRegionFirmware(region, { profileHeader, catalog, blobHeader }) {
   const constant = (source, name) => Number(new RegExp(`\\b${name}\\s*=\\s*(0x[0-9a-f]+|\\d+)\\s*;`, 'i').exec(source)?.[1]);
+  const names = { Wave: 'WAVE', Terrain: 'TERR', Plaits: 'PLTS', Rings: 'RNGS' };
+  const layout = [...(catalog.split('kPlaitsDefaultLayout[] = {')[1] ?? '').split('};')[0]
+    .matchAll(/\{\s*kPlaitsSection(\w+), (\d+), (\d+),\s*\{([^}]*)\}/g)].map((m) => ({ kind: names[m[1]],
+    offset: Number(m[2]), size: Number(m[3]), sha256: m[4].match(/0x[0-9a-f]{2}/g).map((h) => h.slice(2)).join('') }));
   if (region?.profile_version !== constant(profileHeader, 'kProfileVersionBlobs') ||
       region.release !== constant(catalog, 'kPlaitsBlobRelease') ||
-      region.services_version !== constant(blobHeader, 'kPlaitsBlobServicesVersion2')) {
+      region.services_version !== constant(blobHeader, 'kPlaitsBlobServicesVersion2') ||
+      (region.default_layout !== undefined && JSON.stringify(region.default_layout) !== JSON.stringify(layout))) {
     throw new Error('Region metadata must match the firmware.');
   }
 }
