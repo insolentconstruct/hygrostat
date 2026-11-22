@@ -1,7 +1,7 @@
 // Copyright 2026 Insolent Construct.
 // MIT licence: see encoder.js.
 // Links follow the selected release, including its source revision during development.
-import { TOGGLES } from './profile.js?v=2e137df612bfc50d';
+import { TOGGLES } from './profile.js?v=e2e3353429e6caf9';
 const docs = 'https://github.com/insolentconstruct/eurorack/blob/{TAG}/beads/build/docs/FEATURES.md';
 const descriptions = {
   1: ['Snap final pitch, including PITCH, CV and randomness, to a scale.', 'drizzlet-options'],
@@ -40,7 +40,15 @@ const descriptions = {
   37: ['When an options page opens, show each knob’s stored value in turn on [A], or only the page’s first setting at once.', 'options-page-preview'],
   38: ['Open the options pages on the page last used, or always on the first page.', 'options-page-on-opening'],
   39: ['The quality the module starts in after this firmware is installed and after a settings reset, at each start-up until something is saved; once anything is saved, your choice wins.', 'start-in-quality'],
-  40: ['Which knob sets the manual input gain while [A] is held: FEEDBACK as stock, DRY/WET, REVERB, or none.', 'a-gestures-in-profiles']
+  40: ['Which knob sets the manual input gain while [A] is held: FEEDBACK as stock, DRY/WET, REVERB, or none.', 'a-gestures-in-profiles'],
+  41: ['Add a Rings-style modal resonator after the grains, or before the buffer so the grains play its resonance.', 'resonator'],
+  43: ['The resonator material: Wood, String, Glass or Bell, which sets its structure and brightness.', 'resonator'],
+  44: ['How long the resonator rings: Short, Medium, Long or Very long, which sets its damping.', 'resonator'],
+  45: ['An exact resonator structure (byte / 256) in place of Material’s; empty uses the page.', 'resonator'],
+  46: ['An exact resonator brightness (byte / 256) in place of Material’s; empty uses the page.', 'resonator'],
+  47: ['An exact resonator damping (byte / 256) in place of Ring time’s; empty uses the page.', 'resonator'],
+  48: ['An exact resonator pickup position (byte / 256); empty keeps the built-in value.', 'resonator'],
+  49: ['An exact resonator amount (byte / 128, 128 is unity); empty keeps the built-in value.', 'resonator']
 };
 
 export function featureHelp(feature, release) {

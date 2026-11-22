@@ -23,11 +23,11 @@
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
 // Knob cards port options_guide.py: 270-degree arcs and the same LED ladder.
-import { effectiveScales, PULSE_NAMES } from './scales.js?v=2e137df612bfc50d';
-import { defaults, equal, encodeProfile, pageLeds, PAGE_LEDS, GAIN } from './profile.js?v=2e137df612bfc50d';
-import { pageLedName, usedPages } from './layout.js?v=2e137df612bfc50d';
-import { RELEASE_GUIDES } from './release_guides.js?v=2e137df612bfc50d';
-import { placeable, bankWarning } from './layout.js?v=2e137df612bfc50d';
+import { effectiveScales, PULSE_NAMES } from './scales.js?v=e2e3353429e6caf9';
+import { defaults, equal, encodeProfile, pageLeds, PAGE_LEDS, GAIN } from './profile.js?v=e2e3353429e6caf9';
+import { pageLedName, usedPages } from './layout.js?v=e2e3353429e6caf9';
+import { RELEASE_GUIDES } from './release_guides.js?v=e2e3353429e6caf9';
+import { placeable, bankWarning } from './layout.js?v=e2e3353429e6caf9';
 
 const KNOBS = ['FEEDBACK', 'DRY/WET', 'REVERB'];
 export const ACTIONS = ['None', '[A]+SEED', '[A]+FREEZE', '[A] hold'];

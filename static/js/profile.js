@@ -22,7 +22,7 @@
 //
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
-import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=2e137df612bfc50d';
+import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=e2e3353429e6caf9';
 
 // Six-byte entries are kept in wire order: id, state, value, page, amount, action.
 const STATES = ['Off', 'Fixed', 'Adjustable'];
@@ -52,6 +52,17 @@ export const GAIN = 40;
 export const FEEDBACK_SLOT = 3;
 export const amountSlots = (profile) => profile.feedback_slot === true ? 3 : 2;
 const gainMoved = (entries) => entries.some((e) => e[0] === GAIN && e[1]);
+
+// Exact resonator values (Fixed only) replace a page control: { exact ID: page ID }.
+// When every exact value for a page feature is Fixed, it goes Fixed at its value, off its page.
+export const EXACT_REPLACES = { 45: 43, 46: 43, 47: 44 };
+export function exactPageRule(entries, profile) {
+  const has = (id) => profile.features.some((f) => f.id === id);
+  const fixed = (id) => entries.some((e) => e[0] === Number(id) && e[1] === 1);
+  const replaced = new Set(Object.values(EXACT_REPLACES).filter((page) => has(page) &&
+    Object.entries(EXACT_REPLACES).every(([id, target]) => target !== page || (has(Number(id)) && fixed(id)))));
+  return normalise(entries.map((e) => replaced.has(e[0]) && e[1] === 2 ? [e[0], 1, e[2], 0, 0, 0] : e.slice()), profile);
+}
 
 // Profile version 3 (blob firmware) adds Plaits banks of 8 model IDs and the
 // region directory; only a release whose profile.region declares it takes one.
