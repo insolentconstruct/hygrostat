@@ -40,8 +40,8 @@ import { draftText, readDraft, DRAFT } from '../static/js/draft.js';
 import { encode } from '../static/js/encoder.js';
 import { decode } from '../static/js/decoder.js';
 
-// The phase 2 blob firmware, with libraries (override with BLOB_FIRMWARE_REF).
-const ref = process.env.BLOB_FIRMWARE_REF || 'ab0d6f12ebde11da9025d6d4474d398cd82418ee';
+// The phase 3 blob firmware: the stock models as blobs (override with BLOB_FIRMWARE_REF).
+const ref = process.env.BLOB_FIRMWARE_REF || '7620eb68562a816589a21a3b3e1cd9a908c897c5';
 const RELEASE = 20261121;
 const manifest = JSON.parse(readFileSync(new URL('../static/manifest.json', import.meta.url)));
 assert(manifest.releases.every((r) => r.profile.region === undefined), 'no release declares a region yet');
