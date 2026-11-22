@@ -105,10 +105,6 @@ export function firmwareRecord(read) {
 
 // A catalogue row agrees with the firmware's definition; format 2's record
 // bytes and version must also equal the firmware's record layout.
-// Saved without a packed field: always Adjustable, no controls, stepped on the panel (Rings polyphony).
-const panelStepped = (c) => c.saved !== null && c.states.length === 1 && c.states[0] === 'Adjustable' &&
-  !c.page_slots.length && !c.amount_slots.length && !c.actions.length;
-
 export function checkDefinitions(catalogue, definitions, record = null) {
   if (catalogue.features.length !== definitions.length) throw new Error('Catalogue and firmware feature counts differ.');
   if (catalogue.format === 2 && (record?.version !== catalogue.record_version ||
@@ -119,7 +115,8 @@ export function checkDefinitions(catalogue, definitions, record = null) {
     const [values, field, page, amount, action, stateless] = definitions[i];
     const saved = catalogue.format === 1 ? c.field === field :
       (c.saved ?? 0) === record.offsets[i] && (field === null || c.saved !== null) &&
-      (c.id < 15 || (field === null) === (c.saved === null) || panelStepped(c));
+      // As features.py: a feature saved without a packed field is enumerated (the resonator, Rings polyphony).
+      (c.id < 15 || field !== null || c.saved === null || c.values !== null);
     if ((c.values?.length || 0) !== values || (c.page_slots.length > 0) !== page ||
         (c.amount_slots.length > 0) !== amount || (c.actions.length > 0) !== action ||
         (c.stateless ?? false) !== stateless || !saved) {

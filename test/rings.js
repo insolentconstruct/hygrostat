@@ -41,24 +41,17 @@ import { writeRegion, regionItems, droppable, validateRegionFirmware, KINDS } fr
 import { featureHelp } from '../static/js/help.js';
 
 // #345's head (override with RINGS_FIRMWARE_REF).
-const ref = process.env.RINGS_FIRMWARE_REF || 'e2963a18039e98d4b88512bed590d69057e13c3b';
+const ref = process.env.RINGS_FIRMWARE_REF || '3df1b087a7458e57782741ff8e252f55ddb8a21f';
 const show = (file) => firmwareShow(ref, file, { stdio: ['ignore', 'pipe', 'pipe'] });
 const text = (file) => show(file).toString('utf8');
 const read = (file) => readFileSync(new URL(file, import.meta.url));
 const hex = (b) => createHash('sha256').update(b).digest('hex');
 
-// The format 2 catalogue for this firmware: features.py's catalogue() over its feature manifest.
+// The firmware's format 2 catalogue, copied verbatim.
 const fixture = read('fixtures/rings-profile-features.json');
 const catalogue = readCatalogue(fixture, show(MANIFEST));
-const own = JSON.parse(show(CATALOGUE).toString('utf8'));
-if (own.format === 2) assert(equal(fixture, show(CATALOGUE)), 'the fixture is the firmware catalogue verbatim');
-else assert.deepEqual(own.features.map((f) => [f.id, f.name, f.values, f.states, f.default_state, f.default]),
-  catalogue.features.map((f) => [f.id, f.name, f.values, f.states, f.default_state, f.default]), 'format 1 rows agree');
+assert(equal(fixture, show(CATALOGUE)), 'the fixture is the firmware catalogue verbatim');
 checkDefinitions(catalogue, firmwareDefinitions(text), firmwareRecord(text));
-// A saved byte without a packed field is allowed only for a setting stepped on the panel.
-const forged = structuredClone(catalogue);
-forged.features[41].states = ['Off', 'Adjustable'];
-assert.throws(() => checkDefinitions(forged, firmwareDefinitions(text), firmwareRecord(text)), /feature 42 differs/);
 const synthRow = catalogue.features.find((f) => f.id === SYNTH);
 const polyphony = catalogue.features.find((f) => f.id === 42);
 assert.deepEqual(synthRow.values, ['Beads (Stock)', 'Plaits', 'Rings']);
@@ -88,7 +81,7 @@ assert.throws(() => regionSupport({ ...profile, region: { ...profile.region,
 
 // The factory profile: Hygrostat's encoder writes the firmware's own block, polyphony included.
 const factory = defaults(profile);
-assert.deepEqual(factory.at(-1), [42, 2, 0, 0, 0, 0]);
+assert.deepEqual(factory.find((e) => e[0] === 42), [42, 2, 0, 0, 0, 0]);
 const block = Uint8Array.from(text('beads/profile.cc').split('kProfileBlock[kProfileSize]')[1].split('};')[0]
   .match(/0x([0-9a-f]{2})/g), (v) => parseInt(v, 16));
 assert(equal(encodeProfile(factory, profile), block), 'factory block');

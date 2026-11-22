@@ -41,7 +41,7 @@ import { encode } from '../static/js/encoder.js';
 import { decode } from '../static/js/decoder.js';
 
 // The Rings synth firmware (#345): the stock models and Rings as blobs (override with BLOB_FIRMWARE_REF).
-const ref = process.env.BLOB_FIRMWARE_REF || 'e2963a18039e98d4b88512bed590d69057e13c3b';
+const ref = process.env.BLOB_FIRMWARE_REF || '3df1b087a7458e57782741ff8e252f55ddb8a21f';
 const RELEASE = 20261121;
 const manifest = JSON.parse(readFileSync(new URL('../static/manifest.json', import.meta.url)));
 assert(manifest.releases.every((r) => r.profile.region === undefined), 'no release declares a region yet');

@@ -71,6 +71,7 @@ jobs:
           node test/configurable_gestures.js
           node test/region.js
           node test/catalogue.js
+          node test/resonator.js
           node test/rings.js
           node --input-type=module -e '
             import { readFileSync } from "node:fs";
