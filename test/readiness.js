@@ -9,6 +9,7 @@ import { firmwareShow } from './firmware.js';
 import { defaults, encodeProfile, equal, cpuUsage, profileKey, modes,
   validateProfileFormat, initialEntry, pageSlots } from '../static/js/profile.js';
 import { importedCost, tableBytes, tableSha256, importCosts, costTable, moduleCosts } from '../tools/import-costs.js';
+import { readCatalogue, firmwareDefinitions, firmwareRecord, checkDefinitions, MANIFEST } from '../tools/catalogue.js';
 import './costs.js';
 import './help.js';
 import { guide } from '../static/js/guide.js';
@@ -16,12 +17,12 @@ const text = (svg) => [...svg.matchAll(/<text\b[^>]*>(.*?)<\/text>/g)].map((m) =
 const root = new URL('../static/', import.meta.url);
 const read = (p) => readFileSync(new URL(p, root), 'utf8');
 const manifest = JSON.parse(read('manifest.json'));
-const catalogue = JSON.parse(read('profile-features.json'));
 const release = manifest.releases[0], profile = release.profile;
 const moduleRows = moduleCosts(release).rows;
 const firmwareRef = release.development ? release.source_commit : 'refs/tags/' + release.tag;
 const source = (file) => firmwareShow(firmwareRef, file, { encoding: 'utf8' });
 const catalogueBytes = readFileSync(new URL('profile-features.json', root));
+const catalogue = readCatalogue(catalogueBytes);
 // Try the standalone firmware catalogue first, then historical page locations.
 const catalogueAt = (ref) => {
   for (const file of ['beads/build/profile-features.json',
@@ -34,12 +35,15 @@ const catalogueAt = (ref) => {
   }
 };
 assert.deepEqual(catalogueBytes, catalogueAt(firmwareRef), 'copy the authoritative firmware catalogue verbatim');
+// Format 2 names the feature manifest it was generated from.
+if (catalogue.format === 2) readCatalogue(catalogueBytes, firmwareShow(firmwareRef, MANIFEST));
 if (process.env.FIRMWARE_CATALOGUE_REF) {
   assert.deepEqual(catalogueBytes, catalogueAt(process.env.FIRMWARE_CATALOGUE_REF),
     'the prepared firmware catalogue must also match verbatim');
 }
-const table = source('beads/profile.cc').split('kFeatureDefinitions[FEATURE_LAST] = {')[1].split('};')[0];
-const definitions = [...table.matchAll(/\{ (\d+), (\w+), (true|false), (true|false), (true|false), (true|false) \}/g)].slice(1);
+const firmwareText = (file) => firmwareShow(firmwareRef, file, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+const definitions = firmwareDefinitions(firmwareText);
+checkDefinitions(catalogue, definitions, catalogue.format === 2 ? firmwareRecord(firmwareText) : null);
 assert.equal(profile.features.length, definitions.length);
 assert.equal(catalogue.features.length, definitions.length);
 for (const [i, definition] of definitions.entries()) {
@@ -48,8 +52,8 @@ for (const [i, definition] of definitions.entries()) {
   assert.equal(c.id, f.id);
   assert.deepEqual(f.values, c.values);
   assert.equal(f.name, c.name);
-  assert.equal(f.field, c.field);
-  assert.equal(f.field, definition[2] === 'kNoField' ? null : Number(definition[2]));
+  const record = catalogue.format === 1 ? 'field' : 'saved';
+  assert.equal(f[record], c[record]);
   assert.deepEqual(f.states, c.states);
   assert.equal(f.synth_path, c.touches_synth);
   assert.equal(f.stateless, c.stateless ?? false);
@@ -58,14 +62,14 @@ for (const [i, definition] of definitions.entries()) {
   assert.deepEqual(f.cpu, importedCost(f, costTable, moduleRows));
   assert.equal(f.default[1], ['Off', 'Fixed', 'Adjustable'].indexOf(c.default_state));
   assert.equal(f.default[2], c.default);
-  assert.equal(f.values?.length || 0, Number(definition[1]));
-  for (const [key, index, slots] of [['page', 3, 'page_slots'], ['amount', 4, 'amount_slots'], ['action', 5, 'actions']]) {
-    assert.equal(f[key], definition[index] === 'true', `${f.name}: firmware ${key}`);
+  assert.equal(f.values?.length || 0, definition[0]);
+  for (const [key, index, slots] of [['page', 2, 'page_slots'], ['amount', 3, 'amount_slots'], ['action', 4, 'actions']]) {
+    assert.equal(f[key], definition[index], `${f.name}: firmware ${key}`);
     assert.equal(f[key], c[slots].length > 0, `${f.name}: catalogue ${key}`);
     const count = key === 'page' ? pageSlots(profile) : key === 'amount' ? 2 : 3;
     assert.deepEqual(c[slots], f[key] ? Array.from({ length: count }, (_, n) => n + 1) : []);
   }
-  assert.equal(f.stateless, definition[6] === 'true');
+  assert.equal(f.stateless, definition[5]);
   assert.deepEqual(modes(f).map(([, label]) => label), c.states);
   if ([18, 21].includes(f.id)) {
     assert.equal(f.default_in_block, true);

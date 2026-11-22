@@ -27,7 +27,8 @@ const eventOnly = new Map([[24, {
 function inspectedCost(feature) {
   const known = eventOnly.get(feature.id);
   if (!known || feature.name !== known.name || JSON.stringify(feature.values) !== JSON.stringify(known.values) ||
-      JSON.stringify(feature.states) !== JSON.stringify(known.states) || feature.field !== null ||
+      JSON.stringify(feature.states) !== JSON.stringify(known.states) || (feature.field ?? null) !== null ||
+      (feature.saved ?? null) !== null ||
       feature.page !== false || feature.amount !== false || feature.action !== false || feature.stateless !== false ||
       feature.default_in_block !== false || JSON.stringify(feature.default) !== JSON.stringify([feature.id, 0, 0, 0, 0, 0])) {
     throw new Error(`Unknown event-only feature definition: ${feature.id} ${feature.name}`);
