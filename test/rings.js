@@ -42,7 +42,7 @@ import { featureHelp } from '../static/js/help.js';
 import { GROUPS } from '../static/js/layout.js';
 
 // Beta 4 integration with the Rings synth merged (override with RINGS_FIRMWARE_REF).
-const ref = process.env.RINGS_FIRMWARE_REF || '7afca8c34d47aa5cbcac8bc38f04da618a85ab91';
+const ref = process.env.RINGS_FIRMWARE_REF || '26e3f9fa0706638d2a24abc8f832567dff7fc0b3';
 const show = (file) => firmwareShow(ref, file, { stdio: ['ignore', 'pipe', 'pipe'] });
 const text = (file) => show(file).toString('utf8');
 const read = (file) => readFileSync(new URL(file, import.meta.url));

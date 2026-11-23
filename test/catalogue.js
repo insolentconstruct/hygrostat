@@ -15,7 +15,7 @@ import { validate, encodeProfile, decodeProfile, defaults, equal, crc32, pageSlo
   validateProfileFormat } from '../static/js/profile.js';
 const read = (file) => readFileSync(new URL(file, import.meta.url));
 // Format 2 with the Rings synth's cases, Beta 4 integration (override with CATALOGUE_FIRMWARE_REF).
-const ref = process.env.CATALOGUE_FIRMWARE_REF || '7afca8c34d47aa5cbcac8bc38f04da618a85ab91';
+const ref = process.env.CATALOGUE_FIRMWARE_REF || '26e3f9fa0706638d2a24abc8f832567dff7fc0b3';
 const show = (r, file) => firmwareShow(r, file, { stdio: ['ignore', 'pipe', 'pipe'] });
 const text = (file) => show(ref, file).toString('utf8');
 

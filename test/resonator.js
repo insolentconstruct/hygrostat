@@ -12,7 +12,7 @@ import { edit, place, entryOf, places, extraControl, placeable, summary } from '
 import { featureHelp } from '../static/js/help.js';
 const read = (file) => readFileSync(new URL(file, import.meta.url), 'utf8');
 // Beta 4 integration with the Materials and the Rings synth merged (42 is Rings polyphony); bump it (or set RESONATOR_FIRMWARE_REF) when that branch moves.
-const RESONATOR_FIRMWARE_REF = process.env.RESONATOR_FIRMWARE_REF || '7afca8c34d47aa5cbcac8bc38f04da618a85ab91';
+const RESONATOR_FIRMWARE_REF = process.env.RESONATOR_FIRMWARE_REF || '26e3f9fa0706638d2a24abc8f832567dff7fc0b3';
 const ref = RESONATOR_FIRMWARE_REF;
 const IDS = [41, 43, 44, 45, 46, 47, 48, 49];
 const EXACT = [45, 46, 47, 48, 49];
