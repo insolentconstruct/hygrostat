@@ -3,7 +3,7 @@
 // The setup kept in this browser so a reload reopens it. No DOM; storage is passed in.
 // A draft is the share fragment plus a little context; see docs/DESIGN.md.
 
-import { defaults, encodeProfile, equal, normalise, share, templates, unshare } from './profile.js?v=42689801d3309e72';
+import { defaults, encodeProfile, equal, normalise, share, templates, unshare } from './profile.js?v=51666b0c7cc66cf2';
 
 export const DRAFT = 'hygrostat-draft';
 export const BEFORE_LINK = 'hygrostat-draft-before-link';
@@ -15,8 +15,8 @@ export const isFresh = (release, block, newest) => release === newest &&
   equal(block, encodeProfile(defaults(release.profile), release.profile));
 
 // link marks a setup that started from a shared link rather than the person's own.
-export function draftText(release, block, preset, now, link = false) {
-  return JSON.stringify({ v: SCHEMA, saved: now, share: share(release, block), name: release.name,
+export function draftText(release, block, preset, now, link = false, setup = null) {
+  return JSON.stringify({ v: SCHEMA, saved: now, share: share(release, block, setup), name: release.name,
     version: release.profile.version, format: release.profile.format,
     ...Object.hasOwn(templates(release.profile), preset) ? { preset } : {}, ...link ? { link } : {} });
 }
@@ -62,7 +62,7 @@ export function readDraft(storage, releases, key = DRAFT) {
     if (!equal(encodeProfile(shared.entries, release.profile, scales, plaits), Uint8Array.from(
       params.get('profile').match(/../g), (v) => parseInt(v, 16)))) throw new Error('Draft bytes differ.');
     return { release, entries: normalise(shared.entries, release.profile, plaits?.banks.length), scales,
-      ...plaits ? { plaits } : {},
+      ...plaits ? { plaits } : {}, ...shared.setup ? { setup: shared.setup } : {},
       preset: Object.hasOwn(templates(release.profile), draft.preset) ? draft.preset : 'Drizzlet',
       saved: draft.saved, moved, from: draft.name, link: draft.link === true, raw };
   } catch (error) {
@@ -111,7 +111,7 @@ export function keeper(storage) {
     clean() { dirty = false; },
     pause(on = true) { paused = on; },
     // Returns null (nothing to do), 'saved', 'removed' or 'failed'.
-    save(release, block, preset, now, newest) {
+    save(release, block, preset, now, newest, setup = null) {
       if (!dirty || paused || !storage) return null;
       dirty = false;
       if (stash) {
@@ -120,8 +120,8 @@ export function keeper(storage) {
         if (own !== null && (!fromLink(own) || aside === null) && !put(storage, BEFORE_LINK, own)) return 'failed';
         stash = false;
       }
-      const fresh = isFresh(release, block, newest);
-      return put(storage, DRAFT, fresh ? null : draftText(release, block, preset, now, link)) ? (fresh ? 'removed' : 'saved') : 'failed';
+      const fresh = !setup && isFresh(release, block, newest);
+      return put(storage, DRAFT, fresh ? null : draftText(release, block, preset, now, link, setup)) ? (fresh ? 'removed' : 'saved') : 'failed';
     }
   };
 }

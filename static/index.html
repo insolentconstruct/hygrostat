@@ -10,7 +10,7 @@
 <meta name="description" content="Build custom Drizzlet firmware for Mutable Instruments Beads in your browser: choose features, control layout and defaults.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <title>Drizzlet Hygrostat</title>
-<script src="js/theme.js?v=42689801d3309e72"></script>
+<script src="js/theme.js?v=51666b0c7cc66cf2"></script>
 <style>
   /* Brushed panel greys, with the module's own LED colours as the only accents. */
   :root {
@@ -438,6 +438,18 @@
   </section>
 </main>
 
+<section id="palette-editor" class="wrap" hidden aria-label="Installed synths">
+  <h2>Synths and banks</h2>
+  <p><a id="edit-content" href="editor.html" target="_blank" rel="noopener">Edit Beads wavetables and terrain grids</a></p>
+  <div id="palette-controls"></div>
+  <p id="palette-status" role="status"></p>
+</section>
+<section id="flash-meter" class="wrap" aria-label="Flash use" hidden></section>
+<section class="wrap" aria-label="Profile file">
+  <button id="save-profile" type="button">Save profile</button>
+  <label>Open profile <input id="open-profile" type="file" accept=".json,application/json"></label>
+</section>
+
 <section id="scale-editor" class="wrap" hidden>
   <details id="scale-panel">
     <summary>Pitch scales</summary>
@@ -530,6 +542,6 @@
   </div>
   <div id="library-body"></div>
 </dialog>
-<script type="module" src="js/app.js?v=42689801d3309e72"></script>
+<script type="module" src="js/app.js?v=51666b0c7cc66cf2"></script>
 </body>
 </html>

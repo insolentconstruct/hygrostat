@@ -22,7 +22,7 @@
 //
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
-import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=42689801d3309e72';
+import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=51666b0c7cc66cf2';
 
 // Six-byte entries are kept in wire order: id, state, value, page, amount, action.
 const STATES = ['Off', 'Fixed', 'Adjustable'];
@@ -322,9 +322,10 @@ export function filenames(release, fp, isDefault) {
     desktop: isDefault ? `options-guide${release.development ? '-dev' : ''}.svg` : `options-guide-${date}${suffix}.svg`,
     mobile: isDefault ? `options-guide${release.development ? '-dev' : ''}-mobile.svg` : `options-guide-${date}${suffix}-mobile.svg` };
 }
-export function share(release, block) {
+export function share(release, block, setup = null) {
   return new URLSearchParams({ release: release.tag,
-    profile: Array.from(block, (v) => v.toString(16).padStart(2, '0')).join('') }).toString();
+    profile: Array.from(block, (v) => v.toString(16).padStart(2, '0')).join(''),
+    ...setup ? { setup: JSON.stringify(setup) } : {} }).toString();
 }
 export function unshare(text, releases) {
   const params = new URLSearchParams(text.replace(/^#/, ''));
@@ -343,7 +344,8 @@ export function unshare(text, releases) {
     throw new Error('Share link version mismatch. Use its original page or start again.');
   }
   try {
-    return { release, ...decodeSettings(block, release.profile) };
+    return { release, ...decodeSettings(block, release.profile),
+      ...params.has('setup') ? { setup: JSON.parse(params.get('setup')) } : {} };
   } catch (error) {
     throw new Error('Damaged or outdated share link. Copy the full address or start again.', { cause: error });
   }

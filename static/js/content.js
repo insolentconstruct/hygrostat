@@ -24,9 +24,9 @@
 //
 // The editor's wavetables and terrains, kept in this browser for the region writer:
 // regionContent gives writeRegion's wave (factory bytes unless edited) and terrain (null: no grids).
-import { checkWaves } from './region.js?v=42689801d3309e72';
-import { factoryTable } from './wavetables.js?v=42689801d3309e72';
-import { grids, readGrids, parse, MAX_GRIDS } from './terrain.js?v=42689801d3309e72';
+import { checkWaves } from './region.js?v=51666b0c7cc66cf2';
+import { factoryTable } from './wavetables.js?v=51666b0c7cc66cf2';
+import { grids, readGrids, parse, MAX_GRIDS } from './terrain.js?v=51666b0c7cc66cf2';
 
 export const CONTENT = 'hygrostat-content';
 const SCHEMA = 1;
