@@ -9,18 +9,18 @@
 // in the browser, check the .wav, offer it for download.
 
 import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, normalise, GAIN,
-  pageLeds, gestureFirmware, exactPageRule } from './profile.js?v=c1e2c390de363585';
-import { effectiveScales, validateScales } from './scales.js?v=c1e2c390de363585';
-import { scaleEditor } from './scale_editor.js?v=c1e2c390de363585';
-import { guide } from './guide.js?v=c1e2c390de363585';
-import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=c1e2c390de363585';
-import { featureHelp, actionHelp } from './help.js?v=c1e2c390de363585';
+  pageLeds, gestureFirmware, exactPageRule, offeredValues } from './profile.js?v=b636ef2d5f8af210';
+import { effectiveScales, validateScales } from './scales.js?v=b636ef2d5f8af210';
+import { scaleEditor } from './scale_editor.js?v=b636ef2d5f8af210';
+import { guide } from './guide.js?v=b636ef2d5f8af210';
+import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=b636ef2d5f8af210';
+import { featureHelp, actionHelp } from './help.js?v=b636ef2d5f8af210';
 import { KNOBS, KINDS, GROUPS, EXTRA_GROUPS, extraGroup, extraControl, ACTION_DOES, placeName, pageOf, entryOf, occupant, places, valueLabel, stateLabel,
   summary, stateHint, edit, place, adjust, unplace, afterUnplace, canSwap, freeSlot, changes, fitsSlot, placeable, bankWarning, slotCount,
-  usedPages, compaction, compact } from './layout.js?v=c1e2c390de363585';
-import { drawPanel, highlight } from './panel.js?v=c1e2c390de363585';
-import { comboImages } from './combo.js?v=c1e2c390de363585';
-import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=c1e2c390de363585';
+  usedPages, compaction, compact } from './layout.js?v=b636ef2d5f8af210';
+import { drawPanel, highlight } from './panel.js?v=b636ef2d5f8af210';
+import { comboImages } from './combo.js?v=b636ef2d5f8af210';
+import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=b636ef2d5f8af210';
 
 const $ = (id) => document.getElementById(id);
 const cap = (text) => text.replace(/^./, (c) => c.toUpperCase());
@@ -43,7 +43,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=c1e2c390de363585', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=b636ef2d5f8af210', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.ready) return;
       if (data.progress !== undefined) {
@@ -639,7 +639,8 @@ function extra(f) {
     return el('div', { class: 'extra' }, el('label', { for: `extra-${f.id}` }, name), input, about, start, more);
   }
   const select = el('select', { id: `extra-${f.id}`, 'aria-labelledby': `extra-${f.id}-name`, 'aria-describedby': described });
-  f.values.forEach((v, i) => select.add(new Option(i === 0 && e[1] !== 2 && !/\b(stock|default)\b/i.test(valueLabel(f, i)) ? `${valueLabel(f, i)} (stock)` : valueLabel(f, i), i)));
+  const offered = offeredValues(f, profile());
+  f.values.forEach((v, i) => { if (offered.includes(i)) select.add(new Option(i === 0 && e[1] !== 2 && !/\b(stock|default)\b/i.test(valueLabel(f, i)) ? `${valueLabel(f, i)} (stock)` : valueLabel(f, i), i)); });
   select.value = e[1] ? e[2] : 0;
   select.onchange = () => {
     const v = Number(select.value);
@@ -756,7 +757,8 @@ function renderInspector() {
     const label = e[1] === 1 ? 'Value' : 'Starting value';
     if (f.values) {
       const select = el('select', { id: 'value', 'aria-label': `${f.name}: ${label}` });
-      f.values.forEach((v, i) => { if (!(f.id === 1 && profile().version === 2 && i >= 2 && !effectiveScales(scales).some((s) => s.id === i)) && !(e[1] === 1 && i === 0 && f.values[0] === 'Off' && !(f.id === 1 && profile().version === 2))) select.add(new Option(valueLabel(f, i), i)); });
+      const offered = offeredValues(f, profile());
+      f.values.forEach((v, i) => { if (offered.includes(i) && !(f.id === 1 && profile().version === 2 && i >= 2 && !effectiveScales(scales).some((s) => s.id === i)) && !(e[1] === 1 && i === 0 && f.values[0] === 'Off' && !(f.id === 1 && profile().version === 2))) select.add(new Option(valueLabel(f, i), i)); });
       select.value = e[2];
       select.onchange = () => change(2, Number(select.value));
       body.push(el('label', { class: 'field', for: 'value' }, label, select));
@@ -1134,7 +1136,7 @@ async function checkCapabilities() {
   }
   // A constructor alone does not establish support for module workers.
   await new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=c1e2c390de363585', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=b636ef2d5f8af210', { type: 'module' });
     const done = (error) => {
       clearTimeout(timer); worker.terminate();
       error ? reject(error) : resolve();
@@ -1163,7 +1165,7 @@ async function init() {
   }
   $('compatibility').hidden = true;
   try {
-    const response = await fetch('manifest.json?v=c1e2c390de363585', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=b636ef2d5f8af210', { cache: 'no-cache' });
     manifest = await response.json();
   } catch {
     status('Could not load the release list.', 'error');

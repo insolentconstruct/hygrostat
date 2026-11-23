@@ -162,7 +162,7 @@ assert.equal(summary(features[0], [1, 2, 3, 1, 0, 0]), 'Starts Major');
 assert.equal(summary(features[4], [5, 1, 2, 0, 0, 0]), 'Always No limiter');
 const grouped = GROUPS.flatMap(([, ids]) => ids);
 assert.equal(new Set(grouped).size, grouped.length, 'features occur in one group only');
-assert(grouped.every((id) => features.some((f) => f.id === id) || (id >= 24 && id <= 33) || id === 37 || id === 38 || id === 39 || id === 40 || (id >= 41 && id <= 49 && id !== 42)), 'only the known later profile-only features may be absent from an older release');
+assert(grouped.every((id) => features.some((f) => f.id === id) || (id >= 24 && id <= 33) || id === 37 || id === 38 || id === 39 || id === 40 || (id >= 41 && id <= 49)), 'only the known later profile-only features may be absent from an older release');
 assert.deepEqual(grouped.filter((id) => features.some((f) => f.id === id)).sort((a, b) => a - b), features.map((f) => f.id));
 for (const f of features.filter((f) => f.action)) assert(ACTION_DOES[f.id], f.name);
 // Extras groups: every release's extras listed once by ID; an unknown ID shows under Sound.

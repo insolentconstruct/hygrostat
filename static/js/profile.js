@@ -22,7 +22,7 @@
 //
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
-import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=c1e2c390de363585';
+import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=b636ef2d5f8af210';
 
 // Six-byte entries are kept in wire order: id, state, value, page, amount, action.
 const STATES = ['Off', 'Fixed', 'Adjustable'];
@@ -69,22 +69,29 @@ export function exactPageRule(entries, profile) {
 export const PLAITS_BANK = 31;
 export const BANK_SIZE = 8;
 export const MAX_BANKS = 15;
-export const MAX_SECTIONS = 3;
-// Section kinds in their required order: WAVE, TERR, PLTS.
-export const SECTION_KINDS = [0x45564157, 0x52524554, 0x53544c50];
+export const MAX_SECTIONS = 4;
+// Section kinds in their required order: WAVE, TERR, PLTS, RNGS.
+export const SECTION_KINDS = [0x45564157, 0x52524554, 0x53544c50, 0x53474e52];
+export const SECTION_NAMES = ['WAVE', 'TERR', 'PLTS', 'RNGS'];
 export const MIN_SECTION_SIZE = 36;
 // profile-features.json plaits_models: 0-23 stock, 28-99 Palette; 24-27 never assigned.
 export const knownModel = (id) => Number.isInteger(id) && ((id >= 0 && id < 24) || (id >= 28 && id <= 99));
 const u32 = (v) => Number.isInteger(v) && v >= 0 && v <= 0xffffffff;
+// default_layout (optional): the sections the release reads without a directory, as plaits_catalog.cc lists them.
 export function regionSupport(profile) {
   const region = profile.region;
   if (region === undefined) return null;
+  const layout = region?.default_layout;
   if (region?.profile_version !== 3 || profile.version !== 2 || !u32(region.release) || !region.release ||
-      !Number.isInteger(region.services_version) || region.services_version < 1) {
+      !Number.isInteger(region.services_version) || region.services_version < 1 ||
+      (layout !== undefined && !validLayout(layout))) {
     throw new Error('Unsupported region metadata.');
   }
   return region;
 }
+const validLayout = (layout) => Array.isArray(layout) && layout.length <= MAX_SECTIONS && layout.every((e, i) =>
+  SECTION_NAMES.includes(e?.kind) && u32(e.offset) && u32(e.size) && /^[0-9a-f]{64}$/.test(e.sha256) &&
+  (!i || SECTION_NAMES.indexOf(e.kind) > SECTION_NAMES.indexOf(layout[i - 1].kind)));
 
 // Banks the writer accepts, and a directory the module's region reader can lay out.
 export function validatePlaits(plaits) {
@@ -95,13 +102,13 @@ export function validatePlaits(plaits) {
   }
   if (!Array.isArray(directory) || directory.length > MAX_SECTIONS ||
       directory.some((e) => !e || !['kind', 'offset', 'size', 'crc'].every((k) => u32(e[k])))) {
-    throw new Error('The region directory needs up to 3 sections.');
+    throw new Error('The region directory needs up to 4 sections.');
   }
   let previous = -1, next = 0;
   for (const { kind, offset, size } of directory) {
     const index = SECTION_KINDS.indexOf(kind);
     if (index <= previous || offset % 32 || offset < next || size < MIN_SECTION_SIZE || size % 4) {
-      throw new Error('Region sections must be WAVE, TERR, PLTS in order, aligned and apart.');
+      throw new Error('Region sections must be WAVE, TERR, PLTS, RNGS in order, aligned and apart.');
     }
     previous = index;
     next = offset + size;
@@ -156,6 +163,40 @@ export function validate(entries, profile, banks = 0) {
 export const TOGGLES = [2, 4, 6, 7, 23];
 // Plaits play keeps [A] + FREEZE for its bank, so the Synth toggle goes on [A] + SEED.
 export const SYNTH = 7;
+// Synth values (feature 7), as the firmware's synth_choice.h; their meanings never change.
+export const SYNTHS = ['Beads', 'Plaits', 'Rings'];
+// What an install plays: Beads with its wavetables (compiled in until they move to WAVE), Plaits with PLTS, Rings with RNGS.
+export const playableSynths = (kinds, wavesInApp = true) =>
+  [wavesInApp || kinds.includes('WAVE'), kinds.includes('PLTS'), kinds.includes('RNGS')];
+// The section names an install has: its directory's, or the release default layout's without one (null if unknown).
+export function installedKinds(profile, directory) {
+  if (directory.length) return directory.map((e) => SECTION_NAMES[SECTION_KINDS.indexOf(e.kind)]);
+  return regionSupport(profile)?.default_layout?.map((e) => e.kind) ?? null;
+}
+// The Synth values an install offers, in value order, as [value, name].
+export const synthValues = (feature, playable) =>
+  feature.values.map((name, value) => [value, name]).filter(([value]) => playable[value] === true);
+// The values a list offers: Synth only the synths the release's default region plays, any other feature all.
+export function offeredValues(feature, profile) {
+  const kinds = feature.id === SYNTH && regionSupport(profile) && installedKinds(profile, []);
+  return kinds ? synthValues(feature, playableSynths(kinds)).map(([value]) => value) : feature.values.map((_, value) => value);
+}
+// EffectiveSynth: the selection if playable, else Beads, else Plaits, else 3 (silent); a fallback never picks Rings.
+export const effectiveSynth = (value, playable) => playable[value] ? value : playable[0] ? 0 : playable[1] ? 1 : 3;
+// NextSynth: a Synth action steps over synths the install cannot play.
+export function nextSynth(value, playable) {
+  for (let i = 1; i <= SYNTHS.length; ++i) {
+    if (playable[(value + i) % SYNTHS.length]) return (value + i) % SYNTHS.length;
+  }
+  return value;
+}
+// At least one synth (Rings alone arises only from a fault), and a Synth value the install lacks is refused, never mapped.
+export function checkSynths(entries, playable) {
+  if (!playable[0] && !playable[1]) throw new Error('Keep the Beads wavetables or the Plaits models: at least one synth must be installed.');
+  const synth = entries.find((e) => e[0] === SYNTH);
+  const value = synth?.[1] ? synth[2] : 0;
+  if (!playable[value]) throw new Error(`Synth: ${SYNTHS[value]} is not installed. Choose another synth, or add it back.`);
+}
 export const newGestures = (entries) => entries.some((e) => e[4] === FEEDBACK_SLOT ||
   (e[0] === GAIN && e[1]) || (e[5] && TOGGLES.includes(e[0])));
 export const gestureFirmware = (entries) => newGestures(entries) ?
@@ -177,6 +218,9 @@ export function encodeProfile(entries, profile, scales = null, plaits = null) {
   }
   const blobs = plaits === null ? null : validatePlaits(plaits);
   validate(entries, profile, blobs?.banks.length);
+  // A version 2 profile on blob firmware reads the default layout too.
+  const kinds = regionSupport(profile) && installedKinds(profile, blobs?.directory ?? []);
+  if (kinds) checkSynths(entries, playableSynths(kinds));
   const version = profile.version || 1;
   if (![1, 2].includes(version) || profile.size !== (version === 2 ? 4096 : 512) ||
       !validFormat(profile.format)) throw new Error('Unsupported profile format.');

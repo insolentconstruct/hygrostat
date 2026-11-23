@@ -115,7 +115,8 @@ export function checkDefinitions(catalogue, definitions, record = null) {
     const [values, field, page, amount, action, stateless] = definitions[i];
     const saved = catalogue.format === 1 ? c.field === field :
       (c.saved ?? 0) === record.offsets[i] && (field === null || c.saved !== null) &&
-      (c.id < 15 || (field === null) === (c.saved === null));
+      // As features.py: a feature saved without a packed field is enumerated (the resonator, Rings polyphony).
+      (c.id < 15 || field !== null || c.saved === null || c.values !== null);
     if ((c.values?.length || 0) !== values || (c.page_slots.length > 0) !== page ||
         (c.amount_slots.length > 0) !== amount || (c.actions.length > 0) !== action ||
         (c.stateless ?? false) !== stateless || !saved) {

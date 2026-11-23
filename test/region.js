@@ -40,8 +40,8 @@ import { draftText, readDraft, DRAFT } from '../static/js/draft.js';
 import { encode } from '../static/js/encoder.js';
 import { decode } from '../static/js/decoder.js';
 
-// The phase 3 blob firmware: the stock models as blobs (override with BLOB_FIRMWARE_REF).
-const ref = process.env.BLOB_FIRMWARE_REF || '2d7b3a68e9661955ae83fbfd4b752aeba820697d';
+// Beta 4 integration with the Rings synth: the stock models and Rings as blobs (override with BLOB_FIRMWARE_REF).
+const ref = process.env.BLOB_FIRMWARE_REF || '26e3f9fa0706638d2a24abc8f832567dff7fc0b3';
 const RELEASE = 20261121;
 const manifest = JSON.parse(readFileSync(new URL('../static/manifest.json', import.meta.url)));
 assert(manifest.releases.every((r) => r.profile.region === undefined), 'no release declares a region yet');
@@ -79,6 +79,15 @@ function seal(b) {
   return b;
 }
 const makeLibrary = (id, options = {}) => makeBlob(id, { ...options, kind: 2 });
+// A synth (kind 3): one ID, its RAM, three entries, a 36-byte control block and 12-sample blocks.
+function makeSynth({ id = 1, size = 512, ram = 180000, words = [] } = {}) {
+  const b = new Uint8Array(size);
+  for (let i = 96; i < size - 4; ++i) b[i] = (i * 11) & 255;
+  [0x424d5a44, 96, 2, 2, 3, id, 1, size, ram, 0, 0x61, 0x79, 0x7d, size - 4, 0, 0, 0, 0, 36, 12, 0, 0, 0, 0,
+    ...words].forEach((w, i) => put32(b, 4 * i, w));
+  return seal(b);
+}
+const synth = makeSynth();
 // Rows like resources/wavetables.py: samples 256-259 repeat 0-3, row 192 repeats 191.
 const waves = new Uint8Array(WAVE_ROWS * WAVE_ROW * 2);
 for (let row = 0; row < WAVE_ROWS; ++row) {
@@ -92,7 +101,7 @@ const banks = [[0, 1, 2, 3, 4, 5, 6, 7], [28, 29, 30, 31, 32, 33, 34, 35], [8, 9
 
 // Section layout, limits and the JS reader on a good region.
 const { region, directory } = writeRegion({ release: RELEASE, wave: waves, terrain, blobs });
-assert.deepEqual(directory.map((e) => e.kind), SECTION_KINDS);
+assert.deepEqual(directory.map((e) => e.kind), SECTION_KINDS.slice(0, 3));
 assert.deepEqual(directory.map((e) => [e.offset, e.size]), [[0, 100396], [100416, 8228], [108672, 868]]);
 for (const e of directory) {
   assert.equal(u32(region, e.offset + e.size - 4), e.crc);
@@ -103,7 +112,8 @@ assert.deepEqual([0, 1, 2].map((i) => [plts[32 + 16 * i], plts[33 + 16 * i], u32
   [[1, 2, 96], [1, 30, 416], [1, 43, 608]], 'PLTS sorted by model ID on 32-byte offsets');
 assert(plts.subarray(80, 96).every((v) => v === 255) && region.subarray(100396, 100416).every((v) => v === 255));
 const good = await readRegion(region, RELEASE, directory);
-assert.deepEqual(good, { directory: 'ok', sections: { WAVE: 'ok', TERR: 'ok', PLTS: 'ok' }, blobs: ['ok', 'ok', 'ok'] });
+assert.deepEqual(good, { directory: 'ok', sections: { WAVE: 'ok', TERR: 'ok', PLTS: 'ok', RNGS: 'no region' },
+  blobs: ['ok', 'ok', 'ok'] });
 assert.equal((await readRegion(region, RELEASE + 1, directory)).sections.TERR, 'release');
 assert.equal(STATUS.length, 21);
 assert.equal(STATUS.at(-1), 'dependency');
@@ -119,7 +129,7 @@ const refusals = [
   [{ release: RELEASE, blobs: [blobs[0].subarray(0, 252)] }, /size word/],
   [{ release: RELEASE, blobs: [makeBlob(255, { ids: 2 })] }, /no valid model/]];
 for (const [input, message] of refusals) assert.throws(() => writeRegion(input), message);
-for (const [word, value, status] of [[8, 4353, 'ram'], [4, 3, 'kind'], [4, 2, 'header'], [15, 96, 'layout'],
+for (const [word, value, status] of [[8, 4353, 'ram'], [4, 4, 'kind'], [4, 2, 'header'], [15, 96, 'layout'],
   [10, 0x60, 'layout']]) {
   const bad = makeBlob(5);
   put32(bad, 4 * word, value);
@@ -135,6 +145,35 @@ for (const [row, offset] of [[0, 0], [7, 2 * 257], [192, 9]]) {
   assert.throws(() => checkWaves(bad), row === 192 && offset === 9 ? /guard row/ : /samples 0-3/);
 }
 assert.deepEqual(blobInfo(blobs[1]), { kind: 1, first: 2, ids: 3, size: 320, crc: u32(blobs[1], 316) });
+
+// RNGS: the synth blob after PLTS, at offset 32 of its section; Rings only, or left out.
+const full = writeRegion({ release: RELEASE, wave: waves, terrain, blobs: [synth, ...blobs] });
+assert.deepEqual(full.directory.map((e) => e.kind), SECTION_KINDS);
+assert(equal(full.region.subarray(0, region.length), region), 'RNGS leaves the other sections as they were');
+const rngs = full.directory[3];
+assert.deepEqual([rngs.offset, rngs.size], [108672 + 896, 32 + 512 + 4]);
+assert(equal(full.region.subarray(rngs.offset + 32, rngs.offset + 544), synth));
+assert.deepEqual([0, 4, 5].map((w) => u32(full.region, rngs.offset + 4 * w)), [0x43535a44, 548, 1]);
+assert.deepEqual(full.synth, { id: 1, offset: rngs.offset + 32, size: 512 });
+assert.deepEqual((await readRegion(full.region, RELEASE, full.directory)).sections,
+  { WAVE: 'ok', TERR: 'ok', PLTS: 'ok', RNGS: 'ok' });
+const ringsOnly = writeRegion({ release: RELEASE, blobs: [synth] });
+assert.deepEqual(ringsOnly.directory.map((e) => [e.kind, e.offset]), [[KINDS.RNGS, 0]]);
+assert.deepEqual([ringsOnly.blobs, writeRegion({ release: RELEASE, blobs }).synth], [[], null]);
+for (const [bad, message] of [[[synth, makeSynth({ id: 2 })], /More than one synth/],
+  [[synth.subarray(0, 508)], /refused \(header\)/], [[makeSynth({ id: 0 })], /refused \(header\)/],
+  [[makeSynth({ ram: 262145 })], /refused \(ram\)/]]) {
+  assert.throws(() => writeRegion({ release: RELEASE, blobs: bad }), message);
+}
+// The firmware's synth rules: [word, value, status], resealed.
+const synthFaults = [[6, 2, 'header'], [9, 4, 'header'], [17, 1, 'header'], [18, 0, 'header'], [19, 0, 'header'],
+  [15, 480, 'header'], [16, 1, 'header'], [8, 262144, 'ok'], [8, 262145, 'ram'], [10, 0x60, 'layout'],
+  [11, 0, 'layout'], [20, 1, 'header'], [3, 3, 'services']];
+const faultedSynth = (word, value) => { const b = synth.slice(); put32(b, 4 * word, value); return seal(b); };
+for (const [word, value, status] of synthFaults) {
+  if (status === 'ok') assert.equal(writeRegion({ release: RELEASE, blobs: [faultedSynth(word, value)] }).synth.size, 512);
+  else assert.throws(() => writeRegion({ release: RELEASE, blobs: [faultedSynth(word, value)] }), new RegExp(`\\(${status}\\)`));
+}
 
 // Libraries: 1, 5 and 6 (which needs 1); models 13, 82 and 83 need them, 43 needs none.
 const lib1 = makeLibrary(1);
@@ -158,7 +197,8 @@ assert.deepEqual(blobInfo(lib6), { kind: 2, first: 6, ids: 1, size: 292, crc: u3
     ['model', 43, 256, undefined], ['model', 82, 364, undefined], ['model', 83, 328, undefined]]);
   for (const b of written.blobs) assert.equal(u32(s, b.offset + b.size - 4), u32(s, 44 + 16 * written.blobs.indexOf(b)));
   assert.deepEqual(await readRegion(s, RELEASE, written.directory),
-    { directory: 'ok', sections: { WAVE: 'no region', TERR: 'no region', PLTS: 'ok' }, blobs: Array(7).fill('ok') });
+    { directory: 'ok', sections: { WAVE: 'no region', TERR: 'no region', PLTS: 'ok', RNGS: 'no region' },
+      blobs: Array(7).fill('ok') });
   // Model IDs and library IDs are apart: library 1 and model 1 share a region.
   assert.equal(writeRegion({ release: RELEASE, blobs: [lib1, makeBlob(1)] }).blobs.length, 2);
 }
@@ -238,6 +278,13 @@ const reseal = (b) => {
 const unknown = block.slice(); unknown[scalesEnd + 3] = 24; reseal(unknown);
 assert.throws(() => decodeSettings(unknown, profile), /Unknown Plaits model/);
 
+// Four sections, or Rings left out: the directory says which, so a link carries it.
+for (const dir of [full.directory, full.directory.slice(0, 3), [rngs]]) {
+  const b = encodeProfile(entries, profile, null, { banks, directory: dir });
+  assert.equal(b[15], dir.length);
+  assert.deepEqual(unshare(share(release, b), [...manifest.releases, release]).plaits.directory, dir);
+}
+
 // Share links and the kept draft keep the bank table and directory byte for byte.
 const releases = [...manifest.releases, release];
 const shared = unshare(share(release, block), releases);
@@ -298,12 +345,17 @@ try {
   writeFileSync(join(scratch, 'terrain.bin'), terrain);
   const files = blobs.map((b, i) => { const f = join(scratch, `blob${i}.bin`); writeFileSync(f, b); return f; });
   const chainFiles = chain.map((b, i) => { const f = join(scratch, `chain${i}.bin`); writeFileSync(f, b); return f; });
+  const synthFile = join(scratch, 'synth.bin');
+  writeFileSync(synthFile, synth);
   const configurations = [[{ blobs }, files], [{ wave: factory }, ['--wave', join(scratch, 'beads/resources.cc')]],
     [{ terrain, blobs: blobs.slice(1) }, ['--terrain', join(scratch, 'terrain.bin'), ...files.slice(1)]],
     [{ wave: factory, terrain, blobs }, ['--wave', join(scratch, 'beads/resources.cc'), '--terrain',
       join(scratch, 'terrain.bin'), ...files]], [{ blobs: chain }, chainFiles],
     [{ wave: factory, terrain, blobs: [...chain, blobs[1]] }, ['--wave', join(scratch, 'beads/resources.cc'),
-      '--terrain', join(scratch, 'terrain.bin'), ...chainFiles, files[1]]]];
+      '--terrain', join(scratch, 'terrain.bin'), ...chainFiles, files[1]]],
+    [{ blobs: [synth] }, [synthFile]], [{ blobs: [...blobs, synth] }, [synthFile, ...files]],
+    [{ wave: factory, terrain, blobs: [synth, ...chain] }, ['--wave', join(scratch, 'beads/resources.cc'),
+      '--terrain', join(scratch, 'terrain.bin'), ...chainFiles, synthFile]]];
   for (const [input, args] of configurations) {
     const out = join(scratch, 'region.bin');
     execFileSync('python3', ['-I', join(scratch, 'beads/build/tools/blob_sections.py'), out, String(RELEASE), ...args]);
@@ -315,13 +367,16 @@ try {
     const plts = layout.sections.find((s) => s.kind === 'PLTS');
     assert.deepEqual(written.blobs.map((b) => [b.kind, b.id, b.offset, b.size]), (plts?.blobs ?? []).map((b) =>
       [b.library === undefined ? 'model' : 'library', b.library ?? b.model, plts.offset + b.offset, b.size]));
+    const rings = layout.sections.find((s) => s.kind === 'RNGS');
+    assert.deepEqual(written.synth, rings ? { id: rings.blobs[0].synth, offset: rings.offset + rings.blobs[0].offset,
+      size: rings.blobs[0].size } : null);
   }
   // Both writers refuse the same malformed inputs: release 0, a bad CRC, a library ID 0, IDs past 255, a
   // shared model or library ID, nine libraries.
   const badCrc = makeBlob(5); badCrc[100] ^= 1;
   for (const [release, bad] of [[0, [blobs[0]]], [RELEASE, [badCrc]], [RELEASE, [makeLibrary(0)]],
     [RELEASE, [makeBlob(255, { ids: 2 })]], [RELEASE, [makeBlob(2, { ids: 3 }), makeBlob(4)]], [RELEASE, [lib1, lib1b]],
-    [RELEASE, nine]]) {
+    [RELEASE, nine], [RELEASE, [synth, makeSynth({ id: 2 })]], [RELEASE, [synth.map((v, i) => i === 100 ? v ^ 1 : v)]]]) {
     const paths = bad.map((b, i) => { const f = join(scratch, `bad${i}.bin`); writeFileSync(f, b); return f; });
     const python = spawnSync('python3', ['-I', join(scratch, 'beads/build/tools/blob_sections.py'),
       join(scratch, 'bad.bin'), String(release), ...paths], { encoding: 'utf8' });
@@ -395,7 +450,7 @@ try {
   records.at(-1).allowlist = true;
   // Each blob check: the model 2 blob changed, resealed, its entry and section CRCs updated.
   for (const [status, word, value, reblob = true] of [['header', 0, 0], ['header', 1, 64], ['abi', 2, 3],
-    ['services', 3, 3], ['kind', 4, 3], ['header', 4, 2], ['header', 6, 0], ['layout', 15, 96], ['layout', 10, 0x60],
+    ['services', 3, 3], ['kind', 4, 4], ['header', 4, 2], ['header', 6, 0], ['layout', 15, 96], ['layout', 10, 0x60],
     ['layout', 13, 318], ['ram', 8, 4353], ['ram', 9, 16385], ['digest', 50, 7, false]]) {
     const b = padded.slice();
     const at = directory[2].offset + 96;
@@ -456,6 +511,40 @@ try {
   for (const [changes, status] of libraryFaults) pltsRecord([faulted(changes)], [status]);
   pltsRecord([faulted([[5, 0]])], []);
   expected[expected.length - 1] = ['no region', 'no region', 'table'];
+  // RNGS after PLTS, and RNGS alone: [statuses of WAVE, TERR, PLTS, then the RNGS status].
+  {
+    const four = new Uint8Array(full.region.length + 4096).fill(255);
+    four.set(full.region);
+    regionRecord(encodeProfile(entries, profile, null, { banks, directory: full.directory }), four, { digests: [...blobs, synth] });
+    expect(['ok', 'ok', 'ok', ...OK3]);
+    records.at(-1).rngs = 'ok';
+    regionRecord(encodeProfile(entries, profile, null, { banks, directory: full.directory }), four);
+    expect(['ok', 'ok', 'ok', ...OK3]);
+    Object.assign(records.at(-1), { rngs: 'digest', allowlist: 'RNGS' });
+  }
+  // A section holding blob (or raw payload words) with count; the directory names it alone.
+  const ringsRecord = (payload, status, { count = 1, digests = [synth] } = {}) => {
+    const s = new Uint8Array(32 + payload.length + 4);
+    [0x43535a44, KINDS.RNGS, 1, RELEASE, s.length, count, 0, 0].forEach((w, i) => put32(s, 4 * i, w));
+    s.set(payload, 32);
+    seal(s);
+    const dir = [{ kind: KINDS.RNGS, offset: 0, size: s.length, crc: u32(s, s.length - 4) }];
+    regionRecord(encodeProfile(entries, profile, null, { banks, directory: dir }), s, { digests });
+    expect(['no region', 'no region', 'no region']);
+    records.at(-1).rngs = status;
+  };
+  ringsRecord(synth, 'ok');
+  ringsRecord(synth, 'table', { count: 2 });
+  ringsRecord(synth, 'table', { count: 0 });
+  ringsRecord(blobs[0], 'kind', { digests: [blobs[0]] });
+  ringsRecord(lib1, 'kind', { digests: [lib1] });
+  { const p = new Uint8Array(516).fill(255); p.set(synth); ringsRecord(p, 'table'); }
+  ringsRecord(synth.subarray(0, 508), 'header', { digests: [synth.subarray(0, 508)] });
+  ringsRecord(synth.map((v, i) => i === 200 ? v ^ 1 : v), 'digest');
+  for (const [word, value, status] of synthFaults) {
+    const b = faultedSynth(word, value);
+    ringsRecord(b, status, { digests: [b] });
+  }
   const records0 = records.length;
   // Profile refusals: unknown model, start bank past the bank count, counts past their limits.
   profileRecord(block);
@@ -466,9 +555,9 @@ try {
     chosen[pos] = value;
     profileRecord(reseal(chosen));
   }
-  for (const [banksCount, sections] of [[16, 0], [0, 4], [15, 3], [1, 0], [0, 0], [2, 1]]) {
+  for (const [banksCount, sections] of [[16, 0], [0, 5], [15, 4], [1, 0], [0, 0], [2, 1]]) {
     const b = encodeProfile(entries, profile, null, { banks: Array(Math.min(banksCount, 15)).fill(banks[1]),
-      directory: directory.slice(0, Math.min(sections, 3)) });
+      directory: full.directory.slice(0, Math.min(sections, 4)) });
     b[14] = banksCount; b[15] = sections;
     if (banksCount === 16) b.set(banks[1], scalesEnd + 15 * 8);
     const bytes = scalesEnd - 16 + banksCount * 8 + sections * 16;
@@ -511,17 +600,19 @@ try {
     if (i >= records0) continue;
     const statuses = reader.split(' ').map(Number);
     const [services, dir, ...rest] = statuses;
-    const named = [dir, rest[0], rest[1], rest[2]].map((s) => STATUS[s]);
-    const blobStatuses = rest.slice(4).map((s) => STATUS[s]);
+    const named = [dir, rest[0], rest[1], rest[2], rest[3]].map((s) => STATUS[s]);
+    const blobStatuses = rest.slice(5).map((s) => STATUS[s]);
     assert.equal(STATUS[services], 'ok', `record ${i}: services`);
     const want = expected[i];
-    const got = want[0] === 'directory' ? named : [...named.slice(1), ...blobStatuses];
+    const got = want[0] === 'directory' ? named.slice(0, 4) : [...named.slice(1, 4), ...blobStatuses];
     assert.deepEqual(got, want, `record ${i}: firmware statuses`);
+    assert.equal(named[4], want[0] === 'directory' ? 'directory' : records[i].rngs ?? 'no region', `record ${i}: RNGS`);
     if (!decoded.plaits?.directory.length) continue;
     const js = await readRegion(records[i].bytes, records[i].release, decoded.plaits.directory);
-    const jsNamed = [js.directory, js.sections.WAVE, js.sections.TERR, js.sections.PLTS];
+    const jsNamed = [js.directory, js.sections.WAVE, js.sections.TERR, js.sections.PLTS, js.sections.RNGS];
     // A valid blob missing from the digest allowlist is refused only on the module.
-    if (records[i].allowlist) assert.deepEqual([...jsNamed.slice(0, 3), 'ok'], [...named.slice(0, 3), js.sections.PLTS]);
+    if (records[i].allowlist === 'RNGS') assert.deepEqual([...jsNamed.slice(0, 4), 'ok'], [...named.slice(0, 4), js.sections.RNGS]);
+    else if (records[i].allowlist) assert.deepEqual([...jsNamed.slice(0, 3), 'ok', jsNamed[4]], [...named.slice(0, 3), js.sections.PLTS, named[4]]);
     else assert.deepEqual([jsNamed, js.blobs], [named, blobStatuses], `record ${i}: JS reader agrees`);
   }
   console.log(`PASS ${configurations.length} writer layouts equal blob_sections.py; ${records.length} profiles and regions agree with the firmware`);

@@ -14,8 +14,8 @@ import { readCatalogue, catalogueAtRef, catalogueFeatures, firmwareDefinitions, 
 import { validate, encodeProfile, decodeProfile, defaults, equal, crc32, pageSlots,
   validateProfileFormat } from '../static/js/profile.js';
 const read = (file) => readFileSync(new URL(file, import.meta.url));
-// The firmware commit that introduced format 2 (override with CATALOGUE_FIRMWARE_REF).
-const ref = process.env.CATALOGUE_FIRMWARE_REF || '44b7191718136a5dd628c2deb40504cea3f1ae87';
+// Format 2 with the Rings synth's cases, Beta 4 integration (override with CATALOGUE_FIRMWARE_REF).
+const ref = process.env.CATALOGUE_FIRMWARE_REF || '26e3f9fa0706638d2a24abc8f832567dff7fc0b3';
 const show = (r, file) => firmwareShow(r, file, { stdio: ['ignore', 'pipe', 'pipe'] });
 const text = (file) => show(ref, file).toString('utf8');
 

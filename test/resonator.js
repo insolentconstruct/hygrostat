@@ -11,12 +11,12 @@ import { validate, encodeProfile, decodeProfile, defaults, pageSlots, crc32, exa
 import { edit, place, entryOf, places, extraControl, placeable, summary } from '../static/js/layout.js';
 import { featureHelp } from '../static/js/help.js';
 const read = (file) => readFileSync(new URL(file, import.meta.url), 'utf8');
-// Beta 4 integration with the resonator's Materials merged; bump it (or set RESONATOR_FIRMWARE_REF) when that branch moves.
-const RESONATOR_FIRMWARE_REF = process.env.RESONATOR_FIRMWARE_REF || '972d961ae708654336dd35a1c75a8b9bf0e7d66b';
+// Beta 4 integration with the Materials and the Rings synth merged (42 is Rings polyphony); bump it (or set RESONATOR_FIRMWARE_REF) when that branch moves.
+const RESONATOR_FIRMWARE_REF = process.env.RESONATOR_FIRMWARE_REF || '26e3f9fa0706638d2a24abc8f832567dff7fc0b3';
 const ref = RESONATOR_FIRMWARE_REF;
 const IDS = [41, 43, 44, 45, 46, 47, 48, 49];
 const EXACT = [45, 46, 47, 48, 49];
-const RESERVED = 42;
+const UNKNOWN = 50;
 const STATES = ['Off', 'Fixed', 'Adjustable'];
 const manifest = JSON.parse(read('../static/manifest.json'));
 assert(manifest.releases.every((r) => !r.profile.features.some((f) => f.id >= 41)), 'no release lists the resonator');
@@ -40,20 +40,22 @@ const fromCatalogue = (c) => {
     default: placed || [c.id, STATES.indexOf(c.default_state), c.default, 0, 0, 0],
     name: c.name, values: c.values, states: c.states, field: c.field ?? null,
     page: c.page_slots.length > 0, amount: c.amount_slots.length > 0, action: c.actions.length > 0,
-    stateless: c.stateless ?? false, synth_path: c.touches_synth, cpu: null };
+    stateless: c.stateless ?? false, synth_path: c.touches_synth, cpu: null, saved: c.saved ?? null };
 };
 const additions = IDS.map((id) => fromCatalogue(catalogue.features.find((c) => c.id === id)));
+const polyphony = fromCatalogue(catalogue.features.find((c) => c.id === 42));
 const release = structuredClone(beta3);
 Object.assign(release, { tag: 'drizzlet-dev-resonator', name: 'Synthetic fixture (never offered)',
   development: true, source_commit: ref });
-release.profile.features.push(...additions);
+release.profile.features.push(...additions, polyphony);
+release.profile.features.sort((a, b) => a.id - b.id);
 const profile = release.profile;
 const feature = (id) => profile.features.find((f) => f.id === id);
 
-// (a) The catalogue rows agree with kFeatureDefinitions; 42 is a reserved placeholder row.
-assert.deepEqual(catalogue.features.map((c) => c.id), Array.from({ length: 49 }, (_, i) => i + 1).filter((id) => id !== RESERVED));
-assert.equal(definitions.length, 49, 'a definition row for every ID up to 49, 42 included');
-assert.deepEqual(definitions[RESERVED - 1].slice(1), ['0', 'kReservedField', 'false', 'false', 'false', 'false']);
+// (a) The catalogue rows agree with kFeatureDefinitions; 42 is Rings polyphony.
+assert.deepEqual(catalogue.features.map((c) => c.id), Array.from({ length: 49 }, (_, i) => i + 1));
+assert.equal(definitions.length, 49, 'a definition row for every ID up to 49');
+assert.deepEqual(definitions[41].slice(1), ['3', 'kNoField', 'false', 'false', 'false', 'false'], '42 is Rings polyphony');
 // Catalogue format 2: page 5 has record bytes 24-26; the exact values are not saved.
 assert.equal(catalogue.format, 2);
 assert.deepEqual(IDS.map((id) => catalogue.features.find((c) => c.id === id).saved),
@@ -80,7 +82,7 @@ for (const id of EXACT) {
   assert.equal(summary(f, [id, 1, 64, 0, 0, 0]), 'Always 64');
 }
 assert.deepEqual([extraControl({ values: ['Off', 'On'] }), extraControl(feature(41))], ['switch', 'select']);
-// The factory block is Beta 3's defaults plus the three page features, byte for byte.
+// The factory block is Beta 3's defaults plus the three page features and Rings polyphony, byte for byte.
 assert.deepEqual(encodeProfile(defaults(profile), profile), factoryBlock);
 // Help points at the firmware's Resonator section.
 const docs = firmwareShow(ref, 'beads/build/docs/FEATURES.md', { encoding: 'utf8' });
@@ -122,7 +124,7 @@ for (const id of EXACT) {
   assert.throws(() => validate([[id, 2, 0, 16, 0, 0]], profile), /not allowed/);
   assert.throws(() => validate([[id, 1, 0, 16, 0, 0]], profile), /not allowed/);
 }
-assert.throws(() => validate([[RESERVED, 0, 0, 0, 0, 0]], profile), /Unknown/, 'Hygrostat never writes the reserved ID');
+assert.throws(() => validate([[UNKNOWN, 0, 0, 0, 0, 0]], profile), /Unknown/, 'Hygrostat never writes an unknown ID');
 const reseal = (b) => { const end = 16 + new DataView(b.buffer).getUint16(6, true); new DataView(b.buffer).setUint32(end, crc32(b.subarray(0, end)), true); return b; };
 const listing = (entries) => {
   const b = encodeProfile([], profile);
@@ -142,11 +144,15 @@ for (const id of EXACT) {
   cases.push([listing([[id, 2, 0, 0, 0, 0]]), false, false], [listing([[id, 2, 9, 16, 0, 0]]), false, false],
     [listing([[id, 1, 9, 0, 1, 0]]), false, false]);
 }
-// The firmware refuses the reserved ID in every form, as Hygrostat does.
+// The firmware refuses an unknown ID in every form, as Hygrostat does.
 for (let state = 0; state <= 2; ++state) {
-  for (const value of [0, 1]) cases.push([listing([[RESERVED, state, value, 0, 0, 0]]), false, false]);
+  for (const value of [0, 1]) cases.push([listing([[UNKNOWN, state, value, 0, 0, 0]]), false, false]);
 }
-cases.push([listing([[RESERVED, 2, 0, 16, 0, 0]]), false, false], [listing([[RESERVED, 1, 0, 0, 0, 1]]), false, false]);
+cases.push([listing([[UNKNOWN, 2, 0, 16, 0, 0]]), false, false], [listing([[UNKNOWN, 1, 0, 0, 0, 1]]), false, false]);
+// Rings polyphony: Adjustable 1, 2 or 4 voices only.
+for (const [entry, ok] of [[[42, 2, 2, 0, 0, 0], true], [[42, 2, 3, 0, 0, 0], false], [[42, 1, 0, 0, 0, 0], false]]) {
+  cases.push([listing([entry]), ok, ok]);
+}
 const scratch = mkdtempSync(join(tmpdir(), 'hygrostat-resonator-oracle-'));
 try {
   mkdirSync(join(scratch, 'beads/dsp'), { recursive: true });
