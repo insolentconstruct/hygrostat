@@ -45,8 +45,7 @@ const ball = (xm, ym, std, p) => Math.exp(-((p.x - xm) * (p.x - xm) + (p.y - ym)
 const CONSTANTS = { pi: Math.PI, e: Math.E };
 const VARIABLES = ['x', 'y', 'r', 'theta', 'mu'];
 const BINARY = {
-  '+': (a, b) => a + b, '-': (a, b) => a - b, '*': (a, b) => a * b, '/': (a, b) => a / b, '%': (a, b) => a % b,
-  '^': Math.pow
+  '+': (a, b) => a + b, '-': (a, b) => a - b, '*': (a, b) => a * b, '/': (a, b) => a / b, '%': (a, b) => a % b
 };
 const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
 
@@ -61,7 +60,8 @@ function tokenize(text) {
     if (!m) throw new SyntaxError(`Unexpected '${text.slice(at).trim()[0]}'.`);
     if (m[1] !== undefined) tokens.push({ kind: 'number', value: Number(m[1]) });
     else if (m[2] !== undefined) tokens.push({ kind: 'name', value: m[2].toLowerCase() });
-    else tokens.push({ kind: 'op', value: m[3] === '**' ? '^' : m[3] });
+    else if (m[3] === '^' || m[3] === '**') throw new SyntaxError('For powers, use pow(a, b).');
+    else tokens.push({ kind: 'op', value: m[3] });
     at = pattern.lastIndex;
   }
   return tokens;
@@ -112,13 +112,7 @@ export function parse(text) {
       const arg = unary();
       return op === '-' ? node({ op: 'neg', args: [arg] }) : arg;
     }
-    return power();
-  }
-  function power() {
-    const base = atom();
-    if (!isOp('^')) return base;
-    ++at;
-    return node({ op: '^', args: [base, unary()] });
+    return atom();
   }
   function atom() {
     const t = tokens[at++];
@@ -176,7 +170,7 @@ export function point(i, j) {
   return { x, y, r: Math.sqrt(x * x + y * y), theta, mu: (Math.abs(theta) - Math.PI) / -Math.PI };
 }
 
-// Samples values (rows of x) and normalizes them to -127..127 as the Plaits editor does; a flat grid is 0.
+// Samples values (rows of x) and normalizes them to -127..127 as the Plaits editor does; a flat grid is -127.
 export function quantize(values) {
   if (values.length !== GRID_SIZE) throw new Error('A grid is 64 x 64.');
   let low = Infinity;
@@ -186,11 +180,11 @@ export function quantize(values) {
     low = Math.min(low, z);
     high = Math.max(high, z);
   });
-  const scale = 2 / (high - low);
-  if (high !== low && !(Number.isFinite(scale) && scale > 0 && Number.isFinite(high - low))) {
+  const scale = 2 / (high === low ? 1 : high - low);
+  if (!(Number.isFinite(scale) && scale > 0 && Number.isFinite(high - low))) {
     throw new RangeError('Values too large or too small.');
   }
-  return Int8Array.from(values, (z) => (high === low ? 0 : Math.round(((z - low) * scale - 1) * 127)));
+  return Int8Array.from(values, (z) => Math.round(((z - low) * scale - 1) * 127));
 }
 
 // A grid from an equation; throws SyntaxError or RangeError with a short message.

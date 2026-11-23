@@ -10,7 +10,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { firmwareRepo } from './firmware.js';
-import { FACTORY, WAVES, WAVE_SIZE, TABLE_BYTES, MAX_IMPORT, factoryWave, factoryRows, factoryTable, integrate,
+import { FACTORY, WAVES, WAVE_SIZE, TABLE_BYTES, MAX_IMPORT, factoryWave, factoryRows, factoryTable, factoryIntegrate, integrate,
   table, rows, shape, parseWav, resample, cycles, preview } from '../static/js/wavetables.js';
 import { checkWaves, writeRegion, WAVE_ROW } from '../static/js/region.js';
 import { encodeContent, decodeContent, readContent, saveContent, regionContent, CONTENT } from '../static/js/content.js';
@@ -45,15 +45,31 @@ try {
 assert.equal(FACTORY.length, 12);
 assert(FACTORY.every(([, waves]) => waves.length === 16));
 const factory = factoryRows();
-assert.equal(Math.max(...factory.map((r) => Math.max(...r.map(Math.abs)))), 26345, 'factory peak');
+assert.equal(Math.max(...factory.map((r) => Math.max(...Array.from(r, Math.abs)))), 26345, 'factory peak');
 
-// Rows: integration as the generator does, guard samples, silence and refusals.
+// Rows: factory integration, user normalization, guard samples, silence and refusals.
 for (const r of factory) assert.deepEqual(r.subarray(0, 4), r.subarray(WAVE_SIZE));
-assert.deepEqual(integrate(factoryWave(17)), factory[17]);
+assert.deepEqual(factoryIntegrate(factoryWave(17)), factory[17]);
 assert(integrate(new Float64Array(WAVE_SIZE)).every((v) => v === 0), 'silence is a row of zeros');
 assert(integrate(new Float64Array(WAVE_SIZE).fill(0.3)).every((v) => v === 0), 'a constant is silence');
 const square = Float64Array.from({ length: WAVE_SIZE }, (_, i) => (i < 128 ? 1 : -1));
-assert.throws(() => integrate(square), RangeError, 'a square overflows int16 and is refused, not clipped');
+const rowPeak = (row) => Math.max(...Array.from(row, Math.abs));
+const squareRow = integrate(square);
+assert.equal(squareRow.length, 260);
+assert(rowPeak(squareRow) <= 32767);
+assert.equal(rowPeak(squareRow), 32767);
+assert.deepEqual(squareRow.subarray(256), squareRow.subarray(0, 4));
+for (let k = 1; k < WAVE_SIZE; ++k) {
+  const pulse = Float64Array.from({ length: WAVE_SIZE }, (_, i) => (i < k ? 1 : -1));
+  assert(rowPeak(integrate(pulse)) <= 32767, `pulse width ${k}`);
+}
+// A user wave lines up with the factory rows (same 4-sample start), within the 32767/32768 scale and truncation.
+for (const i of [0, 37, 100]) {
+  const user = integrate(factoryWave(i));
+  assert(user.every((v, k) => Math.abs(v - factory[i][k]) <= 2), `wave ${i} aligns with the factory row`);
+}
+const quietRow = integrate(square.map((v) => v * 0.25));
+assert(Math.abs(rowPeak(quietRow) - rowPeak(squareRow) / 4) < 1, 'quiet waves retain their amplitude');
 const narrow = Float64Array.from({ length: WAVE_SIZE }, (_, i) => (i < 64 ? 1 : -1 / 3));
 assert(integrate(narrow).every((v) => v >= -32768 && v <= 32767));
 assert.throws(() => integrate(new Float64Array(255)), /256 samples/);
@@ -61,7 +77,8 @@ assert.throws(() => integrate(Array(256).fill(0)), /256 samples/);
 assert.throws(() => integrate(new Float64Array(WAVE_SIZE).fill(NaN)), /not a number/);
 assert.throws(() => integrate(new Float64Array(WAVE_SIZE).fill(Infinity)), /not a number/);
 assert.throws(() => integrate(new Float64Array(WAVE_SIZE).fill(Number.MAX_VALUE)), RangeError);
-assert.throws(() => integrate(Float64Array.from({ length: WAVE_SIZE }, (_, i) => (i % 2 ? 1 : -1) * Number.MAX_VALUE)), RangeError);
+const alternating = Float64Array.from({ length: WAVE_SIZE }, (_, i) => (i % 2 ? 1 : -1));
+assert.deepEqual(integrate(alternating.map((v) => v * Number.MAX_VALUE)), integrate(alternating));
 
 // The table: 192 rows plus the guard row; malformed tables are refused like the writer refuses them.
 assert.throws(() => table(factory.slice(1)), /192 waves/);

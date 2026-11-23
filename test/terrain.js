@@ -19,9 +19,12 @@ const functions = {
 const sample = point(17, 42);
 const value = (text, p = sample) => evaluate(parse(text), p);
 for (const [text, expected] of [
-  ['1+2*3', 7], ['-2^2', -4], ['2^-1', 0.5], ['2^3^2', 512],
-  ['2**3**2', 512], ['7%4', 3], ['+2', 2], ['4-6/2', 1], ['pi', Math.PI], ['e', Math.E]
+  ['1+2*3', 7], ['-pow(2,2)', -4], ['pow(2,-1)', 0.5], ['pow(2,pow(3,2))', 512],
+  ['7%4', 3], ['+2', 2], ['4-6/2', 1], ['pi', Math.PI], ['e', Math.E]
 ]) assert.equal(value(text), expected, text);
+for (const text of ['x^2', '2**3', 'x ^ y', 'pow(x,2)^2']) {
+  assert.throws(() => parse(text), { name: 'SyntaxError', message: 'For powers, use pow(a, b).' });
+}
 for (const [name, [fn, args]] of Object.entries(functions)) {
   assert.equal(value(`${name}(${args.join(',')})`), fn(...args), name);
   assert.throws(() => parse(`${name}(${[...args, 1].join(',')})`), SyntaxError, name);
@@ -44,7 +47,8 @@ for (const grid of [flat, ripples]) {
   assert.equal(grid.length, 4096);
   assert(grid.every((n) => n >= -127 && n <= 127));
 }
-assert(flat.every((n) => n === 0));
+assert(flat.every((n) => n === -127));
+assert(terrain('-5').every((n) => n === -127));
 assert.equal(Math.min(...ripples), -127);
 assert.equal(Math.max(...ripples), 127);
 const alongX = terrain('x');
@@ -90,7 +94,7 @@ const random = mulberry32(0x4a796772);
 const alphabet = '0123456789xyreipnsocatlgbmhqdw+-*/%^(),. _';
 const names = [...variables, 'pi', 'e', ...Object.keys(functions), ...forbidden, 'require', 'eval', 'Function', 'random'];
 const arities = new Map([...Object.entries(functions).map(([name, [, args]]) => [name, args.length]),
-  ...['+', '-', '*', '/', '%', '^'].map((op) => [op, 2]), ['neg', 1]]);
+  ...['+', '-', '*', '/', '%'].map((op) => [op, 2]), ['neg', 1]]);
 function checkTree(tree) {
   assert.equal(Object.getPrototypeOf(tree), Object.prototype);
   const keys = Object.keys(tree).sort();
@@ -123,6 +127,7 @@ for (let i = 0; i < 20000; ++i) {
     continue;
   }
   ++accepted;
+  assert(!text.includes('^'));
   assert(checkTree(tree) <= MAX_NODES);
   assert.equal(typeof evaluate(tree, point(0, 0)), 'number');
 }

@@ -26,7 +26,7 @@
 //
 // Beads wavetables (WAVE): Mutable Instruments' factory waves and integration, and
 // WAV import and resampling after their Plaits editor, at 256 samples.
-import { checkWaves, WAVE_ROWS, WAVE_ROW } from './region.js?v=f1146e8a4a5babfa';
+import { checkWaves, WAVE_ROWS, WAVE_ROW } from './region.js?v=fca04f45c06739b3';
 
 export const WAVE_SIZE = 256;
 export const BANKS = 12;
@@ -179,11 +179,14 @@ export const FACTORY = [
 
 export const factoryWave = (index) => FACTORY[Math.floor(index / WAVES_PER_BANK)][1][index % WAVES_PER_BANK]();
 
-// One cycle of 256 samples as a WAVE row: integrated over two cycles as wavetables.py does,
-// then samples 0-3 repeated at 256-259. A silent wave is a row of zeros; overflow is refused.
-export function integrate(wave) {
+function checkWave(wave) {
   if (!(wave instanceof Float64Array) || wave.length !== WAVE_SIZE) throw new Error('A wave is 256 samples.');
   if (!wave.every(Number.isFinite)) throw new Error('A wave sample is not a number.');
+}
+
+// A factory wave as its WAVE row, exactly as wavetables.py integrates it; samples 0-3 repeat at 256-259.
+export function factoryIntegrate(wave) {
+  checkWave(wave);
   const offset = ((wave[0] + wave[1]) + wave[2]) + wave[3];
   const x = Float64Array.from({ length: 2 * WAVE_SIZE }, (_, i) => wave[i % WAVE_SIZE] + offset);
   const m = mean(x);
@@ -197,11 +200,43 @@ export function integrate(wave) {
   const m2 = mean(x);
   for (let i = 0; i < WAVE_ROW; ++i) {
     const v = roundEven((x[2 * WAVE_SIZE - WAVE_ROW + i] - m2) * 512);
-    if (!(v >= -32768 && v <= 32767)) throw new RangeError('This wave is too steep for Beads to store.');
+    if (!(v >= -32768 && v <= 32767)) throw new RangeError('This wave is out of range.');
     row[i] = v;
   }
   row.set(row.subarray(0, 4), WAVE_SIZE);
   return row;
+}
+
+// A user wave as its WAVE row, as the Plaits editor's integrate() does (centred, peak at most 1,
+// scaled by 4 * 32767 / n, so it never overflows); rows start 4 samples early, as the factory rows do.
+export function integrate(wave) {
+  checkWave(wave);
+  const n = WAVE_SIZE;
+  let mean = 0;
+  for (let i = 0; i < n; ++i) mean += wave[i];
+  mean /= n;
+  const x = wave.map((v) => v - mean);
+  const amplitude = x.reduce((p, v) => Math.max(p, Math.abs(v)), 1);
+  if (!Number.isFinite(mean) || !Number.isFinite(amplitude)) throw new RangeError('This wave is out of range.');
+  x.forEach((v, i) => { x[i] = v / amplitude; });
+  let integral = 0;
+  let integralMean = 0;
+  for (let i = 0; i < 2 * n; ++i) {
+    integral += x[i % n];
+    if (i >= n) integralMean += integral;
+  }
+  integralMean /= n;
+  const values = new Float64Array(n);
+  integral = 0;
+  for (let i = 0; i < 2 * n; ++i) {
+    integral += x[i % n];
+    if (i >= n) values[i - n] = (integral - integralMean) * (4 * 32767 / n);
+  }
+  return Int16Array.from({ length: WAVE_ROW }, (_, k) => {
+    const v = Math.trunc(values[(k + n - 4) % n]);
+    if (!(v >= -32768 && v <= 32767)) throw new RangeError('This wave is out of range.');
+    return v;
+  });
 }
 
 // 192 rows (Int16Array of 260) as the WAVE payload: int16 LE, plus the guard row.
@@ -217,7 +252,7 @@ export function table(rows) {
   return bytes;
 }
 
-export const factoryRows = () => range(0, WAVES).map((i) => integrate(factoryWave(i)));
+export const factoryRows = () => range(0, WAVES).map((i) => factoryIntegrate(factoryWave(i)));
 export const factoryTable = () => table(factoryRows());
 
 // A WAVE payload back to its 192 rows; refuses what the writer refuses.
