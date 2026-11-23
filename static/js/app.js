@@ -8,19 +8,26 @@
 // check the release's app image against the manifest, encode the update .wav
 // in the browser, check the .wav, offer it for download.
 
-import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, normalise, GAIN,
-  pageLeds, gestureFirmware, exactPageRule, offeredValues } from './profile.js?v=42689801d3309e72';
-import { effectiveScales, validateScales } from './scales.js?v=42689801d3309e72';
-import { scaleEditor } from './scale_editor.js?v=42689801d3309e72';
-import { guide } from './guide.js?v=42689801d3309e72';
-import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=42689801d3309e72';
-import { featureHelp, actionHelp } from './help.js?v=42689801d3309e72';
+import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, GAIN,
+  pageLeds, gestureFirmware, exactPageRule, offeredValues } from './profile.js?v=6a1c50a3577e20b3';
+import { effectiveScales, validateScales } from './scales.js?v=6a1c50a3577e20b3';
+import { scaleEditor } from './scale_editor.js?v=6a1c50a3577e20b3';
+import { guide } from './guide.js?v=6a1c50a3577e20b3';
+import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=6a1c50a3577e20b3';
+import { featureHelp, actionHelp } from './help.js?v=6a1c50a3577e20b3';
 import { KNOBS, KINDS, GROUPS, EXTRA_GROUPS, extraGroup, extraControl, ACTION_DOES, placeName, pageOf, entryOf, occupant, places, valueLabel, stateLabel,
   summary, stateHint, edit, place, adjust, unplace, afterUnplace, canSwap, freeSlot, changes, fitsSlot, placeable, bankWarning, slotCount,
-  usedPages, compaction, compact } from './layout.js?v=42689801d3309e72';
-import { drawPanel, highlight } from './panel.js?v=42689801d3309e72';
-import { comboImages } from './combo.js?v=42689801d3309e72';
-import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=42689801d3309e72';
+  usedPages, compaction, compact } from './layout.js?v=6a1c50a3577e20b3';
+import { drawPanel, highlight } from './panel.js?v=6a1c50a3577e20b3';
+import { comboImages } from './combo.js?v=6a1c50a3577e20b3';
+import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=6a1c50a3577e20b3';
+
+import { regionSupport, SECTION_NAMES, SECTION_KINDS } from './profile.js?v=6a1c50a3577e20b3';
+import { regionImage } from './region.js?v=6a1c50a3577e20b3';
+import { readContent, encodeContent, decodeContent, CONTENT } from './content.js?v=6a1c50a3577e20b3';
+import { grids } from './terrain.js?v=6a1c50a3577e20b3';
+import { factoryTable } from './wavetables.js?v=6a1c50a3577e20b3';
+import { stockBanks, defaultSelection, validateSelection, removeModel, lockSynth, synthLock, flashMeter, refit, selectedRegion, fetchAsset } from './palette.js?v=6a1c50a3577e20b3';
 
 const $ = (id) => document.getElementById(id);
 const cap = (text) => text.replace(/^./, (c) => c.toUpperCase());
@@ -43,7 +50,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=42689801d3309e72', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=6a1c50a3577e20b3', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.ready) return;
       if (data.progress !== undefined) {
@@ -65,6 +72,25 @@ let manifest;
 let download;
 let entries;
 let scales = null;
+let palette = null;
+let portableContent = null;
+let prepared = null;
+let profileFile = null;
+const assets = new Map();
+const cachedFetch = (url) => {
+  if (!assets.has(url)) assets.set(url, fetch(url).then(async (response) => {
+    if (!response.ok) { assets.delete(url); throw new Error('Could not download content.'); }
+    return new Uint8Array(await response.arrayBuffer());
+  }).catch((error) => { assets.delete(url); throw error; }));
+  return assets.get(url).then((bytes) => ({ ok: true, arrayBuffer: async () => bytes.slice().buffer }));
+};
+const setupData = () => palette || portableContent ? { selection: palette, content: portableContent } : null;
+const payloads = () => {
+  if (!portableContent) return { wave: factoryTable(), terrain: null };
+  const content = decodeContent(portableContent);
+  return { wave: content.wave ?? factoryTable(), terrain: content.terrains.length ? grids(content.terrains.map((t) => t.grid)) : null };
+};
+
 let revision = 0;
 const guideURLs = [];
 const comboURLs = [];
@@ -113,26 +139,29 @@ async function build(release, app) {
   }
   const chosen = entries.map((e) => e.slice());
   const chosenScales = validateScales(scales);
-  validate(chosen, release.profile);
-  const block = encodeProfile(chosen, release.profile, chosenScales);
+  validate(chosen, release.profile, palette?.banks.length);
+  const built = await prepare(release);
+  if (!built.meter.fits) throw new Error(`Remove ${-built.meter.free} bytes before building.`);
+  const block = built.block;
   const original = app.slice(release.profile.offset, release.profile.offset + release.profile.size);
   if (!equal(original, encodeProfile(defaults(release.profile), release.profile))) {
     throw new Error('Release settings do not match the release list.');
   }
-  const isDefault = equal(block, original);
+  const isDefault = equal(block, original) && !palette && !portableContent;
   const base = app.slice();
   app.set(block, release.profile.offset);
   const offset = release.profile.offset;
   if (!equal(app.subarray(0, offset), base.subarray(0, offset)) ||
       !equal(app.subarray(offset + release.profile.size), base.subarray(offset + release.profile.size)) ||
-      JSON.stringify(decodeSettings(app.subarray(offset, offset + release.profile.size), release.profile)) !== JSON.stringify({ entries: chosen, scales: chosenScales })) {
+      JSON.stringify(decodeSettings(app.subarray(offset, offset + release.profile.size), release.profile)) !== JSON.stringify({ entries: chosen, scales: chosenScales, ...built.plaits ? { plaits: built.plaits } : {} })) {
     throw new Error('Updated firmware check failed.');
   }
   const appHash = await sha256(app);
   const fp = await fingerprint(block);
   const names = filenames(release, fp, isDefault);
   status('Building and checking…');
-  const wav = await encodeInWorker(app.slice());
+  const image = built.written ? regionImage(app, built.written.region) : app.slice();
+  const wav = await encodeInWorker(image);
   const wavHash = await sha256(wav);
   $('app-hash').textContent = appHash;
   $('wav-hash').textContent = wavHash;
@@ -149,7 +178,8 @@ async function build(release, app) {
   $('result').hidden = false;
   status(isDefault ? 'Ready. Matches the release; audio checked.' : `Ready. Profile ${fp}; audio checked.`, 'ok');
   await updateGuides(release, chosen, fp, names, chosenScales);
-  await updateCombo(release, app, isDefault, fp, names);
+  if (!built.written) await updateCombo(release, app, isDefault, fp, names);
+  else $('combo-status').textContent = 'Use the WAV for this region image.';
   $('download').onclick = () => recordDownload(release);
   recordBuild(release);
   $('result-title').focus({ preventScroll: true });
@@ -173,7 +203,8 @@ const profile = () => {
   const bank = effectiveScales(scales);
   return { ...original, features: original.features.map((f) => f.id !== 1 ? f :
     { ...f, values: Array.from({ length: 16 }, (_, id) => id < 2 ? f.values[id] :
-      bank.find((s) => s.id === id)?.name || 'Unavailable scale') }) };
+      bank.find((s) => s.id === id)?.name || 'Unavailable scale') }).map((f) => f.id === 31 && palette?.banks.length ?
+      { ...f, values: palette.banks.map((_, i) => `Bank ${i + 1}`) } : f) };
 };
 const renderScales = scaleEditor($('scale-editor'), {
   get: () => scales,
@@ -196,7 +227,7 @@ let busy = false;
 async function run() {
   if (busy) return;
   busy = true;
-  $('scale-editor').inert = $('workspace').inert = $('presets').inert = $('preset-confirm').inert = $('template-gallery').inert = $('draft-notice').inert = true;
+  $('palette-editor').inert = $('scale-editor').inert = $('workspace').inert = $('presets').inert = $('preset-confirm').inert = $('template-gallery').inert = $('draft-notice').inert = true;
   $('build').disabled = $('release').disabled = true;
   $('result').hidden = true;
   try {
@@ -209,7 +240,7 @@ async function run() {
     $('build').disabled = $('release').disabled = false;
     busy = false;
     if (pendingShare) { pendingShare = false; loadSharedProfile(); }
-    $('scale-editor').inert = $('workspace').inert = $('presets').inert = $('preset-confirm').inert = $('template-gallery').inert = $('draft-notice').inert = false;
+    $('palette-editor').inert = $('scale-editor').inert = $('workspace').inert = $('presets').inert = $('preset-confirm').inert = $('template-gallery').inert = $('draft-notice').inert = false;
   }
 }
 
@@ -263,7 +294,7 @@ async function updateCombo(release, app, isDefault, fp, names) {
 async function updateGuides(release, chosen, fp, names, chosenScales = scales) {
   guideURLs.splice(0).forEach((url) => URL.revokeObjectURL(url));
   for (const mobile of [false, true]) {
-    const url = URL.createObjectURL(new Blob([guide(chosen, release, fp, mobile, chosenScales)], { type: 'image/svg+xml' }));
+    const url = URL.createObjectURL(new Blob([guide(chosen, release, fp, mobile, chosenScales, palette)], { type: 'image/svg+xml' }));
     guideURLs.push(url);
     const a = $(mobile ? 'guide-mobile' : 'guide');
     a.href = url; a.download = names[mobile ? 'mobile' : 'desktop'];
@@ -744,6 +775,11 @@ function renderInspector() {
       el('a', { href: help.url, text: 'Documentation', 'aria-label': `${f.name} documentation` })));
   if (help.details) body.push(el('p', { class: 'note', id: 'feature-details', text: help.details }));
   if (actionHelp(f)) body.push(el('p', { class: 'note', id: 'action-help', text: actionHelp(f) }));
+  if (palette && ((f.id === 7 && synthLock(palette)) || (f.id === 31 && !palette.models.length))) {
+    body.push(el('p', { class: 'note', text: f.id === 7 ? synthLock(palette) : 'Starting bank locked: no Plaits banks installed.' }));
+    $('inspector').replaceChildren(...body);
+    return;
+  }
   const change = (k, value, message) => commit(() => edit(entries, profile(), f, k, value), message);
   body.push(el('fieldset', { class: 'choices' }, el('legend', { text: 'How it works' }),
     ...modes(f).filter(([state]) => state || f.id !== GAIN).map(([state]) => {
@@ -867,9 +903,9 @@ function renderLibrary(confirm = null) {
         const e = entryOf(entries, f);
         const at = places(e).length ? 'On ' + places(e).map((p) => placeName(p.kind, p.slot)).join(', ') : `No control · ${summary(f, e)}`;
         return el('button', { type: 'button', class: `library-item${here && here[0] === f.id ? ' here' : ''}`, id: `lib-${f.id}`,
-          'aria-describedby': `lib-${f.id}-about`, onclick: () => pick(f.id) },
+          'aria-describedby': `lib-${f.id}-about`, disabled: Boolean(target && f.id === 7 && palette && synthLock(palette)), onclick: () => pick(f.id) },
         el('span', { class: 'name', text: f.name }), el('span', { class: 'at', text: at }),
-        el('span', { class: 'about', id: `lib-${f.id}-about`, text: featureHelp(f, selected()).description }));
+        el('span', { class: 'about', id: `lib-${f.id}-about`, text: f.id === 7 && palette && synthLock(palette) || featureHelp(f, selected()).description }));
       });
     return items.length ? el('section', { class: 'library-group', 'aria-label': name }, el('h3', { text: name }), ...items) : null;
   }).filter(Boolean);
@@ -917,8 +953,10 @@ function render() {
   if (key !== shown && selection.kind === 'page') pageTab = pageOf(selection.slot);
   shown = key;
   const focused = document.activeElement?.id;
+  if (palette) entries = lockSynth(entries, palette);
   renderPresets(); renderGrid(); renderPages(); renderSlots(); renderExtras(); renderInspector(); markTemplateChanges();
   renderScales(selected().profile.version === 2);
+  renderPalette();
   if (focused && document.activeElement === document.body) $(focused)?.focus({ preventScroll: true });
   refresh();
 }
@@ -928,13 +966,28 @@ async function refresh() {
   $('result').hidden = true;
   clearCombo();
   const release = selected();
-  const block = encodeProfile(entries, release.profile, scales);
-  if (drafts.save(release, block, preset, Date.now(), manifest.releases.at(-1)) === 'failed' && !notice.failed) {
+  prepared = null;
+  $('save-profile').disabled = true;
+  $('build').disabled = true;
+  let next;
+  try { next = await prepare(release); } catch (error) {
+    if (token !== revision) return;
+    status(error.message, 'error');
+    $('share').removeAttribute('href');
+    $('save-profile').disabled = true;
+    return;
+  }
+  if (token !== revision) return;
+  prepared = next;
+  const block = next.block;
+  renderMeter(next.meter);
+  if (drafts.save(release, block, preset, Date.now(), manifest.releases.at(-1), setupData()) === 'failed' && !notice.failed) {
     notice.failed = true;
     notice.dismissed = false;
     renderNotice();
   }
-  $('build').disabled = busy;
+  $('build').disabled = busy || !next.meter.fits;
+  $('save-profile').disabled = false;
   const changed = changes(entries, templates(release.profile)[preset] || defaults(release.profile), release.profile).length + Number(scales !== null);
   $('changes').textContent = changed ? `${changed} change${changed === 1 ? '' : 's'} from ${preset}` : `${preset}, unchanged`;
   const slots = slotCount('page', release.profile);
@@ -943,11 +996,143 @@ async function refresh() {
   const fp = await fingerprint(block);
   if (token !== revision) return;
   $('fingerprint').textContent = fp;
-  $('share').href = '#' + share(release, block);
+  $('share').href = '#' + share(release, block, setupData());
   $('share').onclick = () => { history.replaceState(null, '', $('share').href); status('Copy this address to share.'); };
   await updateGuides(release, entries, fp, filenames(release, fp,
       equal(block, encodeProfile(defaults(release.profile), release.profile))));
   if (token === revision) $('summary').dataset.fingerprint = fp;
+}
+
+// A portable setup is validated before the caller replaces the current screen.
+function readSetup(saved, imported = true) {
+  let next = saved.setup?.selection ?? null;
+  const stockImport = imported && regionSupport(saved.release.profile);
+  const content = saved.setup?.content ?? (stockImport ? encodeContent({}) : null);
+  if (content !== null) decodeContent(content);
+  if (next !== null) next = validateSelection(next);
+  else if (saved.setup && stockImport) next = defaultSelection(saved.release);
+  else if (saved.plaits) {
+    if (saved.plaits.directory.length) throw new Error('This older profile does not identify all installed models or custom content. Reopen its original setup and save a portable profile before importing it. Your current selection is kept.');
+    const stock = defaultSelection(saved.release);
+    const banks = saved.plaits.banks.length ? saved.plaits.banks : stock.banks;
+    next = validateSelection({ ...stock, banks, models: [...new Set([...stock.models, ...banks.flat()])] });
+  } else if (stockImport) next = defaultSelection(saved.release);
+  return { palette: next, portableContent: content };
+}
+
+async function prepare(release) {
+  let written = null, plaits = null;
+  if ((palette || portableContent) && !regionSupport(release.profile)) throw new Error('This release cannot keep the selected banks or editor content. Open their original release or start fresh.');
+  if (regionSupport(release.profile)) {
+    if (!release.content) throw new Error('This release has no pinned content assets.');
+    if (!palette && !portableContent) {
+      const local = storage && readContent(storage);
+      if (local?.error) throw new Error('Saved editor content is damaged. Open the editor to repair it.');
+      if (local && (local.wave || local.terrains.length)) {
+        portableContent = encodeContent(local);
+        palette = defaultSelection(release);
+      }
+    }
+    if (palette || portableContent) {
+      const selection = palette ?? defaultSelection(release);
+      written = await selectedRegion(release, selection, payloads(), cachedFetch);
+      plaits = { banks: selection.banks, directory: written.directory };
+    } else {
+      const region = await fetchAsset(release.content.region, cachedFetch);
+      const directory = [];
+      for (const e of release.profile.region.default_layout ?? []) {
+        const section = region.subarray(e.offset, e.offset + e.size);
+        if (section.length !== e.size || await sha256(section) !== e.sha256) throw new Error('Default section hash differs from the release.');
+        directory.push({ kind: SECTION_KINDS[SECTION_NAMES.indexOf(e.kind)], offset: e.offset, size: e.size,
+          crc: new DataView(section.buffer, section.byteOffset, section.byteLength).getUint32(section.length - 4, true) });
+      }
+      if (!directory.length) throw new Error('Missing default section layout.');
+      written = { region, directory };
+    }
+  }
+  const block = encodeProfile(entries, release.profile, scales, plaits);
+  return { written, plaits, block, meter: flashMeter(release.app_size, written, block) };
+}
+
+function renderMeter(meter) {
+  const box = $('flash-meter');
+  box.hidden = false;
+  box.replaceChildren(el('h2', { text: 'Flash use' }),
+    el('p', { text: `App: ${meter.app} B. Alignment: ${meter.padding} B.` }),
+    ...meter.sections.map((s) => el('p', { text: `${s.kind}: ${s.bytes} B` })),
+    el('p', { class: meter.fits ? 'note' : 'warn', text: meter.fits ? `Free to 0x08100000: ${meter.free} B.` :
+      `${-meter.free} B too large. Choose which models or sections to remove; nothing is dropped automatically.` }),
+    el('p', { text: `Install audio: ${meter.seconds.toFixed(1)} s (estimated install time). Profile: ${meter.profile} / ${meter.profile + meter.profileFree} B.` }));
+}
+
+function changePalette(next) {
+  palette = validateSelection(next);
+  entries = lockSynth(entries, palette);
+  const start = entries.find((e) => e[0] === 31);
+  if (start && palette.banks.length && start[2] >= palette.banks.length) {
+    status('Choose a starting bank within the new bank count.', 'error');
+  }
+  edited();
+  render();
+}
+
+function renderPalette() {
+  const box = $('palette-editor');
+  const release = selected();
+  box.hidden = !regionSupport(release.profile);
+  if (box.hidden) return;
+  const current = palette ?? defaultSelection(release);
+  const rows = release.content?.models ?? [];
+  const controls = $('palette-controls');
+  const missing = refit(current, release);
+  $('palette-status').textContent = [synthLock(current), missing.missing.length ?
+    `Refit required: models ${missing.missing.join(', ')} are unavailable. Replace their bank slots, then remove them.` : '',
+  missing.ringsMissing ? 'Rings is unavailable. Remove it to continue.' : ''].filter(Boolean).join(' ');
+  const toggle = (label, on, change, disabled = false) => {
+    const input = el('input', { type: 'checkbox', disabled });
+    input.checked = on;
+    input.onchange = () => { try { change(input.checked); } catch (error) { status(error.message, 'error'); renderPalette(); } };
+    return el('label', { class: 'field' }, input, label);
+  };
+  const children = [toggle('Beads wavetables (WAVE)', current.wave, (wave) => changePalette({ ...current, wave }), !current.models.length),
+    toggle('Rings synth', current.rings, (rings) => changePalette({ ...current, rings }), !release.content?.rings && !current.rings),
+    el('p', { class: 'note', text: 'CPU: not measured. Bank colours follow FEEDBACK bank order. Each bank has eight slots.' })];
+  for (const row of rows) {
+    if (row.id >= 28 && !row.module_rows) continue;
+    children.push(toggle(`${row.name} — ${row.bytes ?? '?'} B; ${row.credit ?? 'Mutable Instruments (MIT)'}`, current.models.includes(row.id), (on) => {
+      if (on) {
+        const models = [...current.models, row.id];
+        changePalette({ ...current, models, banks: current.banks.length ? current.banks : [Array(8).fill(row.id)] });
+      } else changePalette(removeModel(current, row.id));
+    }));
+  }
+  // Unavailable IDs remain visible and removable after their bank slots are explicitly replaced.
+  for (const id of missing.missing) children.push(el('button', { type: 'button', text: `Remove unavailable model ${id}`, onclick: () => {
+    try { changePalette(removeModel(current, id)); } catch (error) { status(error.message, 'error'); }
+  } }));
+  current.banks.forEach((bank, index) => {
+    const group = el('fieldset', {}, el('legend', { text: `Bank ${index + 1}` }));
+    bank.forEach((id, slot) => {
+      const select = el('select', { 'aria-label': `Bank ${index + 1}, slot ${slot + 1}` });
+      for (const model of current.models) select.add(new Option(rows.find((m) => m.id === model)?.name ?? `Unavailable model ${model}`, model));
+      select.value = id;
+      select.onchange = () => {
+        const banks = current.banks.map((b) => b.slice());
+        banks[index][slot] = Number(select.value);
+        changePalette({ ...current, banks });
+      };
+      group.append(select);
+    });
+    group.append(el('button', { type: 'button', text: 'Remove bank', disabled: current.banks.length === 1, onclick: () => {
+      changePalette({ ...current, banks: current.banks.filter((_, i) => i !== index) });
+    } }));
+    children.push(group);
+  });
+  children.push(el('button', { type: 'button', text: 'Add bank', disabled: !current.models.length || current.banks.length >= 15, onclick: () =>
+    changePalette({ ...current, banks: [...current.banks, Array(8).fill(current.models[0])] }) }),
+  el('button', { type: 'button', text: 'Stock banks', disabled: !Array.from({ length: 24 }, (_, id) => id).every((id) => rows.some((m) => m.id === id)), onclick: () =>
+    changePalette({ ...current, models: [...new Set([...current.models, ...stockBanks().flat()])], banks: stockBanks() }) }));
+  controls.replaceChildren(...children);
 }
 
 let pendingShare = false;
@@ -955,10 +1140,13 @@ function loadSharedProfile() {
   try {
     const shared = location.hash ? unshare(location.hash, manifest.releases) :
       { release: selected(), entries: defaults(selected().profile) };
-    const chosen = exactPageRule(normalise(shared.entries, shared.release.profile), shared.release.profile);
+    const chosen = shared.entries.map((e) => e.slice());
+    const restored = readSetup(shared, Boolean(location.hash));
     $('release').value = shared.release.tag;
     entries = chosen;
     scales = shared.scales ?? null;
+    ({ palette, portableContent } = restored);
+    if (palette) entries = lockSynth(entries, palette);
     status('');
     linkOpened();
     setupEditor();
@@ -994,10 +1182,21 @@ function linkOpened() {
   renderNotice();
 }
 
+// Validate portable restoration before any saved-slot swap or screen replacement.
+function readSaved(key = DRAFT) {
+  const draft = storage && readDraft(storage, manifest.releases, key);
+  if (!draft || draft.refused) return draft;
+  try { readSetup(draft); return draft; }
+  catch (error) { return { refused: true, raw: draft.raw, error }; }
+}
+
 function show(draft) {
+  const restored = readSetup(draft);
   $('release').value = draft.release.tag;
-  entries = exactPageRule(draft.entries, draft.release.profile);
+  entries = draft.entries.map((e) => e.slice());
   scales = draft.scales;
+  ({ palette, portableContent } = restored);
+  if (palette) entries = lockSynth(entries, palette);
   preset = draft.preset;
   notice.restored = draft;
   drafts.settled(draft.link);
@@ -1011,7 +1210,7 @@ function refuse(key, raw) {
 }
 
 function restoreDraft() {
-  const draft = storage && readDraft(storage, manifest.releases);
+  const draft = readSaved();
   if (draft?.refused) refuse(DRAFT, draft.raw);
   else if (draft) show(draft);
 }
@@ -1019,11 +1218,12 @@ function restoreDraft() {
 const focusStart = () => $('presets').querySelector('button')?.focus();
 
 function startFresh() {
-  notice.undo = { tag: selected().tag, entries, scales, preset, raw: saved(DRAFT), link: notice.restored?.link ?? false };
+  notice.undo = { tag: selected().tag, entries, scales, palette, portableContent, preset, raw: saved(DRAFT), link: notice.restored?.link ?? false };
   notice.restored = null;
   notice.linked = false;
   $('release').selectedIndex = manifest.releases.length - 1;
   entries = defaults(selected().profile);
+  palette = null; portableContent = null;
   scales = null;
   preset = 'Drizzlet';
   put(storage, DRAFT, null);
@@ -1039,7 +1239,7 @@ function undoFresh() {
   const { tag, raw, link, ...previous } = notice.undo;
   notice.undo = null;
   $('release').value = tag;
-  ({ entries, scales, preset } = previous);
+  ({ entries, scales, palette, portableContent, preset } = previous);
   if (raw !== null) put(storage, DRAFT, raw);
   drafts.settled(link);
   status('Previous setup back.');
@@ -1051,7 +1251,7 @@ function undoFresh() {
 // Opens a saved setup: the draft while a link is unedited, or the second slot, swapped
 // with the draft so neither is lost.
 function openSaved(key) {
-  const draft = storage && readDraft(storage, manifest.releases, key);
+  const draft = readSaved(key);
   if (!draft) { status('That setup is no longer saved in this browser.', 'error'); renderNotice(); return; }
   if (draft.refused) { refuse(key, draft.raw); notice.linked = false; renderNotice(); return; }
   if (key === BEFORE_LINK) {
@@ -1136,7 +1336,7 @@ async function checkCapabilities() {
   }
   // A constructor alone does not establish support for module workers.
   await new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=42689801d3309e72', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=6a1c50a3577e20b3', { type: 'module' });
     const done = (error) => {
       clearTimeout(timer); worker.terminate();
       error ? reject(error) : resolve();
@@ -1165,7 +1365,7 @@ async function init() {
   }
   $('compatibility').hidden = true;
   try {
-    const response = await fetch('manifest.json?v=42689801d3309e72', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=6a1c50a3577e20b3', { cache: 'no-cache' });
     manifest = await response.json();
   } catch {
     status('Could not load the release list.', 'error');
@@ -1207,7 +1407,7 @@ async function init() {
   $('library').addEventListener('click', (event) => { if (event.target === $('library')) $('library').close(); });
   // Check both slots first, so a later link edit never copies or replaces text this page cannot open.
   for (const key of [DRAFT, BEFORE_LINK]) {
-    const draft = storage && readDraft(storage, manifest.releases, key);
+    const draft = readSaved(key);
     if (draft?.refused) refuse(key, draft.raw);
   }
   if (location.hash) loadSharedProfile();
@@ -1218,6 +1418,38 @@ async function init() {
   });
   $('release').onchange = () => { templatePreview = null; compactPreview = false; $('template-gallery').hidden = true; entries = defaults(selected().profile); scales = null; preset = 'Drizzlet'; edited(); setupEditor(); };
   $('forget-draft').onclick = forgetSaved;
+  $('save-profile').onclick = () => {
+    if (!prepared) return;
+    if (profileFile) URL.revokeObjectURL(profileFile);
+    profileFile = URL.createObjectURL(new Blob([JSON.stringify({ v: 1, share: share(selected(), prepared.block, setupData()) })], { type: 'application/json' }));
+    const link = el('a', { href: profileFile, download: 'drizzlet-profile.json' });
+    link.click();
+  };
+  $('edit-content').onclick = () => {
+    $('edit-content').href = portableContent ? 'editor.html#' + new URLSearchParams({ content: portableContent }) : 'editor.html';
+  };
+  $('open-profile').onchange = async () => {
+    try {
+      const file = $('open-profile').files[0];
+      if (!file) return;
+      if (file.size > 2000000) throw new Error('Profile file is too large.');
+      const saved = JSON.parse(await file.text());
+      if (saved.v !== 1 || typeof saved.share !== 'string') throw new Error('Unknown profile file.');
+      unshare(saved.share, manifest.releases);
+      if (busy) throw new Error('Wait for the current build before opening a profile.');
+      history.replaceState(null, '', '#' + saved.share);
+      loadSharedProfile();
+    } catch (error) { status(error.message, 'error'); }
+    $('open-profile').value = '';
+  };
+  window.addEventListener('storage', (event) => {
+    if (event.key === CONTENT) {
+      const content = storage && readContent(storage);
+      if (content?.error) { status('Saved editor content is damaged.', 'error'); return; }
+      portableContent = content ? encodeContent(content) : null;
+      edited(); render();
+    }
+  });
   setupEditor();
   renderNotice();
   $('build').onclick = run;

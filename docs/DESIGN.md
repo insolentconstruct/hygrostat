@@ -131,3 +131,36 @@ The Beta 2 release entry is `drizzlet-2026.11.09`, source `578521f`. Its `date` 
 The Beta 3 release entry is `drizzlet-2026.11.16`, the newest release and the page's default. Its image and WAV are the `fab20b1` candidate's (built from code-identical `9f8be78`), with seven options pages, Beta 2's features with Recent notes and the module-measured TIME scan cost, and features 25–33. Its `date` is the UTC publication date, `2026-11-16`. Its costs and limits come from `costs/drizzlet-2026.11.16-module.json`. Its baselines are Beta 2's measurements, not yet remeasured with Beta 3 code. Beta 2 still refuses Beta 3 features.
 
 The release keeps the historical granular baseline and cost table unchanged. `cpu.estimate_reference` pins the former estimator defaults and their firmware source/profile hash; `default_measured: false` prevents new-default measurement claims. The table-derived Off-to-Adjustable allowances are 0.492 synth and 0.737 granular points, yielding provisional default estimates of 83.9% and 83.7%. These are estimates, not module measurements of the new default; legacy explicit profiles cancel those allowances. Runtime estimation checks the declared allowances against the same reference costs, and incomplete or contradictory reference flags refuse.
+
+
+## Region setup UI
+
+Releases that declare `profile.region` and pinned `content` assets expose the
+model and bank editor. `content.models` supplies model IDs, names, asset URLs
+and SHA-256 hashes; libraries and Rings use the same pinned asset format.
+`content.region` pins the untouched release region. No development models
+without module rows are offered. CPU figures remain “not measured” until those
+rows exist. Existing releases retain their original app-only update path.
+
+Banks contain eight permanent IDs, with one to fifteen banks when Plaits is
+installed. Removing a model used in a bank requires explicit replacement of
+its slots. Removing the last model keeps WAVE and fixes Synth to Beads; removing
+WAVE fixes Synth to Plaits. Guides carry the same lock. Dependent libraries
+follow the selected blobs through the existing resolver.
+
+The flash meter counts the app, alignment, each section and remaining space
+to 0x08100000, alongside the profile block's bytes. Install duration is an
+estimate from the encoded audio sample count. Oversized selections remain
+visible for explicit refitting; downloads require a physically fitting image.
+Unavailable model IDs also remain visible until their bank slots are replaced
+and the models are removed. No automatic model removal occurs on update.
+
+Profile JSON files wrap a share fragment. Optional setup data carries selected
+IDs, banks and validated editor content alongside the firmware profile bytes.
+Older profiles without setup data use their directory and banks, or the stock
+banks when they predate the region format. Untouched releases use their pinned
+region and original profile bytes to retain release WAV identity.
+
+The content editor opens in another tab. A portable setup passes its content
+in the URL fragment, so opening it does not replace the browser's saved content.
+Edits save to local storage and update the open app's setup and draft.

@@ -23,11 +23,12 @@
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
 // Knob cards port options_guide.py: 270-degree arcs and the same LED ladder.
-import { effectiveScales, PULSE_NAMES } from './scales.js?v=42689801d3309e72';
-import { defaults, equal, encodeProfile, pageLeds, PAGE_LEDS, GAIN } from './profile.js?v=42689801d3309e72';
-import { pageLedName, usedPages } from './layout.js?v=42689801d3309e72';
-import { RELEASE_GUIDES } from './release_guides.js?v=42689801d3309e72';
-import { placeable, bankWarning } from './layout.js?v=42689801d3309e72';
+import { effectiveScales, PULSE_NAMES } from './scales.js?v=6a1c50a3577e20b3';
+import { synthLock } from './palette.js?v=6a1c50a3577e20b3';
+import { defaults, equal, encodeProfile, pageLeds, PAGE_LEDS, GAIN } from './profile.js?v=6a1c50a3577e20b3';
+import { pageLedName, usedPages } from './layout.js?v=6a1c50a3577e20b3';
+import { RELEASE_GUIDES } from './release_guides.js?v=6a1c50a3577e20b3';
+import { placeable, bankWarning } from './layout.js?v=6a1c50a3577e20b3';
 
 const KNOBS = ['FEEDBACK', 'DRY/WET', 'REVERB'];
 export const ACTIONS = ['None', '[A]+SEED', '[A]+FREEZE', '[A] hold'];
@@ -142,9 +143,9 @@ function pageSteps(entries, profile) {
   `This profile's pages: ${usedPages(entries, profile).join(' → ')}, then back to the first.`];
 }
 
-export function guide(entries, release, fp, mobile = false, scales = null) {
+export function guide(entries, release, fp, mobile = false, scales = null, selection = null) {
   const drawings = RELEASE_GUIDES.get(release.tag);
-  if (scales === null && drawings && equal(encodeProfile(entries, release.profile, scales),
+  if (selection === null && scales === null && drawings && equal(encodeProfile(entries, release.profile, scales),
       encodeProfile(defaults(release.profile), release.profile))) {
     // Normalisation removes this added fingerprint text; the remaining SVG
     // is byte-identical to options_guide.py's release drawing.
@@ -158,13 +159,15 @@ export function guide(entries, release, fp, mobile = false, scales = null) {
   const margin = mobile ? 22 : 35;
   const features = release.profile.features.map((f) => f.id !== 1 || release.profile.version !== 2 ? f :
     { ...f, scales: effectiveScales(scales), values: Array.from({ length: 16 }, (_, id) => id < 2 ? f.values[id] :
-      effectiveScales(scales).find((s) => s.id === id)?.name || 'Off (scale removed)') });
+      effectiveScales(scales).find((s) => s.id === id)?.name || 'Off (scale removed)') }).map((f) => f.id === 31 && selection?.banks.length ?
+    { ...f, values: selection.banks.map((_, i) => `Bank ${i + 1}`) } : f);
   const feature = (e) => features.find((f) => f.id === e[0]);
   const idle = entries.find((e) => e[0] === 25 && e[1] === 1 && e[2]);
   const fixed = (id) => entries.some((e) => e[0] === id && e[1] === 1 && e[2]);
   d.text(margin, 35, 'Drizzlet Hidden Options', 24, 'bold');
   d.text(margin, 61, `Profile ${fp} · ${release.tag}`, 15);
   let y = 90;
+  if (selection && synthLock(selection)) y = d.lines(margin, y, synthLock(selection), mobile ? 43 : 140) + 3;
   for (const line of (entries.some((e) => e[3]) ? [
     `Open: hold [M] 3 seconds; all three mix LEDs pulse. Release.${fixed(38) ? ' Opens on the first page.' : ''}`,
     ...pageSteps(entries, release.profile),
