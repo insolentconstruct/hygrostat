@@ -1,7 +1,7 @@
 // Copyright 2026 Insolent Construct.
 // MIT licence: see encoder.js.
 // Links follow the selected release, including its source revision during development.
-import { TOGGLES } from './profile.js?v=1fa788e70704b81e';
+import { TOGGLES } from './profile.js?v=c9430eaf5d79e21a';
 const docs = 'https://github.com/insolentconstruct/eurorack/blob/{TAG}/beads/build/docs/FEATURES.md';
 const descriptions = {
   1: ['Snap final pitch, including PITCH, CV and randomness, to a scale.', 'drizzlet-options'],
@@ -43,7 +43,7 @@ const descriptions = {
   40: ['Which knob sets the manual input gain while [A] is held: FEEDBACK as stock, DRY/WET, REVERB, or none.', 'a-gestures-in-profiles'],
   41: ['Add a Rings-style modal resonator after the grains, or before the buffer so the grains play its resonance.', 'resonator'],
   42: ['How many voices the Rings synth starts with: 1, 2 or 4. While Rings plays, [A] + FREEZE steps them; the count is saved.', 'synth-and-rings-polyphony'],
-  43: ['The resonator material: Wood, String, Glass or Bell, which sets its structure and brightness.', 'resonator'],
+  43: ['The resonator material: Wood, String, Glass or Bell, or a Drizzlet object, Marimba, Drum, Bowl or Gong, with its own modes.', 'resonator'],
   44: ['How long the resonator rings: Short, Medium, Long or Very long, which sets its damping.', 'resonator'],
   45: ['An exact resonator structure (byte / 256) in place of Material’s; empty uses the page.', 'resonator'],
   46: ['An exact resonator brightness (byte / 256) in place of Material’s; empty uses the page.', 'resonator'],

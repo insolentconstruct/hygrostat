@@ -40,8 +40,8 @@ import { defaults, encodeProfile, decodeSettings, validate, equal, crc32, share,
 import { writeRegion, regionItems, droppable, validateRegionFirmware, KINDS } from '../static/js/region.js';
 import { featureHelp } from '../static/js/help.js';
 
-// #345's head (override with RINGS_FIRMWARE_REF).
-const ref = process.env.RINGS_FIRMWARE_REF || '29106463e405b92a2997bc38f387d92488656153';
+// Beta 4 integration with the Rings synth merged (override with RINGS_FIRMWARE_REF).
+const ref = process.env.RINGS_FIRMWARE_REF || '7afca8c34d47aa5cbcac8bc38f04da618a85ab91';
 const show = (file) => firmwareShow(ref, file, { stdio: ['ignore', 'pipe', 'pipe'] });
 const text = (file) => show(file).toString('utf8');
 const read = (file) => readFileSync(new URL(file, import.meta.url));
