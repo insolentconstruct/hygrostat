@@ -22,7 +22,7 @@
 //
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
-import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=6a1c50a3577e20b3';
+import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=9775dd2a6485c3cc';
 
 // Six-byte entries are kept in wire order: id, state, value, page, amount, action.
 const STATES = ['Off', 'Fixed', 'Adjustable'];
@@ -154,6 +154,13 @@ export function validate(entries, profile, banks = 0) {
   }
   if (profile.feedback_slot === true && used[1].has(FEEDBACK_SLOT) && !gainMoved(entries)) {
     throw new Error('[A] + FEEDBACK has manual gain: move it or take it off the knobs first.');
+  }
+  // Synth start must leave the bank and polyphony gesture free during synth play.
+  const synth = entries.find((e) => e[0] === SYNTH);
+  if (profile.reachability_rules === true && synth &&
+      (synth[1] === 2 || (synth[1] === 1 && synth[2])) &&
+      entries.some((e) => e[0] === 9 && e[5] === 2)) {
+    throw new Error('Synth start on [A] + FREEZE prevents changing the synth bank or polyphony.');
   }
   return entries;
 }
