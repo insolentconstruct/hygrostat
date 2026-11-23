@@ -34,14 +34,14 @@ import { fileURLToPath } from 'node:url';
 import { firmwareRepo } from './firmware.js';
 import { defaults, encodeProfile, decodeSettings, crc32, equal, share, unshare, normalise, validatePlaits,
   regionSupport, knownModel, SECTION_KINDS } from '../static/js/profile.js';
-import { writeRegion, readRegion, regionStart, regionImage, checkWaves, blobInfo, blobDependencies, resolveBlobs,
-  validateRegionFirmware, APP_START, REGION_END, KINDS, STATUS, WAVE_ROWS, WAVE_ROW } from '../static/js/region.js';
+import { writeRegion, readRegion, regionStart, regionImage, checkWaves, checkTerrains, regionSynths, checkInstallable,
+  blobInfo, blobDependencies, resolveBlobs, validateRegionFirmware, APP_START, REGION_END, KINDS, STATUS, WAVE_ROWS, WAVE_ROW } from '../static/js/region.js';
 import { draftText, readDraft, DRAFT } from '../static/js/draft.js';
 import { encode } from '../static/js/encoder.js';
 import { decode } from '../static/js/decoder.js';
 
-// Beta 4 integration with the Rings synth: the stock models and Rings as blobs (override with BLOB_FIRMWARE_REF).
-const ref = process.env.BLOB_FIRMWARE_REF || '26e3f9fa0706638d2a24abc8f832567dff7fc0b3';
+// Beta 4 phase 4: Beads' wavetables in the default region (WAVE) and TERR's model flag.
+const ref = process.env.BLOB_FIRMWARE_REF || 'bc830b2cd495202dd9e61183a1413e427724a44e';
 const RELEASE = 20261121;
 const manifest = JSON.parse(readFileSync(new URL('../static/manifest.json', import.meta.url)));
 assert(manifest.releases.every((r) => r.profile.region === undefined), 'no release declares a region yet');
@@ -129,6 +129,20 @@ const refusals = [
   [{ release: RELEASE, blobs: [blobs[0].subarray(0, 252)] }, /size word/],
   [{ release: RELEASE, blobs: [makeBlob(255, { ids: 2 })] }, /no valid model/]];
 for (const [input, message] of refusals) assert.throws(() => writeRegion(input), message);
+for (const bytes of [new Uint8Array(0), new Uint8Array(17 * 4096), new Uint8Array(4097), new Int8Array(4096)]) {
+  assert.throws(() => checkTerrains(bytes), { message: 'TERR must be 1 to 16 grids of 64 x 64.' });
+}
+for (const count of [1, 16]) assert.doesNotThrow(() => checkTerrains(new Uint8Array(count * 4096)));
+const modelFlags = [[2, 2, 'ok'], [2, 3, 'ok'], [2, 4, 'header'], [2, 0x80000000, 'header'],
+  [2, 6, 'header'], [1, 1, 'ok'], [1, 2, 'header']].map(([abi, flags, status]) => {
+  const blob = makeBlob(5, { abi });
+  put32(blob, 4 * (abi === 1 ? 13 : 17), flags);
+  return { blob: seal(blob), status };
+});
+for (const { blob, status } of modelFlags) {
+  if (status === 'ok') assert.equal(writeRegion({ release: RELEASE, blobs: [blob] }).blobs.length, 1);
+  else assert.throws(() => writeRegion({ release: RELEASE, blobs: [blob] }), /refused \(header\)/);
+}
 for (const [word, value, status] of [[8, 4353, 'ram'], [4, 4, 'kind'], [4, 2, 'header'], [15, 96, 'layout'],
   [10, 0x60, 'layout']]) {
   const bad = makeBlob(5);
@@ -160,6 +174,17 @@ assert.deepEqual((await readRegion(full.region, RELEASE, full.directory)).sectio
 const ringsOnly = writeRegion({ release: RELEASE, blobs: [synth] });
 assert.deepEqual(ringsOnly.directory.map((e) => [e.kind, e.offset]), [[KINDS.RNGS, 0]]);
 assert.deepEqual([ringsOnly.blobs, writeRegion({ release: RELEASE, blobs }).synth], [[], null]);
+for (const [written, synths] of [
+  [writeRegion({ release: RELEASE, wave: waves }), { beads: true, plaits: false, rings: false }],
+  [writeRegion({ release: RELEASE, blobs }), { beads: false, plaits: true, rings: false }],
+  [ringsOnly, { beads: false, plaits: false, rings: true }],
+  [writeRegion({ release: RELEASE, blobs: [makeLibrary(1)] }), { beads: false, plaits: false, rings: false }],
+  [full, { beads: true, plaits: true, rings: true }]]) {
+  assert.deepEqual(regionSynths(written), synths);
+  if (synths.beads || synths.plaits) assert.doesNotThrow(() => checkInstallable(written));
+  else assert.throws(() => checkInstallable(written),
+    { message: "A setup needs Beads' wavetables or at least one Plaits model." });
+}
 for (const [bad, message] of [[[synth, makeSynth({ id: 2 })], /More than one synth/],
   [[synth.subarray(0, 508)], /refused \(header\)/], [[makeSynth({ id: 0 })], /refused \(header\)/],
   [[makeSynth({ ram: 262145 })], /refused \(ram\)/]]) {
@@ -342,6 +367,16 @@ try {
   const values = table.slice(0, table.indexOf('};')).match(/-?\d+/g).slice(1).map(Number);
   const factory = new Uint8Array(values.length * 2);
   values.forEach((v, i) => new DataView(factory.buffer).setInt16(2 * i, v, true));
+  const defaultWave = /\{\s*kPlaitsSectionWave, (\d+), (\d+),\s*\{([^}]*)\}/
+    .exec(sources.catalog.split('kPlaitsDefaultLayout[] = {')[1].split('};')[0]);
+  assert(defaultWave, 'the default layout includes factory WAVE');
+  const factoryWritten = writeRegion({ release: RELEASE, wave: factory });
+  const waveEntry = factoryWritten.directory.find((e) => e.kind === KINDS.WAVE);
+  const waveSection = factoryWritten.region.subarray(waveEntry.offset, waveEntry.offset + waveEntry.size);
+  assert.equal(waveSection.length, Number(defaultWave[2]), 'factory WAVE size matches the default layout');
+  assert.equal(sha256(waveSection).toString('hex'),
+    defaultWave[3].match(/0x[0-9a-f]{2}/g).map((h) => h.slice(2)).join(''),
+    'factory WAVE digest matches the default layout');
   writeFileSync(join(scratch, 'terrain.bin'), terrain);
   const files = blobs.map((b, i) => { const f = join(scratch, `blob${i}.bin`); writeFileSync(f, b); return f; });
   const chainFiles = chain.map((b, i) => { const f = join(scratch, `chain${i}.bin`); writeFileSync(f, b); return f; });
@@ -483,6 +518,7 @@ try {
     expect(['no region', 'no region', statuses.find((x) => x !== 'ok') ?? 'ok', ...statuses]);
     return s;
   };
+  for (const { blob, status } of modelFlags) pltsRecord([blob], [status]);
   const sortedChain = [lib1, lib5, lib6, m13, blobs[0], m82, m83];
   assert(equal(pltsRecord(sortedChain, Array(7).fill('ok')), writeRegion({ release: RELEASE, blobs: chain }).region),
     'the JS writer lays libraries out as the module reads them');

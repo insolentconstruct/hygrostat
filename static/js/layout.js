@@ -7,7 +7,7 @@
 // Editor rules for the layout view: where each feature sits on the module and
 // how a placement, swap or removal changes the six-byte entries. Every result
 // goes through normalise(), so the validator stays the final gate.
-import { normalise, initialEntry, pageLeds, pageSlots, amountSlots, GAIN, FEEDBACK_SLOT, SYNTH } from './profile.js?v=b636ef2d5f8af210';
+import { normalise, initialEntry, pageLeds, pageSlots, amountSlots, GAIN, FEEDBACK_SLOT, SYNTH } from './profile.js?v=5094286fb5d9b69e';
 
 export const KNOBS = ['FEEDBACK', 'DRY/WET', 'REVERB'];
 // Entry byte for each kind of destination, and how many there are; a

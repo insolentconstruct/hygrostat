@@ -3,7 +3,7 @@
 // The setup kept in this browser so a reload reopens it. No DOM; storage is passed in.
 // A draft is the share fragment plus a little context; see docs/DESIGN.md.
 
-import { defaults, encodeProfile, equal, normalise, share, templates, unshare } from './profile.js?v=b636ef2d5f8af210';
+import { defaults, encodeProfile, equal, normalise, share, templates, unshare } from './profile.js?v=5094286fb5d9b69e';
 
 export const DRAFT = 'hygrostat-draft';
 export const BEFORE_LINK = 'hygrostat-draft-before-link';
