@@ -35,10 +35,11 @@ import { firmwareRepo, firmwareShow } from './firmware.js';
 import { readCatalogue, catalogueFeatures, firmwareDefinitions, firmwareRecord, checkDefinitions,
   MANIFEST, CATALOGUE } from '../tools/catalogue.js';
 import { defaults, encodeProfile, decodeSettings, validate, equal, crc32, share, unshare, regionSupport,
-  playableSynths, installedKinds, synthValues, nextSynth, effectiveSynth, checkSynths, SYNTH,
+  playableSynths, installedKinds, synthValues, offeredValues, nextSynth, effectiveSynth, checkSynths, SYNTH,
   SECTION_NAMES } from '../static/js/profile.js';
 import { writeRegion, regionItems, droppable, validateRegionFirmware, KINDS } from '../static/js/region.js';
 import { featureHelp } from '../static/js/help.js';
+import { GROUPS } from '../static/js/layout.js';
 
 // Beta 4 integration with the Rings synth merged (override with RINGS_FIRMWARE_REF).
 const ref = process.env.RINGS_FIRMWARE_REF || '7afca8c34d47aa5cbcac8bc38f04da618a85ab91';
@@ -148,10 +149,15 @@ try {
   const dir = (...names) => names.map((name, i) => ({ kind: KINDS[name], offset: 256 * i, size: 64, crc: i }));
   assert.deepEqual(installedKinds(profile, []), ['PLTS', 'RNGS']);
   assert.deepEqual(installedKinds(profile, dir('PLTS')), ['PLTS']);
+  // The Synth lists offer what the default region plays; other lists everything; the library lists Rings polyphony.
+  assert.deepEqual(offeredValues(synthRow, profile), [0, 1, 2]);
+  const noRings = { ...profile, region: { ...profile.region, default_layout: profile.region.default_layout.slice(0, 1) } };
+  assert.deepEqual(offeredValues(synthRow, noRings), [0, 1]);
+  assert.deepEqual(offeredValues(polyphony, noRings), [0, 1, 2]);
+  assert(GROUPS.some(([, ids]) => ids.includes(42)), 'Rings polyphony is in the feature library');
   assert.equal(installedKinds(beta3.profile, []), null);
   const accepted = encodeProfile(rings, profile, null, { banks: [], directory: [] });
   encodeProfile(rings, profile);
-  const noRings = { ...profile, region: { ...profile.region, default_layout: profile.region.default_layout.slice(0, 1) } };
   for (const plaits of [null, { banks: [], directory: [] }]) {
     assert.throws(() => encodeProfile(rings, noRings, null, plaits), /Rings is not installed/);
   }

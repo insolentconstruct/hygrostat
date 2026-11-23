@@ -22,7 +22,7 @@
 //
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
-import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=c9430eaf5d79e21a';
+import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=b636ef2d5f8af210';
 
 // Six-byte entries are kept in wire order: id, state, value, page, amount, action.
 const STATES = ['Off', 'Fixed', 'Adjustable'];
@@ -176,6 +176,11 @@ export function installedKinds(profile, directory) {
 // The Synth values an install offers, in value order, as [value, name].
 export const synthValues = (feature, playable) =>
   feature.values.map((name, value) => [value, name]).filter(([value]) => playable[value] === true);
+// The values a list offers: Synth only the synths the release's default region plays, any other feature all.
+export function offeredValues(feature, profile) {
+  const kinds = feature.id === SYNTH && regionSupport(profile) && installedKinds(profile, []);
+  return kinds ? synthValues(feature, playableSynths(kinds)).map(([value]) => value) : feature.values.map((_, value) => value);
+}
 // EffectiveSynth: the selection if playable, else Beads, else Plaits, else 3 (silent); a fallback never picks Rings.
 export const effectiveSynth = (value, playable) => playable[value] ? value : playable[0] ? 0 : playable[1] ? 1 : 3;
 // NextSynth: a Synth action steps over synths the install cannot play.

@@ -7,7 +7,7 @@
 // Editor rules for the layout view: where each feature sits on the module and
 // how a placement, swap or removal changes the six-byte entries. Every result
 // goes through normalise(), so the validator stays the final gate.
-import { normalise, initialEntry, pageLeds, pageSlots, amountSlots, GAIN, FEEDBACK_SLOT, SYNTH } from './profile.js?v=c9430eaf5d79e21a';
+import { normalise, initialEntry, pageLeds, pageSlots, amountSlots, GAIN, FEEDBACK_SLOT, SYNTH } from './profile.js?v=b636ef2d5f8af210';
 
 export const KNOBS = ['FEEDBACK', 'DRY/WET', 'REVERB'];
 // Entry byte for each kind of destination, and how many there are; a
@@ -27,7 +27,7 @@ export const ACTION_DOES = { 9: 'Start the synth', 13: 'Switch monophonic grains
   2: 'Switch reverb character', 4: 'Switch processor', 6: 'Switch frozen feedback', 7: 'Switch synth',
   23: 'Switch TIME modulation' };
 export const GROUPS = [
-  ['Sound', [2, 4, 5, 6, 7, 11, 12, 24, 39, 41, 43, 44, 45, 46, 47, 48, 49, 31, 32, 33]],
+  ['Sound', [2, 4, 5, 6, 7, 42, 11, 12, 24, 39, 41, 43, 44, 45, 46, 47, 48, 49, 31, 32, 33]],
   ['Playback', [1, 3, 8, 10, 13, 14, 23, 26, 28]],
   ['Controls', [9, 16, 21, 25, 27, 29, 30, 37, 38, 40]],
   ['Indicators', [15, 17, 18, 19, 20, 22]]
