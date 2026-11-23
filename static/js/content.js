@@ -23,9 +23,10 @@
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
 // The editor's wavetables and terrains, kept in this browser for the region writer:
-// regionContent gives writeRegion's wave and terrain payloads (null: factory table, no grids).
-import { checkWaves } from './region.js?v=fca04f45c06739b3';
-import { grids, readGrids, parse, MAX_GRIDS } from './terrain.js?v=fca04f45c06739b3';
+// regionContent gives writeRegion's wave (factory bytes unless edited) and terrain (null: no grids).
+import { checkWaves } from './region.js?v=42689801d3309e72';
+import { factoryTable } from './wavetables.js?v=42689801d3309e72';
+import { grids, readGrids, parse, MAX_GRIDS } from './terrain.js?v=42689801d3309e72';
 
 export const CONTENT = 'hygrostat-content';
 const SCHEMA = 1;
@@ -72,10 +73,10 @@ export function saveContent(storage, content) {
   else storage.setItem(CONTENT, text);
 }
 
-// The payloads for writeRegion({ wave, terrain }); wave null means the factory table.
+// The payloads for writeRegion({ wave, terrain }): wave is never null (the writer reads null as no WAVE).
 export function regionContent(storage) {
   const content = readContent(storage);
-  if (content === null) return { wave: null, terrain: null };
-  if (content.error) throw new Error('The saved wavetables or terrains are damaged.', { cause: content.error });
-  return { wave: content.wave, terrain: content.terrains.length ? grids(content.terrains.map((t) => t.grid)) : null };
+  if (content?.error) throw new Error('The saved wavetables or terrains are damaged.', { cause: content.error });
+  const terrains = content?.terrains ?? [];
+  return { wave: content?.wave ?? factoryTable(), terrain: terrains.length ? grids(terrains.map((t) => t.grid)) : null };
 }

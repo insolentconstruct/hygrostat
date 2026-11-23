@@ -30,7 +30,7 @@
 // -b 12000 -c 6000 -p 256, written as its 16-bit mono .wav. Each step follows
 // the Python and numpy arithmetic, so the result is byte-identical.
 
-import { sin, cos } from './glibc_sincos.js?v=5094286fb5d9b69e';
+import { sin, cos } from './glibc_sincos.js?v=42689801d3309e72';
 
 const SAMPLE_RATE = 48000;
 const CARRIER = 6000;

@@ -204,7 +204,7 @@ const store = (items = {}) => ({ getItem: (k) => items[k] ?? null, setItem: (k, 
   removeItem: (k) => { delete items[k]; }, items });
 const empty = store();
 assert.equal(readContent(empty), null);
-assert.deepEqual(regionContent(empty), { wave: null, terrain: null });
+assert.deepEqual(regionContent(empty), { wave: factoryBytes, terrain: null }, 'factory bytes, never null');
 const edited = factory.slice();
 edited[40] = integrate(narrow);
 const custom = table(edited);
@@ -216,6 +216,10 @@ assert.deepEqual(decodeContent(saved.items[CONTENT]).terrains, terrains);
 const payloads = regionContent(saved);
 assert.deepEqual(payloads.wave, custom);
 assert.equal(payloads.terrain.length, 2 * 4096);
+const gridsOnly = store();
+saveContent(gridsOnly, { wave: null, terrains });
+assert.deepEqual(regionContent(gridsOnly).wave, factoryBytes, 'grids alone keep the factory WAVE');
+writeRegion({ release: 20261121, ...regionContent(gridsOnly) });
 saveContent(saved, { wave: null, terrains: [] });
 assert.equal(saved.items[CONTENT], undefined, 'nothing custom leaves nothing saved');
 const tamper = (edit) => {

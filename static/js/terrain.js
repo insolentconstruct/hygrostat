@@ -25,6 +25,7 @@
 //
 // Wave terrain grids (TERR) sampled as Mutable Instruments' Plaits editor does; equations
 // are parsed by a fixed grammar and evaluated as a tree, never as JavaScript.
+import { checkTerrains } from './region.js?v=42689801d3309e72';
 
 export const GRID = 64;
 export const GRID_SIZE = GRID * GRID;
@@ -204,13 +205,15 @@ export function grids(list) {
     if (!(g instanceof Int8Array) || g.length !== GRID_SIZE) throw new Error(`Terrain ${i + 1} is malformed.`);
     bytes.set(new Uint8Array(g.buffer, g.byteOffset, g.length), i * GRID_SIZE);
   }
+  checkTerrains(bytes);
   return bytes;
 }
 
 // A TERR payload back to its grids; refuses what the writer refuses.
 export function readGrids(bytes) {
-  const count = bytes instanceof Uint8Array ? bytes.length / GRID_SIZE : 0;
-  if (!Number.isInteger(count) || count < 1 || count > MAX_GRIDS) throw new Error('TERR must be 1 to 16 grids of 64 x 64.');
+  if (!(bytes instanceof Uint8Array)) throw new Error('TERR must be 1 to 16 grids of 64 x 64.');
+  checkTerrains(bytes);
+  const count = bytes.length / GRID_SIZE;
   return Array.from({ length: count }, (_, i) => Int8Array.from(bytes.subarray(i * GRID_SIZE, (i + 1) * GRID_SIZE), (v) => (v << 24) >> 24));
 }
 
