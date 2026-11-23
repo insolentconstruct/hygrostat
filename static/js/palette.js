@@ -23,11 +23,11 @@
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
 // Selection, banks and physical flash accounting; no DOM.
-import { knownModel, validatePlaits, SECTION_NAMES, SECTION_KINDS, SYNTH, sha256 } from './profile.js?v=51666b0c7cc66cf2';
-import { writeRegion, resolveBlobs, blobInfo, checkInstallable, regionStart, REGION_END, APP_START } from './region.js?v=51666b0c7cc66cf2';
-import { sampleCount } from './encoder.js?v=51666b0c7cc66cf2';
+import { knownModel, validatePlaits, SECTION_NAMES, SECTION_KINDS, SYNTH, sha256 } from './profile.js?v=6a1c50a3577e20b3';
+import { writeRegion, resolveBlobs, blobInfo, checkInstallable, regionStart, REGION_END, APP_START } from './region.js?v=6a1c50a3577e20b3';
+import { sampleCount } from './encoder.js?v=6a1c50a3577e20b3';
 
-export const stockBanks = () => Array.from({ length: 3 }, (_, b) => Array.from({ length: 8 }, (_, i) => b * 8 + i));
+export const stockBanks = () => Array.from({ length: 3 }, (_, b) => Array.from({ length: 8 }, (_, i) => [8, 16, 0][b] + i));
 
 export function validateSelection(value) {
   if (!value || typeof value.wave !== 'boolean' || typeof value.rings !== 'boolean' ||
@@ -59,7 +59,7 @@ export function removeModel(selection, id, replacement) {
 export function lockSynth(entries, selection) {
   const locked = !selection.models.length ? 0 : !selection.wave ? 1 : null;
   return entries.map((e) => e[0] === SYNTH && locked !== null ? [SYNTH, 1, locked, 0, 0, 0] :
-    e[0] === 31 && !selection.models.length ? [31, 1, 0, 0, 0, 0] : e.slice());
+    e[0] === 31 && !selection.models.length ? [31, 2, 0, 0, 0, 0] : e.slice());
 }
 export const synthLock = (selection) => !selection.models.length ? 'Synth locked to Beads: no Plaits models installed.' :
   !selection.wave ? 'Synth locked to Plaits: Beads wavetables removed.' : '';

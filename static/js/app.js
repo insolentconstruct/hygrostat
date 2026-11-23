@@ -9,25 +9,25 @@
 // in the browser, check the .wav, offer it for download.
 
 import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, GAIN,
-  pageLeds, gestureFirmware, exactPageRule, offeredValues } from './profile.js?v=51666b0c7cc66cf2';
-import { effectiveScales, validateScales } from './scales.js?v=51666b0c7cc66cf2';
-import { scaleEditor } from './scale_editor.js?v=51666b0c7cc66cf2';
-import { guide } from './guide.js?v=51666b0c7cc66cf2';
-import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=51666b0c7cc66cf2';
-import { featureHelp, actionHelp } from './help.js?v=51666b0c7cc66cf2';
+  pageLeds, gestureFirmware, exactPageRule, offeredValues } from './profile.js?v=6a1c50a3577e20b3';
+import { effectiveScales, validateScales } from './scales.js?v=6a1c50a3577e20b3';
+import { scaleEditor } from './scale_editor.js?v=6a1c50a3577e20b3';
+import { guide } from './guide.js?v=6a1c50a3577e20b3';
+import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=6a1c50a3577e20b3';
+import { featureHelp, actionHelp } from './help.js?v=6a1c50a3577e20b3';
 import { KNOBS, KINDS, GROUPS, EXTRA_GROUPS, extraGroup, extraControl, ACTION_DOES, placeName, pageOf, entryOf, occupant, places, valueLabel, stateLabel,
   summary, stateHint, edit, place, adjust, unplace, afterUnplace, canSwap, freeSlot, changes, fitsSlot, placeable, bankWarning, slotCount,
-  usedPages, compaction, compact } from './layout.js?v=51666b0c7cc66cf2';
-import { drawPanel, highlight } from './panel.js?v=51666b0c7cc66cf2';
-import { comboImages } from './combo.js?v=51666b0c7cc66cf2';
-import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=51666b0c7cc66cf2';
+  usedPages, compaction, compact } from './layout.js?v=6a1c50a3577e20b3';
+import { drawPanel, highlight } from './panel.js?v=6a1c50a3577e20b3';
+import { comboImages } from './combo.js?v=6a1c50a3577e20b3';
+import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=6a1c50a3577e20b3';
 
-import { regionSupport, SECTION_NAMES, SECTION_KINDS } from './profile.js?v=51666b0c7cc66cf2';
-import { regionImage } from './region.js?v=51666b0c7cc66cf2';
-import { readContent, encodeContent, decodeContent, regionContent, CONTENT } from './content.js?v=51666b0c7cc66cf2';
-import { grids } from './terrain.js?v=51666b0c7cc66cf2';
-import { factoryTable } from './wavetables.js?v=51666b0c7cc66cf2';
-import { stockBanks, defaultSelection, validateSelection, removeModel, lockSynth, synthLock, flashMeter, refit, selectedRegion, fetchAsset } from './palette.js?v=51666b0c7cc66cf2';
+import { regionSupport, SECTION_NAMES, SECTION_KINDS } from './profile.js?v=6a1c50a3577e20b3';
+import { regionImage } from './region.js?v=6a1c50a3577e20b3';
+import { readContent, encodeContent, decodeContent, CONTENT } from './content.js?v=6a1c50a3577e20b3';
+import { grids } from './terrain.js?v=6a1c50a3577e20b3';
+import { factoryTable } from './wavetables.js?v=6a1c50a3577e20b3';
+import { stockBanks, defaultSelection, validateSelection, removeModel, lockSynth, synthLock, flashMeter, refit, selectedRegion, fetchAsset } from './palette.js?v=6a1c50a3577e20b3';
 
 const $ = (id) => document.getElementById(id);
 const cap = (text) => text.replace(/^./, (c) => c.toUpperCase());
@@ -50,7 +50,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=51666b0c7cc66cf2', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=6a1c50a3577e20b3', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.ready) return;
       if (data.progress !== undefined) {
@@ -86,7 +86,7 @@ const cachedFetch = (url) => {
 };
 const setupData = () => palette || portableContent ? { selection: palette, content: portableContent } : null;
 const payloads = () => {
-  if (!portableContent) return storage ? regionContent(storage) : { wave: factoryTable(), terrain: null };
+  if (!portableContent) return { wave: factoryTable(), terrain: null };
   const content = decodeContent(portableContent);
   return { wave: content.wave ?? factoryTable(), terrain: content.terrains.length ? grids(content.terrains.map((t) => t.grid)) : null };
 };
@@ -1004,17 +1004,19 @@ async function refresh() {
 }
 
 // A portable setup is validated before the caller replaces the current screen.
-function readSetup(saved) {
+function readSetup(saved, imported = true) {
   let next = saved.setup?.selection ?? null;
-  const content = saved.setup?.content ?? null;
+  const stockImport = imported && regionSupport(saved.release.profile);
+  const content = saved.setup?.content ?? (stockImport ? encodeContent({}) : null);
   if (content !== null) decodeContent(content);
   if (next !== null) next = validateSelection(next);
+  else if (saved.setup && stockImport) next = defaultSelection(saved.release);
   else if (saved.plaits) {
-    const kinds = saved.plaits.directory.map((e) => SECTION_NAMES[SECTION_KINDS.indexOf(e.kind)]);
-    const banks = saved.plaits.banks.length ? saved.plaits.banks : kinds.includes('PLTS') ? stockBanks() : [];
-    next = validateSelection({ wave: kinds.includes('WAVE'), rings: kinds.includes('RNGS'), banks,
-      models: [...new Set(banks.flat())] });
-  }
+    if (saved.plaits.directory.length) throw new Error('This older profile does not identify all installed models or custom content. Reopen its original setup and save a portable profile before importing it. Your current selection is kept.');
+    const stock = defaultSelection(saved.release);
+    const banks = saved.plaits.banks.length ? saved.plaits.banks : stock.banks;
+    next = validateSelection({ ...stock, banks, models: [...new Set([...stock.models, ...banks.flat()])] });
+  } else if (stockImport) next = defaultSelection(saved.release);
   return { palette: next, portableContent: content };
 }
 
@@ -1129,7 +1131,7 @@ function renderPalette() {
   children.push(el('button', { type: 'button', text: 'Add bank', disabled: !current.models.length || current.banks.length >= 15, onclick: () =>
     changePalette({ ...current, banks: [...current.banks, Array(8).fill(current.models[0])] }) }),
   el('button', { type: 'button', text: 'Stock banks', disabled: !Array.from({ length: 24 }, (_, id) => id).every((id) => rows.some((m) => m.id === id)), onclick: () =>
-    changePalette({ ...current, models: Array.from({ length: 24 }, (_, id) => id), banks: defaultSelection(release).banks }) }));
+    changePalette({ ...current, models: [...new Set([...current.models, ...stockBanks().flat()])], banks: stockBanks() }) }));
   controls.replaceChildren(...children);
 }
 
@@ -1139,7 +1141,7 @@ function loadSharedProfile() {
     const shared = location.hash ? unshare(location.hash, manifest.releases) :
       { release: selected(), entries: defaults(selected().profile) };
     const chosen = shared.entries.map((e) => e.slice());
-    const restored = readSetup(shared);
+    const restored = readSetup(shared, Boolean(location.hash));
     $('release').value = shared.release.tag;
     entries = chosen;
     scales = shared.scales ?? null;
@@ -1180,6 +1182,14 @@ function linkOpened() {
   renderNotice();
 }
 
+// Validate portable restoration before any saved-slot swap or screen replacement.
+function readSaved(key = DRAFT) {
+  const draft = storage && readDraft(storage, manifest.releases, key);
+  if (!draft || draft.refused) return draft;
+  try { readSetup(draft); return draft; }
+  catch (error) { return { refused: true, raw: draft.raw, error }; }
+}
+
 function show(draft) {
   const restored = readSetup(draft);
   $('release').value = draft.release.tag;
@@ -1200,7 +1210,7 @@ function refuse(key, raw) {
 }
 
 function restoreDraft() {
-  const draft = storage && readDraft(storage, manifest.releases);
+  const draft = readSaved();
   if (draft?.refused) refuse(DRAFT, draft.raw);
   else if (draft) show(draft);
 }
@@ -1241,7 +1251,7 @@ function undoFresh() {
 // Opens a saved setup: the draft while a link is unedited, or the second slot, swapped
 // with the draft so neither is lost.
 function openSaved(key) {
-  const draft = storage && readDraft(storage, manifest.releases, key);
+  const draft = readSaved(key);
   if (!draft) { status('That setup is no longer saved in this browser.', 'error'); renderNotice(); return; }
   if (draft.refused) { refuse(key, draft.raw); notice.linked = false; renderNotice(); return; }
   if (key === BEFORE_LINK) {
@@ -1326,7 +1336,7 @@ async function checkCapabilities() {
   }
   // A constructor alone does not establish support for module workers.
   await new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=51666b0c7cc66cf2', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=6a1c50a3577e20b3', { type: 'module' });
     const done = (error) => {
       clearTimeout(timer); worker.terminate();
       error ? reject(error) : resolve();
@@ -1355,7 +1365,7 @@ async function init() {
   }
   $('compatibility').hidden = true;
   try {
-    const response = await fetch('manifest.json?v=51666b0c7cc66cf2', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=6a1c50a3577e20b3', { cache: 'no-cache' });
     manifest = await response.json();
   } catch {
     status('Could not load the release list.', 'error');
@@ -1397,7 +1407,7 @@ async function init() {
   $('library').addEventListener('click', (event) => { if (event.target === $('library')) $('library').close(); });
   // Check both slots first, so a later link edit never copies or replaces text this page cannot open.
   for (const key of [DRAFT, BEFORE_LINK]) {
-    const draft = storage && readDraft(storage, manifest.releases, key);
+    const draft = readSaved(key);
     if (draft?.refused) refuse(key, draft.raw);
   }
   if (location.hash) loadSharedProfile();

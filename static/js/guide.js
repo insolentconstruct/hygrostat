@@ -23,12 +23,12 @@
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
 // Knob cards port options_guide.py: 270-degree arcs and the same LED ladder.
-import { effectiveScales, PULSE_NAMES } from './scales.js?v=51666b0c7cc66cf2';
-import { synthLock } from './palette.js?v=51666b0c7cc66cf2';
-import { defaults, equal, encodeProfile, pageLeds, PAGE_LEDS, GAIN } from './profile.js?v=51666b0c7cc66cf2';
-import { pageLedName, usedPages } from './layout.js?v=51666b0c7cc66cf2';
-import { RELEASE_GUIDES } from './release_guides.js?v=51666b0c7cc66cf2';
-import { placeable, bankWarning } from './layout.js?v=51666b0c7cc66cf2';
+import { effectiveScales, PULSE_NAMES } from './scales.js?v=6a1c50a3577e20b3';
+import { synthLock } from './palette.js?v=6a1c50a3577e20b3';
+import { defaults, equal, encodeProfile, pageLeds, PAGE_LEDS, GAIN } from './profile.js?v=6a1c50a3577e20b3';
+import { pageLedName, usedPages } from './layout.js?v=6a1c50a3577e20b3';
+import { RELEASE_GUIDES } from './release_guides.js?v=6a1c50a3577e20b3';
+import { placeable, bankWarning } from './layout.js?v=6a1c50a3577e20b3';
 
 const KNOBS = ['FEEDBACK', 'DRY/WET', 'REVERB'];
 export const ACTIONS = ['None', '[A]+SEED', '[A]+FREEZE', '[A] hold'];

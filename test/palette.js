@@ -39,7 +39,8 @@ const beads = removeModel({ ...selection, wave: false, models: [0] }, 0);
 assert.equal(beads.wave, true);
 assert.deepEqual(beads.banks, []);
 const entries = defaults(release.profile);
-assert.deepEqual(lockSynth([[31, 1, 14, 0, 0, 0]], beads), [[31, 1, 0, 0, 0, 0]]);
+assert.deepEqual(lockSynth([[31, 1, 14, 0, 0, 0]], beads), [[31, 2, 0, 0, 0, 0]]);
+assert.doesNotThrow(() => encodeProfile(lockSynth(entries, beads), release.profile));
 for (const [chosen, value] of [[beads, 0], [{ ...selection, wave: false }, 1]]) {
   assert.deepEqual(lockSynth(entries, chosen).find((e) => e[0] === 7), [7, 1, value, 0, 0, 0]);
   assert.match(synthLock(chosen), /locked/);
@@ -56,7 +57,7 @@ const raw = draftText(release, block, 'Drizzlet', 42, false, setup);
 const draft = readDraft({ getItem: (key) => key === DRAFT ? raw : null }, [release]);
 assert.deepEqual(draft.setup, setup);
 assert.deepEqual(decodeSettings(block, release.profile).plaits, plaits);
-assert.deepEqual(stockBanks().flat(), Array.from({ length: 24 }, (_, i) => i));
+assert.deepEqual(stockBanks(), [[8, 9, 10, 11, 12, 13, 14, 15], [16, 17, 18, 19, 20, 21, 22, 23], [0, 1, 2, 3, 4, 5, 6, 7]]);
 assert.equal(unshare(share(release, encodeProfile(entries, release.profile)), [release]).plaits, undefined);
 const meter = flashMeter(660124, { region: new Uint8Array(100396), directory }, block);
 assert.equal(meter.free, 917504 - 663552 - 100396);
