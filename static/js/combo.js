@@ -9,7 +9,7 @@
 // stmlib's merged Intel HEX of the same bytes (objcopy's app HEX, then the
 // bootloader's, one end-of-file record).
 
-import { equal, sha256 } from './profile.js?v=b636ef2d5f8af210';
+import { equal, sha256 } from './profile.js?v=5094286fb5d9b69e';
 
 export const COMBO_ADDRESS = 0x08000000;
 export const BOOTLOADER_SIZE = 0x20000;

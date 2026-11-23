@@ -24,8 +24,8 @@
 //
 // The region after the app (firmware beads/blob/plaits_region.h): WAVE, TERR,
 // PLTS and RNGS sections, written as beads/build/tools/blob_sections.py does.
-import { crc32, sha256, SECTION_KINDS, SECTION_NAMES, MIN_SECTION_SIZE } from './profile.js?v=b636ef2d5f8af210';
-import { sampleCount } from './encoder.js?v=b636ef2d5f8af210';
+import { crc32, sha256, SECTION_KINDS, SECTION_NAMES, MIN_SECTION_SIZE } from './profile.js?v=5094286fb5d9b69e';
+import { sampleCount } from './encoder.js?v=5094286fb5d9b69e';
 
 export const APP_START = 0x08020000;
 export const REGION_END = 0x08100000;
@@ -234,6 +234,26 @@ function rings(release, blob) {
   return section('RNGS', release, 1, blob);
 }
 
+// TERR's grids: 1 to 16 of 64 x 64 bytes, as the firmware reads them.
+export function checkTerrains(bytes) {
+  const count = bytes.length / TERRAIN_SIZE;
+  if (!(bytes instanceof Uint8Array) || !Number.isInteger(count) || count < 1 || count > MAX_TERRAINS) {
+    throw new Error('TERR must be 1 to 16 grids of 64 x 64.');
+  }
+}
+
+// The synths a written region lets play: Beads' with WAVE, Plaits with a model, Rings with its blob.
+export function regionSynths(written) {
+  return { beads: written.directory.some((e) => e.kind === KINDS.WAVE),
+    plaits: written.blobs.some((b) => b.kind === 'model'), rings: written.synth !== null };
+}
+
+// At least one synth stays installed: Beads' wavetables or a Plaits model (owner, 2026-11-21).
+export function checkInstallable(written) {
+  const { beads, plaits } = regionSynths(written);
+  if (!beads && !plaits) throw new Error("A setup needs Beads' wavetables or at least one Plaits model.");
+}
+
 // The region and its profile directory; wave is 193 rows of int16 LE, terrain 1-16 64 x 64 grids;
 // blobs are Plaits models and libraries, and at most one synth blob, which goes in RNGS.
 export function writeRegion({ release, wave = null, terrain = null, blobs = [] }) {
@@ -244,11 +264,8 @@ export function writeRegion({ release, wave = null, terrain = null, blobs = [] }
     sections.push(section('WAVE', release, WAVE_ROWS, wave));
   }
   if (terrain !== null) {
-    const count = terrain.length / TERRAIN_SIZE;
-    if (!(terrain instanceof Uint8Array) || !Number.isInteger(count) || count < 1 || count > MAX_TERRAINS) {
-      throw new Error('TERR must be 1 to 16 grids of 64 x 64.');
-    }
-    sections.push(section('TERR', release, count, terrain));
+    checkTerrains(terrain);
+    sections.push(section('TERR', release, terrain.length / TERRAIN_SIZE, terrain));
   }
   if (!Array.isArray(blobs)) throw new Error('Blobs must be a list.');
   const synths = blobs.filter(isSynth);
@@ -302,7 +319,7 @@ function readHeader(blob, abi) {
   if (abi === 1) {
     return { header: word(1), services: word(3), kind: MODEL, first: word(4), ids: 1, size: word(5), state: word(6),
       arena: word(7), init: word(8), reset: word(9), render: word(10), got: word(11), gotSize: word(12),
-      dependencies: 0, dependencyCount: 0, zero: 0, reserved: 0 };
+      dependencies: 0, dependencyCount: 0, flags: word(13), zero: 0, reserved: 0 };
   }
   return blob.length < 96 ? null : { header: word(1), services: word(3), kind: word(4), first: word(5), ids: word(6),
     size: word(7), state: word(8), arena: word(9), init: word(10), reset: word(11), render: word(12), got: word(13),
@@ -327,6 +344,8 @@ function checkBlob(blob) {
   // A synth: one nonzero ID, both sizes, no arena, flags or libraries.
   if (synth && (h.ids !== 1 || !h.first || h.arena || h.flags || !h.controls || !h.block ||
       h.dependencies || h.dependencyCount)) return 'header';
+  // A model knows only these flags; TERR requires version 2.
+  if (h.kind === MODEL && (h.flags & ~(abi === 1 ? 1 : 3))) return 'header';
   // A library has one nonzero ID, and no flags or gains.
   if (!h.ids || h.first >= 256 || h.ids > 256 - h.first || (library && (h.ids !== 1 || !h.first || h.zero)) ||
       h.reserved) return 'header';
