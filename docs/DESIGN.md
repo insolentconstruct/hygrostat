@@ -164,3 +164,23 @@ region and original profile bytes to retain release WAV identity.
 The content editor opens in another tab. A portable setup passes its content
 in the URL fragment, so opening it does not replace the browser's saved content.
 Edits save to local storage and update the open app's setup and draft.
+
+
+## Importing a Beta 4 region catalogue
+
+Run the firmware's `beads/build/tools/build_region.sh` in its build image.
+Pass the output directory containing `blob/` and `region.bin` to Hygrostat's
+importer:
+
+```sh
+node tools/import-catalogue.js firmware <firmware-ref> <region-output> static/images
+node test/beta4_catalogue.js
+```
+
+The importer uses `tools/catalogue.js` to check the firmware feature manifest,
+definitions and record layout, and checks the region and all blob digests
+against the same firmware revision, including the compiled default layout.
+It writes the original catalogue and a
+release index under `static/images/beta4-catalogue/`. The index supplies the
+profile fields and pinned content for the future release entry. The live
+release list is updated when matching firmware is ready to publish.

@@ -1,0 +1,2996 @@
+{
+  "copyright": "Copyright 2026 Insolent Construct. MIT licence: see js/encoder.js.",
+  "source_commit": "5b2ba5973ffe0151b062fd492698e985abc84de8",
+  "catalogue": {
+    "url": "images/beta4-catalogue/profile-features.json",
+    "sha256": "3e2e602ce40910e89806168e57e34d39c21d08e57b0bdd9653485548d357e44f"
+  },
+  "profile": {
+    "offset": 1024,
+    "size": 4096,
+    "version": 2,
+    "format": 1,
+    "page_leds": [
+      1,
+      2,
+      4,
+      3,
+      5,
+      6,
+      7
+    ],
+    "hold_rules": true,
+    "feedback_slot": true,
+    "reachability_rules": true,
+    "features": [
+      {
+        "id": 1,
+        "name": "Pitch scale",
+        "values": [
+          "Off",
+          "Chromatic",
+          "Fifths",
+          "Major",
+          "Minor",
+          "Pentatonic major",
+          "Pentatonic minor",
+          "Pelog",
+          "Raag Bhairav",
+          "Raag Shri",
+          "User scale 10",
+          "User scale 11",
+          "User scale 12",
+          "User scale 13",
+          "User scale 14",
+          "User scale 15"
+        ],
+        "page": true,
+        "amount": false,
+        "action": false,
+        "stateless": false,
+        "synth_path": true,
+        "cpu": null,
+        "default": [
+          1,
+          2,
+          0,
+          1,
+          0,
+          0
+        ],
+        "default_in_block": true,
+        "states": [
+          "Off",
+          "Fixed",
+          "Adjustable"
+        ],
+        "saved": 8
+      },
+      {
+        "id": 2,
+        "name": "Reverb character",
+        "values": [
+          "Stock",
+          "Clouds-style"
+        ],
+        "page": true,
+        "amount": false,
+        "action": true,
+        "stateless": false,
+        "synth_path": true,
+        "cpu": null,
+        "default": [
+          2,
+          2,
+          0,
+          6,
+          0,
+          0
+        ],
+        "default_in_block": true,
+        "states": [
+          "Off",
+          "Fixed",
+          "Adjustable"
+        ],
+        "saved": 9
+      },
+      {
+        "id": 3,
+        "name": "Delay mode",
+        "values": [
+          "Auto (Stock)",
+          "Disabled",
+          "Wide/smooth filter"
+        ],
+        "page": true,
+        "amount": false,
+        "action": false,
+        "stateless": false,
+        "synth_path": false,
+        "cpu": null,
+        "default": [
+          3,
+          2,
+          0,
+          5,
+          0,
+          0
+        ],
+        "default_in_block": true,
+        "states": [
+          "Off",
+          "Fixed",
+          "Adjustable"
+        ],
+        "saved": 10
+      },
+      {
+        "id": 4,
+        "name": "Processor",
+        "values": [
+          "Granular (Stock)",
+          "Spectral"
+        ],
+        "page": true,
+        "amount": false,
+        "action": true,
+        "stateless": false,
+        "synth_path": true,
+        "cpu": null,
+        "default": [
+          4,
+          2,
+          0,
+          7,
+          0,
+          0
+        ],
+        "default_in_block": true,
+        "states": [
+          "Off",
+          "Fixed",
+          "Adjustable"
+        ],
+        "saved": 11
+      },
+      {
+        "id": 5,
+        "name": "Limiter",
+        "values": [
+          "Stock",
+          "Fast release",
+          "Off"
+        ],
+        "page": true,
+        "amount": false,
+        "action": false,
+        "stateless": false,
+        "synth_path": true,
+        "cpu": null,
+        "default": [
+          5,
+          2,
+          0,
+          12,
+          0,
+          0
+        ],
+        "default_in_block": true,
+        "states": [
+          "Off",
+          "Fixed",
+          "Adjustable"
+        ],
+        "saved": 12
+      },
+      {
+        "id": 6,
+        "name": "Frozen feedback",
+        "values": [
+          "Stock",
+          "Evolving"
+        ],
+        "page": true,
+        "amount": false,
+        "action": true,
+        "stateless": false,
+        "synth_path": false,
+        "cpu": null,
+        "default": [
+          6,
+          2,
+          0,
+          4,
+          0,
+          0
+        ],
+        "default_in_block": true,
+        "states": [
+          "Off",
+          "Fixed",
+          "Adjustable"
+        ],
+        "saved": 13
+      },
+      {
+        "id": 7,
+        "name": "Synth",
+        "values": [
+          "Beads (Stock)",
+          "Plaits",
+          "Rings"
+        ],
+        "page": true,
+        "amount": false,
+        "action": true,
+        "stateless": false,
+        "synth_path": true,
+        "cpu": null,
+        "default": [
+          7,
+          2,
+          0,
+          8,
+          0,
+          0
+        ],
+        "default_in_block": true,
+        "states": [
+          "Off",
+          "Fixed",
+          "Adjustable"
+        ],
+        "saved": 14
+      },
+      {
+        "id": 8,
+        "name": "Attacks",
+        "values": [
+          "Off",
+          "Snap",
+          "Snap and trigger"
+        ],
+        "page": true,
+        "amount": false,
+        "action": false,
+        "stateless": false,
+        "synth_path": true,
+        "cpu": null,
+        "default": [
+          8,
+          2,
+          0,
+          3,
+          0,
+          0
+        ],
+        "default_in_block": true,
+        "states": [
+          "Off",
+          "Fixed",
+          "Adjustable"
+        ],
+        "saved": 15
+      },
+      {
+        "id": 9,
+        "name": "Synth start",
+        "values": [
+          "Automatic (Stock)",
+          "Manual"
+        ],
+        "page": true,
+        "amount": false,
+        "action": true,
+        "stateless": true,
+        "synth_path": false,
+        "cpu": null,
+        "default": [
+          9,
+          2,
+          0,
+          9,
+          0,
+          3
+        ],
+        "default_in_block": true,
+        "states": [
+          "Off",
+          "Fixed",
+          "Adjustable"
+        ],
+        "saved": 16
+      },
+      {
+        "id": 10,
+        "name": "Random pitch steps",
+        "values": [
+          "Free (Stock)",
+          "Fifths and octaves",
+          "Recent notes"
+        ],
+        "page": true,
+        "amount": false,
+        "action": false,
+        "stateless": false,
+        "synth_path": true,
+        "cpu": null,
+        "default": [
+          10,
+          2,
+          0,
+          2,
+          0,
+          0
+        ],
+        "default_in_block": true,
+        "states": [
+          "Off",
+          "Fixed",
+          "Adjustable"
+        ],
+        "saved": 17
+      },
+      {
+        "id": 11,
+        "name": "Stereo width",
+        "values": null,
+        "page": false,
+        "amount": true,
+        "action": false,
+        "stateless": false,
+        "synth_path": true,
+        "cpu": null,
+        "default": [
+          11,
+          2,
+          0,
+          0,
+          1,
+          0
+        ],
+        "default_in_block": true,
+        "states": [
+          "Off",
+          "Fixed",
+          "Adjustable"
+        ],
+        "saved": 18
+      },
+      {
+        "id": 12,
+        "name": "Diffusion",
+        "values": null,
+        "page": false,
+        "amount": true,
+        "action": false,
+        "stateless": false,
+        "synth_path": true,
+        "cpu": null,
+        "default": [
+          12,
+          2,
+          0,
+          0,
+          2,
+          0
+        ],
+        "default_in_block": true,
+        "states": [
+          "Off",
+          "Fixed",
+          "Adjustable"
+        ],
+        "saved": 19
+      },
+      {
+        "id": 13,
+        "name": "Monophonic grains",
+        "values": [
+          "Off",
+          "On"
+        ],
+        "page": false,
+        "amount": false,
+        "action": true,
+        "stateless": false,
+        "synth_path": false,
+        "cpu": null,
+        "default": [
+          13,
+          2,
+          0,
+          0,
+          0,
+          1
+        ],
+        "default_in_block": true,
+        "states": [
+          "Off",
+          "Fixed",
+          "Adjustable"
+        ],
+        "saved": null
+      },
+      {
+        "id": 14,
+        "name": "Buffer trim",
+        "values": [
+          "Off",
+          "On"
+        ],
+        "page": false,
+        "amount": false,
+        "action": true,
+        "stateless": true,
+        "synth_path": false,
+        "cpu": null,
+        "default": [
+          14,
+          1,
+          1,
+          0,
+          0,
+          2
+        ],
+        "default_in_block": true,
+        "states": [
+          "Off",
+          "Fixed",
+          "Adjustable"
+        ],
+        "saved": null
+      },
+      {
+        "id": 15,
+        "name": "Version at boot",
+        "values": [
+          "Off",
+          "On"
+        ],
+        "page": false,
+        "amount": false,
+        "action": false,
+        "stateless": false,
+        "synth_path": false,
+        "cpu": null,
+        "default": [
+          15,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "default_in_block": false,
+        "states": [
+          "Off",
+          "Fixed"
+        ],
+        "saved": null
+      },
+      {
+        "id": 16,
+        "name": "Input attenuation",
+        "values": [
+          "Off",
+          "On"
+        ],
+        "page": false,
+        "amount": false,
+        "action": false,
+        "stateless": false,
+        "synth_path": true,
+        "cpu": null,
+        "default": [
+          16,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "default_in_block": false,
+        "states": [
+          "Off",
+          "Fixed"
+        ],
+        "saved": null
+      },
+      {
+        "id": 17,
+        "name": "Delay indication",
+        "values": [
+          "Off",
+          "On"
+        ],
+        "page": false,
+        "amount": false,
+        "action": false,
+        "stateless": false,
+        "synth_path": false,
+        "cpu": null,
+        "default": [
+          17,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "default_in_block": false,
+        "states": [
+          "Off",
+          "Fixed"
+        ],
+        "saved": null
+      },
+      {
+        "id": 18,
+        "name": "LED brightness",
+        "values": [
+          "100%",
+          "66%",
+          "33%"
+        ],
+        "page": true,
+        "amount": false,
+        "action": false,
+        "stateless": false,
+        "synth_path": false,
+        "cpu": null,
+        "default": [
+          18,
+          2,
+          0,
+          10,
+          0,
+          0
+        ],
+        "default_in_block": true,
+        "states": [
+          "Off",
+          "Fixed",
+          "Adjustable"
+        ],
+        "saved": 20
+      },
+      {
+        "id": 19,
+        "name": "Live assignment LEDs",
+        "values": [
+          "Off",
+          "On"
+        ],
+        "page": false,
+        "amount": false,
+        "action": false,
+        "stateless": false,
+        "synth_path": false,
+        "cpu": null,
+        "default": [
+          19,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "default_in_block": false,
+        "states": [
+          "Off",
+          "Fixed"
+        ],
+        "saved": null
+      },
+      {
+        "id": 20,
+        "name": "FREEZE during saves",
+        "values": [
+          "Off",
+          "On"
+        ],
+        "page": false,
+        "amount": false,
+        "action": false,
+        "stateless": false,
+        "synth_path": false,
+        "cpu": null,
+        "default": [
+          20,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "default_in_block": false,
+        "states": [
+          "Off",
+          "Fixed"
+        ],
+        "saved": null
+      },
+      {
+        "id": 21,
+        "name": "SEED latch",
+        "values": [
+          "Off",
+          "Ignore",
+          "Sync",
+          "Add"
+        ],
+        "page": true,
+        "amount": false,
+        "action": false,
+        "stateless": false,
+        "synth_path": true,
+        "cpu": null,
+        "default": [
+          21,
+          2,
+          0,
+          11,
+          0,
+          0
+        ],
+        "default_in_block": true,
+        "states": [
+          "Off",
+          "Fixed",
+          "Adjustable"
+        ],
+        "saved": 21
+      },
+      {
+        "id": 22,
+        "name": "Pitch notch indication",
+        "values": [
+          "Off",
+          "On"
+        ],
+        "page": false,
+        "amount": false,
+        "action": false,
+        "stateless": false,
+        "synth_path": false,
+        "cpu": null,
+        "default": [
+          22,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "default_in_block": false,
+        "states": [
+          "Off",
+          "Fixed"
+        ],
+        "saved": null
+      },
+      {
+        "id": 23,
+        "name": "TIME modulation",
+        "values": [
+          "Random",
+          "Scan"
+        ],
+        "page": true,
+        "amount": false,
+        "action": true,
+        "stateless": false,
+        "synth_path": false,
+        "cpu": null,
+        "default": [
+          23,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "default_in_block": false,
+        "states": [
+          "Off",
+          "Fixed",
+          "Adjustable"
+        ],
+        "saved": 22
+      },
+      {
+        "id": 24,
+        "name": "Synth reverb tail",
+        "values": [
+          "Keep (stock)",
+          "Clear"
+        ],
+        "page": false,
+        "amount": false,
+        "action": false,
+        "stateless": false,
+        "synth_path": true,
+        "cpu": null,
+        "default": [
+          24,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "default_in_block": false,
+        "states": [
+          "Off",
+          "Fixed"
+        ],
+        "saved": null
+      },
+      {
+        "id": 25,
+        "name": "Options page idle timeout",
+        "values": [
+          "Off (stay open)",
+          "5 s",
+          "10 s",
+          "20 s",
+          "30 s"
+        ],
+        "page": false,
+        "amount": false,
+        "action": false,
+        "stateless": false,
+        "synth_path": false,
+        "cpu": null,
+        "default": [
+          25,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "default_in_block": false,
+        "states": [
+          "Off",
+          "Fixed"
+        ],
+        "saved": null
+      },
+      {
+        "id": 26,
+        "name": "Delay SEED latch fade",
+        "values": [
+          "Switch at once (stock)",
+          "Fade"
+        ],
+        "page": false,
+        "amount": false,
+        "action": false,
+        "stateless": false,
+        "synth_path": false,
+        "cpu": null,
+        "default": [
+          26,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "default_in_block": false,
+        "states": [
+          "Off",
+          "Fixed"
+        ],
+        "saved": null
+      },
+      {
+        "id": 27,
+        "name": "Input gain at power-on",
+        "values": [
+          "Automatic (stock)",
+          "Manual"
+        ],
+        "page": false,
+        "amount": false,
+        "action": false,
+        "stateless": false,
+        "synth_path": true,
+        "cpu": null,
+        "default": [
+          27,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "default_in_block": false,
+        "states": [
+          "Off",
+          "Fixed"
+        ],
+        "saved": null
+      },
+      {
+        "id": 28,
+        "name": "Attack sensitivity",
+        "values": [
+          "Normal (default)",
+          "Low",
+          "High"
+        ],
+        "page": false,
+        "amount": false,
+        "action": false,
+        "stateless": false,
+        "synth_path": true,
+        "cpu": null,
+        "default": [
+          28,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "default_in_block": false,
+        "states": [
+          "Off",
+          "Fixed"
+        ],
+        "saved": null
+      },
+      {
+        "id": 29,
+        "name": "SEED at power-on",
+        "values": [
+          "Latched (stock)",
+          "Unlatched"
+        ],
+        "page": false,
+        "amount": false,
+        "action": false,
+        "stateless": false,
+        "synth_path": true,
+        "cpu": null,
+        "default": [
+          29,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "default_in_block": false,
+        "states": [
+          "Off",
+          "Fixed"
+        ],
+        "saved": null
+      },
+      {
+        "id": 30,
+        "name": "PITCH knob",
+        "values": [
+          "Notches (stock)",
+          "Smooth"
+        ],
+        "page": false,
+        "amount": false,
+        "action": false,
+        "stateless": false,
+        "synth_path": true,
+        "cpu": null,
+        "default": [
+          30,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "default_in_block": false,
+        "states": [
+          "Off",
+          "Fixed"
+        ],
+        "saved": null
+      },
+      {
+        "id": 31,
+        "name": "Plaits bank",
+        "values": [
+          "Green",
+          "Red",
+          "Yellow"
+        ],
+        "page": false,
+        "amount": false,
+        "action": false,
+        "stateless": false,
+        "synth_path": true,
+        "cpu": null,
+        "default": [
+          31,
+          2,
+          0,
+          0,
+          0,
+          0
+        ],
+        "default_in_block": true,
+        "states": [
+          "Adjustable"
+        ],
+        "saved": 23
+      },
+      {
+        "id": 32,
+        "name": "Mix law",
+        "values": [
+          "Stock",
+          "Gentle",
+          "Send"
+        ],
+        "page": false,
+        "amount": false,
+        "action": false,
+        "stateless": false,
+        "synth_path": false,
+        "cpu": null,
+        "default": [
+          32,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "default_in_block": false,
+        "states": [
+          "Off",
+          "Fixed"
+        ],
+        "saved": null
+      },
+      {
+        "id": 33,
+        "name": "Reverb input",
+        "values": [
+          "Mix (stock)",
+          "Grains"
+        ],
+        "page": false,
+        "amount": false,
+        "action": false,
+        "stateless": false,
+        "synth_path": false,
+        "cpu": null,
+        "default": [
+          33,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "default_in_block": false,
+        "states": [
+          "Off",
+          "Fixed"
+        ],
+        "saved": null
+      },
+      {
+        "id": 34,
+        "name": "Grain stealing",
+        "values": [
+          "2021/2024 (default)",
+          "2026"
+        ],
+        "page": false,
+        "amount": false,
+        "action": false,
+        "stateless": false,
+        "synth_path": true,
+        "cpu": null,
+        "default": [
+          34,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "default_in_block": false,
+        "states": [
+          "Off",
+          "Fixed"
+        ],
+        "saved": null
+      },
+      {
+        "id": 35,
+        "name": "Delay feedback",
+        "values": [
+          "Stock",
+          "Unity notch"
+        ],
+        "page": false,
+        "amount": false,
+        "action": false,
+        "stateless": false,
+        "synth_path": false,
+        "cpu": null,
+        "default": [
+          35,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "default_in_block": false,
+        "states": [
+          "Off",
+          "Fixed"
+        ],
+        "saved": null
+      },
+      {
+        "id": 36,
+        "name": "Delay time",
+        "values": [
+          "Glide (stock)",
+          "Crossfade"
+        ],
+        "page": false,
+        "amount": false,
+        "action": false,
+        "stateless": false,
+        "synth_path": false,
+        "cpu": null,
+        "default": [
+          36,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "default_in_block": false,
+        "states": [
+          "Off",
+          "Fixed"
+        ],
+        "saved": null
+      },
+      {
+        "id": 37,
+        "name": "Options page preview",
+        "values": [
+          "Each knob in turn",
+          "First setting only"
+        ],
+        "page": false,
+        "amount": false,
+        "action": false,
+        "stateless": false,
+        "synth_path": false,
+        "cpu": null,
+        "default": [
+          37,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "default_in_block": false,
+        "states": [
+          "Off",
+          "Fixed"
+        ],
+        "saved": null
+      },
+      {
+        "id": 38,
+        "name": "Options page on opening",
+        "values": [
+          "Last used",
+          "First page"
+        ],
+        "page": false,
+        "amount": false,
+        "action": false,
+        "stateless": false,
+        "synth_path": false,
+        "cpu": null,
+        "default": [
+          38,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "default_in_block": false,
+        "states": [
+          "Off",
+          "Fixed"
+        ],
+        "saved": null
+      },
+      {
+        "id": 39,
+        "name": "Start in quality",
+        "values": [
+          "Keep current",
+          "Bright digital",
+          "Cold digital",
+          "Sunny tape",
+          "Scorched cassette"
+        ],
+        "page": false,
+        "amount": false,
+        "action": false,
+        "stateless": false,
+        "synth_path": false,
+        "cpu": null,
+        "default": [
+          39,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "default_in_block": false,
+        "states": [
+          "Off",
+          "Fixed"
+        ],
+        "saved": null
+      },
+      {
+        "id": 40,
+        "name": "Manual gain knob",
+        "values": [
+          "Not on a knob"
+        ],
+        "page": false,
+        "amount": true,
+        "action": false,
+        "stateless": false,
+        "synth_path": false,
+        "cpu": null,
+        "default": [
+          40,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "default_in_block": false,
+        "states": [
+          "Off",
+          "Fixed",
+          "Adjustable"
+        ],
+        "saved": null
+      },
+      {
+        "id": 41,
+        "name": "Resonator",
+        "values": [
+          "Off (stock)",
+          "After the grains",
+          "Before the buffer",
+          "In the feedback"
+        ],
+        "page": true,
+        "amount": false,
+        "action": false,
+        "stateless": false,
+        "synth_path": false,
+        "cpu": null,
+        "default": [
+          41,
+          2,
+          0,
+          13,
+          0,
+          0
+        ],
+        "default_in_block": true,
+        "states": [
+          "Off",
+          "Fixed",
+          "Adjustable"
+        ],
+        "saved": 24
+      },
+      {
+        "id": 42,
+        "name": "Rings polyphony",
+        "values": [
+          "1",
+          "2",
+          "4"
+        ],
+        "page": false,
+        "amount": false,
+        "action": false,
+        "stateless": false,
+        "synth_path": true,
+        "cpu": null,
+        "default": [
+          42,
+          2,
+          0,
+          0,
+          0,
+          0
+        ],
+        "default_in_block": true,
+        "states": [
+          "Adjustable"
+        ],
+        "saved": 27
+      },
+      {
+        "id": 43,
+        "name": "Resonator material",
+        "values": [
+          "Wood",
+          "String",
+          "Glass",
+          "Bell",
+          "Marimba",
+          "Drum",
+          "Bowl",
+          "Gong"
+        ],
+        "page": true,
+        "amount": false,
+        "action": false,
+        "stateless": false,
+        "synth_path": false,
+        "cpu": null,
+        "default": [
+          43,
+          2,
+          1,
+          14,
+          0,
+          0
+        ],
+        "default_in_block": true,
+        "states": [
+          "Off",
+          "Fixed",
+          "Adjustable"
+        ],
+        "saved": 25
+      },
+      {
+        "id": 44,
+        "name": "Resonator ring time",
+        "values": [
+          "Short",
+          "Medium",
+          "Long",
+          "Very long"
+        ],
+        "page": true,
+        "amount": false,
+        "action": false,
+        "stateless": false,
+        "synth_path": false,
+        "cpu": null,
+        "default": [
+          44,
+          2,
+          1,
+          15,
+          0,
+          0
+        ],
+        "default_in_block": true,
+        "states": [
+          "Off",
+          "Fixed",
+          "Adjustable"
+        ],
+        "saved": 26
+      },
+      {
+        "id": 45,
+        "name": "Resonator structure",
+        "values": null,
+        "page": false,
+        "amount": false,
+        "action": false,
+        "stateless": false,
+        "synth_path": false,
+        "cpu": null,
+        "default": [
+          45,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "default_in_block": false,
+        "states": [
+          "Off",
+          "Fixed"
+        ],
+        "saved": null
+      },
+      {
+        "id": 46,
+        "name": "Resonator brightness",
+        "values": null,
+        "page": false,
+        "amount": false,
+        "action": false,
+        "stateless": false,
+        "synth_path": false,
+        "cpu": null,
+        "default": [
+          46,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "default_in_block": false,
+        "states": [
+          "Off",
+          "Fixed"
+        ],
+        "saved": null
+      },
+      {
+        "id": 47,
+        "name": "Resonator damping",
+        "values": null,
+        "page": false,
+        "amount": false,
+        "action": false,
+        "stateless": false,
+        "synth_path": false,
+        "cpu": null,
+        "default": [
+          47,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "default_in_block": false,
+        "states": [
+          "Off",
+          "Fixed"
+        ],
+        "saved": null
+      },
+      {
+        "id": 48,
+        "name": "Resonator position",
+        "values": null,
+        "page": false,
+        "amount": false,
+        "action": false,
+        "stateless": false,
+        "synth_path": false,
+        "cpu": null,
+        "default": [
+          48,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "default_in_block": false,
+        "states": [
+          "Off",
+          "Fixed"
+        ],
+        "saved": null
+      },
+      {
+        "id": 49,
+        "name": "Resonator amount",
+        "values": null,
+        "page": false,
+        "amount": false,
+        "action": false,
+        "stateless": false,
+        "synth_path": false,
+        "cpu": null,
+        "default": [
+          49,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "default_in_block": false,
+        "states": [
+          "Off",
+          "Fixed"
+        ],
+        "saved": null
+      },
+      {
+        "id": 50,
+        "name": "Synth output level",
+        "values": [
+          "Stock",
+          "Half",
+          "Quarter",
+          "Eighth"
+        ],
+        "page": false,
+        "amount": false,
+        "action": false,
+        "stateless": false,
+        "synth_path": true,
+        "cpu": null,
+        "default": [
+          50,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "default_in_block": false,
+        "states": [
+          "Off",
+          "Fixed"
+        ],
+        "saved": null
+      },
+      {
+        "id": 51,
+        "name": "Grain output division",
+        "values": [
+          "Stock",
+          "/2",
+          "/4",
+          "/8",
+          "/16"
+        ],
+        "page": false,
+        "amount": false,
+        "action": false,
+        "stateless": false,
+        "synth_path": false,
+        "cpu": null,
+        "default": [
+          51,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "default_in_block": false,
+        "states": [
+          "Off",
+          "Fixed"
+        ],
+        "saved": null
+      },
+      {
+        "id": 52,
+        "name": "Gain ceiling",
+        "values": [
+          "Stock (+32 dB)",
+          "+24 dB",
+          "+18 dB",
+          "+12 dB"
+        ],
+        "page": true,
+        "amount": false,
+        "action": false,
+        "stateless": false,
+        "synth_path": false,
+        "cpu": null,
+        "default": [
+          52,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "default_in_block": false,
+        "states": [
+          "Off",
+          "Fixed",
+          "Adjustable"
+        ],
+        "saved": 28
+      }
+    ],
+    "region": {
+      "profile_version": 3,
+      "release": 20261121,
+      "services_version": 2,
+      "default_layout": [
+        {
+          "kind": "WAVE",
+          "offset": 0,
+          "size": 100396,
+          "sha256": "bfa430951f1bc077c2a74f38cad6162e5c1d9fa7912b3bc95aa09a466994065d"
+        },
+        {
+          "kind": "PLTS",
+          "offset": 100416,
+          "size": 188560,
+          "sha256": "81991a2a40dc1a09e5d6e1040e272e41034ccaed8f5aa21b91d195eda8548bef"
+        },
+        {
+          "kind": "RNGS",
+          "offset": 288992,
+          "size": 66456,
+          "sha256": "9eae706fa29d4e9f5e4d37f7397ad49759932fa29693ca48f1b247411aa9b223"
+        }
+      ]
+    }
+  },
+  "content": {
+    "models": [
+      {
+        "id": 0,
+        "name": "VA + VCF",
+        "palette": "virtual-analog-vcf",
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/virtual_analog_vcf.bin",
+        "sha256": "6f88334ea2cb19d491beb08d6644de341c6ae646421ea516e9033f047846f01e",
+        "bytes": 3032
+      },
+      {
+        "id": 1,
+        "name": "Phase Distortion",
+        "palette": "phase-distortion",
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/phase_distortion.bin",
+        "sha256": "1dbc5753100cb95ef916049ad1c298d0c87b25b2e4583d3eeda4c44f3ad3d1b1",
+        "bytes": 1820
+      },
+      {
+        "id": 2,
+        "name": "6-Op FM Bank A",
+        "palette": "dx7-bank-a",
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [
+          4
+        ],
+        "url": "images/beta4-catalogue/blob/six_op_fm.bin",
+        "sha256": "16e2f3237f58380b0b93d751e7b276898e454f8107adb7bdf7b561b9257a9563",
+        "bytes": 16516
+      },
+      {
+        "id": 3,
+        "name": "6-Op FM Bank B",
+        "palette": "dx7-bank-b",
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [
+          4
+        ],
+        "url": "images/beta4-catalogue/blob/six_op_fm.bin",
+        "sha256": "16e2f3237f58380b0b93d751e7b276898e454f8107adb7bdf7b561b9257a9563",
+        "bytes": 16516
+      },
+      {
+        "id": 4,
+        "name": "6-Op FM Bank C",
+        "palette": "dx7-bank-c",
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [
+          4
+        ],
+        "url": "images/beta4-catalogue/blob/six_op_fm.bin",
+        "sha256": "16e2f3237f58380b0b93d751e7b276898e454f8107adb7bdf7b561b9257a9563",
+        "bytes": 16516
+      },
+      {
+        "id": 5,
+        "name": "Wave Terrain",
+        "palette": "wave-terrain",
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [
+          1
+        ],
+        "url": "images/beta4-catalogue/blob/wave_terrain.bin",
+        "sha256": "a51be417e48ddc69cd428f6035ed01a81b55aa25b246d0729af87d351b415301",
+        "bytes": 2836
+      },
+      {
+        "id": 6,
+        "name": "String Machine",
+        "palette": "string-machine",
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [
+          2
+        ],
+        "url": "images/beta4-catalogue/blob/string_machine.bin",
+        "sha256": "cb29de723d6f8854302cadd3c0ba119a4e8f8ce4056ba8f43b3b4cf719e16d6c",
+        "bytes": 4404
+      },
+      {
+        "id": 7,
+        "name": "Chiptune",
+        "palette": "chiptune",
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [
+          2
+        ],
+        "url": "images/beta4-catalogue/blob/chiptune.bin",
+        "sha256": "03daa8a10f7a808972ba3879ca2205f237af8a58753e887cf4156648b30aa3b8",
+        "bytes": 5680
+      },
+      {
+        "id": 8,
+        "name": "Virtual Analog",
+        "palette": "virtual-analog",
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/virtual_analog.bin",
+        "sha256": "b15dae8b82502d8ca1dd18b242774390a6fd1fa22ddbdd47dbe63089b3363348",
+        "bytes": 3272
+      },
+      {
+        "id": 9,
+        "name": "Waveshaping",
+        "palette": "waveshaping",
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/waveshaping.bin",
+        "sha256": "6dc6faaa2070d2e5e24cd56da9f465d03738dcb0f568bc0c804066525ef530e6",
+        "bytes": 2132
+      },
+      {
+        "id": 10,
+        "name": "Two-op FM",
+        "palette": "two-op-fm",
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/two_op_fm.bin",
+        "sha256": "2c3cc8163c5ef9f5e4a7804bcbc22e818ae535dd1b8938f1c73b4e4a158b8982",
+        "bytes": 2148
+      },
+      {
+        "id": 11,
+        "name": "Granular Formant",
+        "palette": "granular-formant",
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/granular_formant.bin",
+        "sha256": "025616b5d6fdfe75a5fa86b66a1d901edd115bf8cec55e016e25e1dd02db6742",
+        "bytes": 2892
+      },
+      {
+        "id": 12,
+        "name": "Harmonic Oscillator",
+        "palette": "harmonic",
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/harmonic.bin",
+        "sha256": "ab15d86439f7ac0e25a38610f298e73f5ca1b9f16f632112166e4fbdee2ea9a9",
+        "bytes": 4252
+      },
+      {
+        "id": 13,
+        "name": "Wavetable",
+        "palette": "wavetable",
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [
+          1
+        ],
+        "url": "images/beta4-catalogue/blob/wavetable.bin",
+        "sha256": "d7fb5e486664ea90c9d0f8de5095c0eff9cb5268b0d050bd259ceb051ad84023",
+        "bytes": 2596
+      },
+      {
+        "id": 14,
+        "name": "Chords",
+        "palette": "chords",
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [
+          1,
+          2
+        ],
+        "url": "images/beta4-catalogue/blob/chords.bin",
+        "sha256": "0f9505a5927a485f65133c043781172e3c029622b642170e5fe46a006fcc08ca",
+        "bytes": 4140
+      },
+      {
+        "id": 15,
+        "name": "Speech",
+        "palette": "speech",
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [
+          3
+        ],
+        "url": "images/beta4-catalogue/blob/speech.bin",
+        "sha256": "91670c7a22d5b0218b28cf80efd71be9d889feb8fca015eff884a8e69fd283b8",
+        "bytes": 1468
+      },
+      {
+        "id": 16,
+        "name": "Swarm",
+        "palette": "swarm",
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/swarm.bin",
+        "sha256": "3d9291594fe9f23023325e78bd9636d2c14f91a18032d9498ecd54935896605f",
+        "bytes": 3080
+      },
+      {
+        "id": 17,
+        "name": "Filtered Noise",
+        "palette": "filtered-noise",
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/filtered_noise.bin",
+        "sha256": "c81df17f462ca55f7c80faa50d3c3e4cf2298e736b06dd90a9fcbad8856d2d5e",
+        "bytes": 2220
+      },
+      {
+        "id": 18,
+        "name": "Particle Noise",
+        "palette": "particle-noise",
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/particle_noise.bin",
+        "sha256": "d23fd2ce73d2c5bb68c335179c85e37d9f7044dc1de91de3f00ec722063a2be0",
+        "bytes": 3160
+      },
+      {
+        "id": 19,
+        "name": "Inharmonic String",
+        "palette": "inharmonic-string",
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/inharmonic_string.bin",
+        "sha256": "89ec38188d8d9b3eab5238211ab87a37049f7b9b7c9324cad5219a186ec7f9ca",
+        "bytes": 7472
+      },
+      {
+        "id": 20,
+        "name": "Modal Resonator",
+        "palette": "modal-resonator",
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/modal_resonator.bin",
+        "sha256": "cd4c391764d525fc7a98c92177fd3888183872ce72e499c9b91c73a5c440af2a",
+        "bytes": 4656
+      },
+      {
+        "id": 21,
+        "name": "Analog Bass Drum",
+        "palette": "analog-bass-drum",
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/bass_drum.bin",
+        "sha256": "83d5ba55cb2937a99ad7b36e32c3615e3314cd90936277bb9127b8b60ba9c0c7",
+        "bytes": 4328
+      },
+      {
+        "id": 22,
+        "name": "Analog Snare",
+        "palette": "analog-snare",
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/snare_drum.bin",
+        "sha256": "5c411440bf90f4c6a3cf5e50ede89409010e21f783a8f2e12f73f020c904c8a5",
+        "bytes": 4960
+      },
+      {
+        "id": 23,
+        "name": "Analog Hi-hat",
+        "palette": "analog-hi-hat",
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/hi_hats.bin",
+        "sha256": "325147383b2dd99c8915fdd6e508942c914452c4f5dbc6b2e4b1e25eed798278",
+        "bytes": 8140
+      },
+      {
+        "id": 28,
+        "name": "Natural Speech",
+        "palette": "natural-speech",
+        "family": "Vocal",
+        "blob_size": 22132,
+        "state_size": 860,
+        "arena_size": 0,
+        "credit": "Lyle Mills",
+        "licence": "MIT",
+        "notice": "Voice data rendered with Kokoro-82M (Apache-2.0), voice af_heart.",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/natural_speech.bin",
+        "sha256": "584989e4416feeeb0a2171a23e3a75d736ad074ce27556b93757316f0f6cf10b",
+        "bytes": 22132
+      },
+      {
+        "id": 29,
+        "name": "Glisson",
+        "palette": "glisson",
+        "family": "Granular",
+        "blob_size": 2416,
+        "state_size": 128,
+        "arena_size": 0,
+        "credit": "Lyle Mills",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/glisson.bin",
+        "sha256": "918fbe4ad2c9fd4301d4bb2a627e64f0ddf2647dcbbda420203b6fd985b2e856",
+        "bytes": 2416
+      },
+      {
+        "id": 30,
+        "name": "GENDY",
+        "palette": "gendy",
+        "family": "Stochastic",
+        "blob_size": 3140,
+        "state_size": 156,
+        "arena_size": 0,
+        "credit": "Lyle Mills",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/gendy.bin",
+        "sha256": "90c3d609d76118a9c5c976990c1a834344a9378de48a58ab1b25445a9a39454b",
+        "bytes": 3140
+      },
+      {
+        "id": 31,
+        "name": "Scanned",
+        "palette": "scanned",
+        "family": "Physical",
+        "blob_size": 3808,
+        "state_size": 404,
+        "arena_size": 0,
+        "credit": "Lyle Mills",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/scanned.bin",
+        "sha256": "136b3cdad6a8b5472a4854e64c32ac0f5f281540007f654030648328f5c48341",
+        "bytes": 3808
+      },
+      {
+        "id": 32,
+        "name": "Pulsar",
+        "palette": "pulsar",
+        "family": "Microsound",
+        "blob_size": 1344,
+        "state_size": 20,
+        "arena_size": 0,
+        "credit": "Lyle Mills",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/pulsar.bin",
+        "sha256": "0aa02b3d7f225dce5dc5eca3044a7b8d55f8cec4d1323850f323b0fe04a04de0",
+        "bytes": 1344
+      },
+      {
+        "id": 33,
+        "name": "Loopback",
+        "palette": "loopback",
+        "family": "Feedback",
+        "blob_size": 1068,
+        "state_size": 32,
+        "arena_size": 0,
+        "credit": "Lyle Mills",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/loopback.bin",
+        "sha256": "81195b3608dc5f52601a58afd9dc8e402ae35a73c37e0bd8b31f31f008db1dc9",
+        "bytes": 1068
+      },
+      {
+        "id": 34,
+        "name": "Lockstep",
+        "palette": "lockstep",
+        "family": "PLL",
+        "blob_size": 1700,
+        "state_size": 20,
+        "arena_size": 0,
+        "credit": "Lyle Mills",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/lockstep.bin",
+        "sha256": "d4d9146c3e1524f766b675d718b72de1c582e8758c2720c1d3907631c2b0be14",
+        "bytes": 1700
+      },
+      {
+        "id": 35,
+        "name": "Tapfield",
+        "palette": "tapfield",
+        "family": "Bitwise",
+        "blob_size": 1816,
+        "state_size": 44,
+        "arena_size": 0,
+        "credit": "Lyle Mills",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/tapfield.bin",
+        "sha256": "66c6fb0a5484fd55b6ad4acd021348a2a5dc4c81ab6eab4e6ab51b05f375b5fc",
+        "bytes": 1816
+      },
+      {
+        "id": 36,
+        "name": "Phase Weave",
+        "palette": "phase-weave",
+        "credit": "Lyle Mills",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/phase_weave.bin",
+        "sha256": "5eef9326c386476d404107139e368059320f88de2dd7d6840d1387a497c944be",
+        "bytes": 1948
+      },
+      {
+        "id": 37,
+        "name": "Sideband Bank",
+        "palette": "sideband-bank",
+        "family": "Additive",
+        "blob_size": 2756,
+        "state_size": 8,
+        "arena_size": 0,
+        "credit": "Lyle Mills",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/sideband.bin",
+        "sha256": "c24dbb7085784450822be6350f24a5d91f576ea9a24177953047af7ba5bb0166",
+        "bytes": 2756
+      },
+      {
+        "id": 38,
+        "name": "Attractor",
+        "palette": "attractor",
+        "family": "Chaos",
+        "blob_size": 1508,
+        "state_size": 28,
+        "arena_size": 0,
+        "credit": "Lyle Mills",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/attractor.bin",
+        "sha256": "c584c2b14e9c060dfc89e5558dc61e631755e3826d3a478795cff7412111491b",
+        "bytes": 1508
+      },
+      {
+        "id": 39,
+        "name": "Undertow",
+        "palette": "undertow",
+        "family": "Subharmonic",
+        "blob_size": 4696,
+        "state_size": 160,
+        "arena_size": 0,
+        "credit": "Lyle Mills",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/undertow.bin",
+        "sha256": "a97696324a01db208c1325a567a5a10e3c412232f899fbf9b530d879055ff77c",
+        "bytes": 4696
+      },
+      {
+        "id": 40,
+        "name": "Reed Pipe",
+        "palette": "reed-pipe",
+        "family": "Physical",
+        "blob_size": 2304,
+        "state_size": 72,
+        "arena_size": 8192,
+        "credit": "Lyle Mills",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/reed_pipe.bin",
+        "sha256": "5f870a58ff20e8c5df317c8f911e4deb9d76560cbb1afda3afc93adb092a66c1",
+        "bytes": 2304
+      },
+      {
+        "id": 41,
+        "name": "Phase Flock",
+        "palette": "phase-flock",
+        "family": "Coupled",
+        "blob_size": 3676,
+        "state_size": 64,
+        "arena_size": 0,
+        "credit": "Lyle Mills",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/phase_flock.bin",
+        "sha256": "869aa4e8d23f32fca5023ec20882588dc6733f0253a83a7e5034c032bcfd2048",
+        "bytes": 3676
+      },
+      {
+        "id": 42,
+        "name": "Rulefield",
+        "palette": "rulefield",
+        "family": "Cellular",
+        "blob_size": 1368,
+        "state_size": 44,
+        "arena_size": 0,
+        "credit": "Lyle Mills",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/rulefield.bin",
+        "sha256": "8487ff1f2b42ec5e5a9d480212da687cc0f55acbc8c3254e2f0aedd6f6fdbf3b",
+        "bytes": 1368
+      },
+      {
+        "id": 43,
+        "name": "Spectral Spiral",
+        "palette": "spectral-spiral",
+        "credit": "Lyle Mills",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/spectral_spiral.bin",
+        "sha256": "dd7e811e26f6f602c56e2c585870329cd99e2095d7c7194e7adf78106d2ee1aa",
+        "bytes": 2700
+      },
+      {
+        "id": 44,
+        "name": "Z Filter",
+        "palette": "z-filter",
+        "family": "Subtractive",
+        "blob_size": 1788,
+        "state_size": 56,
+        "arena_size": 0,
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/z_filter.bin",
+        "sha256": "d2beb3008049d2d54a73a1527961e02dc487c826d3e2679ab146bebd3c18c460",
+        "bytes": 1788
+      },
+      {
+        "id": 45,
+        "name": "Toy",
+        "palette": "toy",
+        "family": "Bitwise",
+        "blob_size": 1528,
+        "state_size": 48,
+        "arena_size": 0,
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/toy.bin",
+        "sha256": "4f3bb73074b4eacdafcfa5a4bf8052c5e296683a044e8bc12c2f0f118cf7d3e6",
+        "bytes": 1528
+      },
+      {
+        "id": 46,
+        "name": "CSaw",
+        "palette": "csaw",
+        "family": "Subtractive",
+        "blob_size": 1444,
+        "state_size": 40,
+        "arena_size": 0,
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/csaw.bin",
+        "sha256": "d5ecd1e86af4bffaf2fd838747e67ac290d2f3a430e6a6c15c990fb3a28ebcee",
+        "bytes": 1444
+      },
+      {
+        "id": 47,
+        "name": "Ring Mod",
+        "palette": "ring-mod",
+        "family": "Digital",
+        "blob_size": 2392,
+        "state_size": 144,
+        "arena_size": 0,
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/ring_mod.bin",
+        "sha256": "d483b7c7dddf51f7e125b2233b5735e7784dae34f7e61d2dbf93ecf4c59ba7f0",
+        "bytes": 2392
+      },
+      {
+        "id": 48,
+        "name": "Fold",
+        "palette": "fold",
+        "family": "Waveshaping",
+        "blob_size": 3752,
+        "state_size": 44,
+        "arena_size": 2056,
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/fold.bin",
+        "sha256": "2fe401a2d9f47d61dbd0429adc2fee1b9cb88c43fa556ea8ff840e12c0a6f699",
+        "bytes": 3752
+      },
+      {
+        "id": 49,
+        "name": "Buzz",
+        "palette": "buzz",
+        "family": "Digital",
+        "blob_size": 9980,
+        "state_size": 32,
+        "arena_size": 0,
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/buzz.bin",
+        "sha256": "d9635fc6cef75f0ee78c047623a95921fcabccf67c8b8ff89b08727a8bb9f189",
+        "bytes": 9980
+      },
+      {
+        "id": 50,
+        "name": "Dual Sync",
+        "palette": "dual-sync",
+        "family": "Subtractive",
+        "blob_size": 2860,
+        "state_size": 1068,
+        "arena_size": 0,
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/dual_sync.bin",
+        "sha256": "08011aff08a536bcfec2c0008e8f7df2ed8beeded9f8728298ca0ff2bfd3b617",
+        "bytes": 2860
+      },
+      {
+        "id": 51,
+        "name": "Granular Cloud",
+        "palette": "granular-cloud",
+        "family": "Granular",
+        "blob_size": 3200,
+        "state_size": 80,
+        "arena_size": 0,
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/granular_cloud.bin",
+        "sha256": "311ac1cc5673916a35de652abb3e9f24bde8d027700e9995375929c0e5d686ee",
+        "bytes": 3200
+      },
+      {
+        "id": 52,
+        "name": "Morph",
+        "palette": "morph",
+        "family": "Subtractive",
+        "blob_size": 4228,
+        "state_size": 572,
+        "arena_size": 0,
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/morph.bin",
+        "sha256": "a967fb909265012f1c51b1d6f2671dab8d549ba23e4b349d41cc94af610c5dac",
+        "bytes": 4228
+      },
+      {
+        "id": 53,
+        "name": "Noise Bank",
+        "palette": "noise-bank",
+        "family": "Noise",
+        "blob_size": 9812,
+        "state_size": 348,
+        "arena_size": 0,
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/noise_bank.bin",
+        "sha256": "7b9e8dac2e18cc2ff5bcf9693b26ad3b15a3f877d0028a020a4c1f1cacd67a5f",
+        "bytes": 9812
+      },
+      {
+        "id": 54,
+        "name": "Particle Burst",
+        "palette": "particle-burst",
+        "family": "Noise",
+        "blob_size": 2392,
+        "state_size": 104,
+        "arena_size": 0,
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/particle_burst.bin",
+        "sha256": "7ad49cfc7c6b35dfdde0e8cc9a30748a661d725f5ef510de9783350114a92b04",
+        "bytes": 2392
+      },
+      {
+        "id": 55,
+        "name": "Saw Square",
+        "palette": "saw-square",
+        "family": "Subtractive",
+        "blob_size": 1668,
+        "state_size": 56,
+        "arena_size": 0,
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/saw_square.bin",
+        "sha256": "fc25c5d7fb8ab2161d73414c1f2d74e13b09af6f033ffdf6709510b7f04c5e29",
+        "bytes": 1668
+      },
+      {
+        "id": 56,
+        "name": "Saw Swarm",
+        "palette": "saw-swarm",
+        "family": "Subtractive",
+        "blob_size": 3964,
+        "state_size": 88,
+        "arena_size": 0,
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/saw_swarm.bin",
+        "sha256": "da28522486e9d63e90a7fb5c6b8763accca13155e30c98c22d2b825dce8ddfd7",
+        "bytes": 3964
+      },
+      {
+        "id": 57,
+        "name": "Vowel",
+        "palette": "vowel",
+        "family": "Vocal",
+        "blob_size": 3436,
+        "state_size": 604,
+        "arena_size": 0,
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/vowel.bin",
+        "sha256": "96963b295f07e12c346384624013c490c58f26a73a10bc6a14b961484fc01ebd",
+        "bytes": 3436
+      },
+      {
+        "id": 58,
+        "name": "Harmonics",
+        "palette": "harmonics",
+        "family": "Additive",
+        "blob_size": 2908,
+        "state_size": 104,
+        "arena_size": 0,
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/harmonics.bin",
+        "sha256": "c921a80d5892376703ef9e5cf35aaefb2173050346177a4a3b34c6fe355c65f6",
+        "bytes": 2908
+      },
+      {
+        "id": 59,
+        "name": "VOSIM",
+        "palette": "vosim",
+        "family": "Formant",
+        "blob_size": 4600,
+        "state_size": 204,
+        "arena_size": 0,
+        "credit": "Mutable Instruments, Lyle Mills",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/vosim.bin",
+        "sha256": "e7ad5ebbaa92e1dd02c9f22c7c52037a7f587cca35d7782e5cbdced8b51f5504",
+        "bytes": 4600
+      },
+      {
+        "id": 60,
+        "name": "Plucked",
+        "palette": "plucked",
+        "family": "Physical",
+        "blob_size": 4040,
+        "state_size": 176,
+        "arena_size": 12288,
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/plucked.bin",
+        "sha256": "466fce52885f9d1042a2ec43c9efb0c12da53f579c767d090ff26883bdd009d2",
+        "bytes": 4040
+      },
+      {
+        "id": 61,
+        "name": "Blown",
+        "palette": "blown",
+        "family": "Physical",
+        "blob_size": 3860,
+        "state_size": 316,
+        "arena_size": 8192,
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/blown.bin",
+        "sha256": "e882461491944689e402f1b85ebc1c4f85b8c80cce99522fd01147a918bdbb58",
+        "bytes": 3860
+      },
+      {
+        "id": 62,
+        "name": "Struck Bell",
+        "palette": "struck-bell",
+        "family": "Additive",
+        "blob_size": 3732,
+        "state_size": 136,
+        "arena_size": 0,
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/struck_bell.bin",
+        "sha256": "64bbda736bbf978dc1801b7485f7912267ba86f2bfdb2e6593d3b4893890c4bd",
+        "bytes": 3732
+      },
+      {
+        "id": 63,
+        "name": "Struck Drum",
+        "palette": "struck-drum",
+        "family": "Additive",
+        "blob_size": 4020,
+        "state_size": 76,
+        "arena_size": 0,
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/struck_drum.bin",
+        "sha256": "fb1119cf958a94648af40c67d3fae961ec5e604f8b4ab253cae4fc0e78dd75a9",
+        "bytes": 4020
+      },
+      {
+        "id": 64,
+        "name": "Kick",
+        "palette": "kick",
+        "family": "Drums",
+        "blob_size": 3392,
+        "state_size": 52,
+        "arena_size": 0,
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/kick.bin",
+        "sha256": "717dc1e90ff49741d607fdba5d9ef78228ac9746b5432faa8289e49d56b37a78",
+        "bytes": 3392
+      },
+      {
+        "id": 65,
+        "name": "Snare",
+        "palette": "snare",
+        "family": "Drums",
+        "blob_size": 4892,
+        "state_size": 108,
+        "arena_size": 0,
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/snare.bin",
+        "sha256": "f01c04db11f827244851412bfd77be6350de4585b7a4059ed9334f001ddf9f2c",
+        "bytes": 4892
+      },
+      {
+        "id": 66,
+        "name": "Cymbal",
+        "palette": "cymbal",
+        "family": "Drums",
+        "blob_size": 3800,
+        "state_size": 72,
+        "arena_size": 0,
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/cymbal.bin",
+        "sha256": "f0ea020d3a728580d42e335ada6dfc37fe85cc38f1b2140096d3d5a21b0928b2",
+        "bytes": 3800
+      },
+      {
+        "id": 67,
+        "name": "Wave Scan",
+        "palette": "wave-scan",
+        "family": "Wavetable",
+        "blob_size": 37604,
+        "state_size": 556,
+        "arena_size": 0,
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/wave_scan.bin",
+        "sha256": "374e1e48bde74246d7a084e9cb7c8e6b44fb34826a4951a2647aa710c722fade",
+        "bytes": 37604
+      },
+      {
+        "id": 68,
+        "name": "Wave Paraphonic",
+        "palette": "wave-paraphonic",
+        "family": "Polyphonic",
+        "blob_size": 3576,
+        "state_size": 80,
+        "arena_size": 0,
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [
+          1
+        ],
+        "url": "images/beta4-catalogue/blob/wave_paraphonic.bin",
+        "sha256": "53e48f18f83cf447be895611291052d8e3bdab99e87984936522e370279bd3fb",
+        "bytes": 3576
+      },
+      {
+        "id": 69,
+        "name": "Fluted",
+        "palette": "fluted",
+        "family": "Physical",
+        "blob_size": 5860,
+        "state_size": 324,
+        "arena_size": 5120,
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/fluted.bin",
+        "sha256": "c3284f57992d071e42ec2cc29cd4efab41d745a9b6613b4c483707cb17d63c34",
+        "bytes": 5860
+      },
+      {
+        "id": 70,
+        "name": "Question Mark",
+        "palette": "question-mark",
+        "family": "Noise",
+        "blob_size": 3256,
+        "state_size": 40,
+        "arena_size": 0,
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/question_mark.bin",
+        "sha256": "d2974ad4939061f146a2a3ebbda8f3fcffab3c0e367f5928329d3e745570a269",
+        "bytes": 3256
+      },
+      {
+        "id": 71,
+        "name": "Virtual Analog Variant",
+        "palette": "virtual-analog-variant",
+        "family": "Subtractive",
+        "blob_size": 8108,
+        "state_size": 184,
+        "arena_size": 192,
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/virtual_analog_variant.bin",
+        "sha256": "44d84126245c62df301c8a9c53d928440cb3b50272ee0fb6fa69ca823bde9e07",
+        "bytes": 8108
+      },
+      {
+        "id": 72,
+        "name": "Bowed",
+        "palette": "bowed",
+        "family": "Physical",
+        "blob_size": 2936,
+        "state_size": 52,
+        "arena_size": 5120,
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/bowed.bin",
+        "sha256": "28504beff72fb7e6e5a68d542c1c19a06bb9565bc54f49c236c5ad705d97d764",
+        "bytes": 2936
+      },
+      {
+        "id": 73,
+        "name": "Sub Osc",
+        "palette": "sub-oscillator",
+        "family": "Subtractive",
+        "blob_size": 1844,
+        "state_size": 60,
+        "arena_size": 0,
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/sub_oscillator.bin",
+        "sha256": "03c491a41e4d85c9da5ebdf419d1c91260228eeff240c51e90cfd6bfa9c46286",
+        "bytes": 1844
+      },
+      {
+        "id": 74,
+        "name": "Digital Modulation",
+        "palette": "digital-modulation",
+        "family": "Digital",
+        "blob_size": 1296,
+        "state_size": 36,
+        "arena_size": 0,
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/digital_modulation.bin",
+        "sha256": "208a0af5ebcc570d44924466603dfee3c7daf9bfd561d49e6c6236cc4b61731c",
+        "bytes": 1296
+      },
+      {
+        "id": 75,
+        "name": "Saw Comb",
+        "palette": "saw-comb",
+        "family": "Feedback",
+        "blob_size": 3468,
+        "state_size": 56,
+        "arena_size": 8192,
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/saw_comb.bin",
+        "sha256": "a2ad0aea3fb1957b1106a60cf5cb8ce9c1b5154fb67b5963c3e6a518735b1644",
+        "bytes": 3468
+      },
+      {
+        "id": 76,
+        "name": "Vowel FOF",
+        "palette": "vowel-fof",
+        "family": "Vocal",
+        "blob_size": 3768,
+        "state_size": 72,
+        "arena_size": 0,
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/vowel_fof.bin",
+        "sha256": "b8be72e15d6813d6db05ec796d0c2e8d43a83bd66f5b8644b0435006d49d886b",
+        "bytes": 3768
+      },
+      {
+        "id": 77,
+        "name": "Raw FM",
+        "palette": "raw-fm",
+        "family": "FM",
+        "blob_size": 1328,
+        "state_size": 12,
+        "arena_size": 0,
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/raw_fm.bin",
+        "sha256": "c9632e788115146700cdd1cb18e293fe8835ce2a73d3e51a8122ceaddb36bdad",
+        "bytes": 1328
+      },
+      {
+        "id": 78,
+        "name": "Triple",
+        "palette": "triple",
+        "family": "Polyphonic",
+        "blob_size": 3320,
+        "state_size": 132,
+        "arena_size": 0,
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/triple.bin",
+        "sha256": "8cc5726a2af58e341f21980980b19cd9a0de1af1ef218507e19cd44b3dd66097",
+        "bytes": 3320
+      },
+      {
+        "id": 79,
+        "name": "Bytebeat",
+        "palette": "bytebeat",
+        "family": "Digital",
+        "blob_size": 1176,
+        "state_size": 32,
+        "arena_size": 0,
+        "credit": "Tim Churches",
+        "licence": "MIT",
+        "notice": "Expressions from Tim Churches' Bees-in-the-Trees (MIT), credited there to their authors.",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/bytebeat.bin",
+        "sha256": "83bcc4a428f36ce47b12e18793f2f69e327c2baa3dbf1efb27628d30bc284e3e",
+        "bytes": 1176
+      },
+      {
+        "id": 80,
+        "name": "Diatonic Chord",
+        "palette": "diatonic-chord",
+        "family": "Polyphonic",
+        "blob_size": 668,
+        "state_size": 68,
+        "arena_size": 0,
+        "credit": "Tom Burns",
+        "licence": "MIT",
+        "libraries": [
+          5
+        ],
+        "url": "images/beta4-catalogue/blob/diatonic_chord.bin",
+        "sha256": "193e020899b88415f7fad8b4d18f40de7e7cb1ec0b4d97b31f533fc50ac30f49",
+        "bytes": 668
+      },
+      {
+        "id": 81,
+        "name": "Scale Stack",
+        "palette": "scale-stack",
+        "family": "Polyphonic",
+        "blob_size": 492,
+        "state_size": 68,
+        "arena_size": 0,
+        "credit": "Tom Burns",
+        "licence": "MIT",
+        "libraries": [
+          5
+        ],
+        "url": "images/beta4-catalogue/blob/scale_stack.bin",
+        "sha256": "b09b639506479b677667f0869c772adf783a1605be24c39fee970d8dcc88fefe",
+        "bytes": 492
+      },
+      {
+        "id": 82,
+        "name": "Wavetable Diatonic Chord",
+        "palette": "wavetable-chord",
+        "family": "Polyphonic",
+        "blob_size": 744,
+        "state_size": 72,
+        "arena_size": 0,
+        "credit": "Tom Burns",
+        "licence": "MIT",
+        "libraries": [
+          1,
+          5,
+          6
+        ],
+        "url": "images/beta4-catalogue/blob/wavetable_chord.bin",
+        "sha256": "82c2e39ad544f0e43d118af64373aad9840c215ae11f62fd20cb19893c52ff56",
+        "bytes": 744
+      },
+      {
+        "id": 83,
+        "name": "Wavetable Scale Stack",
+        "palette": "wavetable-scale-stack",
+        "family": "Polyphonic",
+        "blob_size": 568,
+        "state_size": 72,
+        "arena_size": 0,
+        "credit": "Tom Burns",
+        "licence": "MIT",
+        "libraries": [
+          1,
+          5,
+          6
+        ],
+        "url": "images/beta4-catalogue/blob/wavetable_scale_stack.bin",
+        "sha256": "1bced58f9ffcbd2fc86193a9dc9aa1b5fc15f26ba6cb3b39cbbddda2187a2839",
+        "bytes": 568
+      },
+      {
+        "id": 84,
+        "name": "Shakers",
+        "palette": "shakers",
+        "family": "Percussion",
+        "blob_size": 9216,
+        "state_size": 296,
+        "arena_size": 0,
+        "credit": "Lyle Mills, after Perry R. Cook and Gary P. Scavone",
+        "licence": "MIT",
+        "notice": "Derived from STK, Copyright 1995-2023 Perry R. Cook and Gary P. Scavone (STK licence).",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/shakers.bin",
+        "sha256": "0aaa26ec6ce2fa45c9a086e55d661a509ad3c1739c0c51e0993de0e1b5a339da",
+        "bytes": 9216
+      },
+      {
+        "id": 85,
+        "name": "Brass",
+        "palette": "brass",
+        "family": "Physical",
+        "blob_size": 2512,
+        "state_size": 52,
+        "arena_size": 10752,
+        "credit": "Lyle Mills, after Perry R. Cook and Gary P. Scavone",
+        "licence": "MIT",
+        "notice": "Derived from STK, Copyright 1995-2023 Perry R. Cook and Gary P. Scavone (STK licence).",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/brass.bin",
+        "sha256": "d90d47829794d18d96263ecf401a6efc9ea8b32b4a41c16e5eb50f6e183ab6d5",
+        "bytes": 2512
+      },
+      {
+        "id": 86,
+        "name": "Helix",
+        "palette": "helix",
+        "family": "Chords",
+        "blob_size": 4508,
+        "state_size": 532,
+        "arena_size": 0,
+        "credit": "Lyle Mills",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/helix.bin",
+        "sha256": "ccf03738f97279b9263b2a37e863df48b2905b82aa536880a4b3bb09d6771856",
+        "bytes": 4508
+      },
+      {
+        "id": 87,
+        "name": "Skins",
+        "palette": "skins",
+        "family": "Percussion",
+        "blob_size": 3000,
+        "state_size": 76,
+        "arena_size": 0,
+        "credit": "Lyle Mills",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/skins.bin",
+        "sha256": "b499a5af224a9f2269dddc2c1cdbbf0c1a323a1178686843140ada453e13d129",
+        "bytes": 3000
+      },
+      {
+        "id": 88,
+        "name": "Circuit Zaps",
+        "palette": "circuit-zaps",
+        "family": "Percussion",
+        "blob_size": 1448,
+        "state_size": 36,
+        "arena_size": 0,
+        "credit": "Lyle Mills",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/circuit_zaps.bin",
+        "sha256": "499d8f14ee7f53df84e03cc224567f66702b3313037c0778b6b3b5de02e499b3",
+        "bytes": 1448
+      },
+      {
+        "id": 89,
+        "name": "Metalwork",
+        "palette": "metalwork",
+        "family": "Percussion",
+        "blob_size": 2648,
+        "state_size": 84,
+        "arena_size": 0,
+        "credit": "Lyle Mills",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/metalwork.bin",
+        "sha256": "5f6de3fc8baf764a9de31852884323d93f7f786bd0e943c993e99380e40029ff",
+        "bytes": 2648
+      },
+      {
+        "id": 90,
+        "name": "Analog Clap",
+        "palette": "clap",
+        "family": "Drums",
+        "blob_size": 3208,
+        "state_size": 200,
+        "arena_size": 0,
+        "credit": "Dylan Bolink",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/clap.bin",
+        "sha256": "b6de032ebbccfe8b6407270f76e3e6793886d6585f432c7766acc2407beeff68",
+        "bytes": 3208
+      },
+      {
+        "id": 91,
+        "name": "Analog Percussion",
+        "palette": "analog-percussion",
+        "family": "Drums",
+        "blob_size": 3480,
+        "state_size": 172,
+        "arena_size": 0,
+        "credit": "Dylan Bolink",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/analog_percussion.bin",
+        "sha256": "4d77739d79af7e54809835e8857859ec302ac392cc2bcfb30b94364174805f58",
+        "bytes": 3480
+      },
+      {
+        "id": 92,
+        "name": "Freshets Formant",
+        "palette": "freshets-formant",
+        "family": "Formant",
+        "blob_size": 3740,
+        "state_size": 84,
+        "arena_size": 0,
+        "credit": "Dylan Bolink",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/freshets_formant.bin",
+        "sha256": "d7021bdcff86edcd3c61ebad668835b7936e836e26ad8543db3b7bab0c3f5bb6",
+        "bytes": 3740
+      },
+      {
+        "id": 93,
+        "name": "BubbleTime",
+        "palette": "bubbletime",
+        "family": "Experimental",
+        "blob_size": 12292,
+        "state_size": 760,
+        "arena_size": 0,
+        "credit": "Combust",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/bubbletime.bin",
+        "sha256": "859f3bf0a5a7066a7812d3f81bb5e43d844517a5c29ecc160f4246e06ea8c111",
+        "bytes": 12292
+      },
+      {
+        "id": 94,
+        "name": "ZxPhase48k",
+        "palette": "zxphase48k",
+        "family": "Chiptune",
+        "blob_size": 2936,
+        "state_size": 128,
+        "arena_size": 0,
+        "credit": "Combust",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/zxphase48k.bin",
+        "sha256": "0e8d567790ea6d404fe8cde3659b2ce519c6711bde4c79bf86ff6536dd908e94",
+        "bytes": 2936
+      },
+      {
+        "id": 95,
+        "name": "ZxPulse48k",
+        "palette": "zxpulse48k",
+        "family": "Chiptune",
+        "blob_size": 5220,
+        "state_size": 244,
+        "arena_size": 0,
+        "credit": "Combust",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/zxpulse48k.bin",
+        "sha256": "3622caac2710079f91e4b240be3d86b1fab90e927b196446978dcf5845f30861",
+        "bytes": 5220
+      },
+      {
+        "id": 96,
+        "name": "Acid",
+        "palette": "acid",
+        "family": "Acid",
+        "blob_size": 4512,
+        "state_size": 240,
+        "arena_size": 0,
+        "credit": "Dylan Bolink",
+        "licence": "MIT",
+        "notice": "Parts from Open303, Copyright 2009 Robin Schmidt (MIT).",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/acid.bin",
+        "sha256": "88f38446fe8457b56504d95c32249fc25e7a4e22fc6b2485821475ce6c1b00f6",
+        "bytes": 4512
+      },
+      {
+        "id": 97,
+        "name": "Supersaw Chords",
+        "palette": "chords-supersaw",
+        "family": "Polyphonic",
+        "blob_size": 3996,
+        "state_size": 268,
+        "arena_size": 0,
+        "credit": "Dirk Hoppmann",
+        "licence": "MIT",
+        "libraries": [],
+        "url": "images/beta4-catalogue/blob/chords_supersaw.bin",
+        "sha256": "c3f9e206de6b2dbfa8f8b87ec5cc243698656676eabe10aa75dee46946fa5c28",
+        "bytes": 3996
+      },
+      {
+        "id": 98,
+        "name": "Speech Sounds",
+        "palette": "formant-speech",
+        "family": "Vocal",
+        "blob_size": 4948,
+        "state_size": 352,
+        "arena_size": 192,
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [
+          3
+        ],
+        "url": "images/beta4-catalogue/blob/speech_sounds.bin",
+        "sha256": "7f4fe093b73f957b3df866694fcb06c7695db625eb9eb5cfbfab987a15c8efac",
+        "bytes": 4948
+      },
+      {
+        "id": 99,
+        "name": "LPC Words",
+        "palette": "lpc-speech",
+        "family": "Vocal",
+        "blob_size": 6336,
+        "state_size": 244,
+        "arena_size": 14464,
+        "credit": "Mutable Instruments",
+        "licence": "MIT",
+        "libraries": [
+          3
+        ],
+        "url": "images/beta4-catalogue/blob/lpc_words.bin",
+        "sha256": "355611ef12e2eeb84d1f36095ce18b477f69936fa01adc2c1cd75b4d9e71e1b3",
+        "bytes": 6336
+      }
+    ],
+    "libraries": [
+      {
+        "id": 1,
+        "name": "plaits-wavetables",
+        "kind": "data",
+        "contents": "Plaits' integrated wavetables",
+        "url": "images/beta4-catalogue/blob/plaits_wavetables.bin",
+        "sha256": "a1bcb015d1c05497f08993a200727552d595f0213aada89797506358e51487f1"
+      },
+      {
+        "id": 2,
+        "name": "chord-bank",
+        "kind": "code",
+        "contents": "Plaits' chord bank",
+        "url": "images/beta4-catalogue/blob/chord_bank_library.bin",
+        "sha256": "9edf01da528fea157f247e9416c9fbced299e54149b0783e16b23fc23c0f7530"
+      },
+      {
+        "id": 3,
+        "name": "speech",
+        "kind": "code",
+        "contents": "Plaits' speech synths and word banks",
+        "url": "images/beta4-catalogue/blob/speech_library.bin",
+        "sha256": "2935608afcb60fe64b4cfa3b2deb7d83650bfe85efcd55c6d2194532df1fa0ab"
+      },
+      {
+        "id": 4,
+        "name": "six-op",
+        "kind": "code",
+        "contents": "6-op FM: algorithms, DX units and patch banks",
+        "url": "images/beta4-catalogue/blob/six_op_library.bin",
+        "sha256": "dc82ef7fd9927495e1bef461fd3b43c9a00e8f6b52943e25f301bfb6dfacb38f"
+      },
+      {
+        "id": 5,
+        "name": "scale-voices",
+        "kind": "code",
+        "contents": "Palette's scale-voice renderers",
+        "url": "images/beta4-catalogue/blob/scale_voices_library.bin",
+        "sha256": "34d84d1e8bf8cc395dcab3bbd565219d835e09442f0baa53b20d1f3b6c201a71"
+      },
+      {
+        "id": 6,
+        "name": "scale-wavetable-voices",
+        "kind": "code",
+        "contents": "Palette's wavetable scale-voice renderers",
+        "url": "images/beta4-catalogue/blob/wavetable_scale_voices_library.bin",
+        "sha256": "d5edcc80f1581981dd2201d54cbf4c8e0f0feb4e90d311e0a72892d4f8c6816c"
+      }
+    ],
+    "rings": {
+      "url": "images/beta4-catalogue/blob/rings_synth.bin",
+      "sha256": "1f9ca33c061609ae3ce7fae287472fd85b1023e085cba0461e2e9256d6008c55"
+    },
+    "region": {
+      "url": "images/beta4-catalogue/region.bin",
+      "sha256": "45312e82d0bb3e5e6a1b29852ffd903c6455fb4b7c4359aed4d03f9828fad8e0"
+    }
+  }
+}
