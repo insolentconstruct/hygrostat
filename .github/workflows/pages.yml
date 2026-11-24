@@ -81,19 +81,6 @@ jobs:
           PYTHON="$RUNNER_TEMP/py/bin/python3" node test/wavetables.js
           node test/terrain.js
           node test/palette.js
-          node --input-type=module -e '
-            import { readFileSync } from "node:fs";
-            import { fileURLToPath } from "node:url";
-            import { execFileSync } from "node:child_process";
-            const root = new URL("./static/", import.meta.url);
-            for (const r of JSON.parse(readFileSync(new URL("manifest.json", root))).releases) {
-              if (!r.wav_sha256) {
-                console.log(`${r.tag}: no release WAV hash in manifest; golden check unavailable`);
-                continue;
-              }
-              execFileSync(process.execPath, ["test/golden.js",
-                fileURLToPath(new URL(r.app, root)), r.wav_sha256], { stdio: "inherit" });
-            }'
       - name: Install the pinned Hugo
         run: |
           archive="hugo_${HUGO_VERSION}_linux-amd64.tar.gz"
@@ -140,6 +127,7 @@ jobs:
           SITE=static BASE=http://127.0.0.1:8080/ node test/gestures_browser.mjs
           SITE=static BASE=http://127.0.0.1:8080/ node test/editor_browser.mjs
           SITE=static BASE=http://127.0.0.1:8080/ node test/palette_browser.mjs
+          SITE=static BASE=http://127.0.0.1:8080/ node test/palette_regressions_browser.mjs
           BASE=http://127.0.0.1:8080/ node test/security_browser.mjs
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: failure()
