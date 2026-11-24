@@ -38,7 +38,12 @@ for (const release of manifest.releases) {
   check(equal(encodeProfile(defaults(release.profile), release.profile), app.subarray(1024, 1024 + release.profile.size)), `${release.tag}: default profile equals firmware`);
   const wav = encode(app);
   check(equal(decode(wav, app.length), app), `${release.tag}: WAV decodes byte for byte`);
-  check(hash(wav) === release.wav_sha256, `${release.tag}: .wav byte-identical`);
+  const hasWavHash = release.wav_sha256 !== undefined;
+  if (hasWavHash) {
+    check(hash(wav) === release.wav_sha256, `${release.tag}: .wav byte-identical`);
+  } else {
+    check(release.development === true, `${release.tag}: missing release WAV hash`);
+  }
   const ref = release.development ? release.source_commit : `refs/tags/${release.tag}`;
   const header = firmwareShow(ref, 'beads/profile.h', { encoding: 'utf8' });
   try { validateProfileFormat(release, header); check(true, `${release.tag}: firmware profile format`); }
@@ -74,6 +79,7 @@ for (const release of manifest.releases) {
           `${release.tag}: later source revision changes only documentation, pins and tests`);
       for (const [file, line] of [['expected-hashes.sha256', `${release.app_sha256}  app.bin`],
         ['expected-wav.sha256', `${release.wav_sha256}  app.wav`]]) {
+        if (file === 'expected-wav.sha256' && !hasWavHash) continue;
         const pins = firmwareShow(release.source_commit, `beads/build/${file}`, { encoding: 'utf8' });
         check(pins.split('\n').includes(line), `${release.tag}: ${file} preserves the offered image`);
       }
