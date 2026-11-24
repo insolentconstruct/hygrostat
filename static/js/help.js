@@ -1,7 +1,7 @@
 // Copyright 2026 Insolent Construct.
 // MIT licence: see encoder.js.
 // Links follow the selected release, including its source revision during development.
-import { TOGGLES } from './profile.js?v=4273d18f21910bb5';
+import { TOGGLES } from './profile.js?v=fd42af3d70d68f49';
 const docs = 'https://github.com/insolentconstruct/eurorack/blob/{TAG}/beads/build/docs/FEATURES.md';
 const descriptions = {
   1: ['Snap final pitch, including PITCH, CV and randomness, to a scale.', 'drizzlet-options'],
@@ -49,19 +49,24 @@ const descriptions = {
   46: ['An exact resonator brightness (byte / 256) in place of Material’s; empty uses the page.', 'resonator'],
   47: ['An exact resonator damping (byte / 256) in place of Ring time’s; empty uses the page.', 'resonator'],
   48: ['An exact resonator pickup position (byte / 256); empty keeps the built-in value.', 'resonator'],
-  49: ['An exact resonator amount (byte / 128, 128 is unity); empty keeps the built-in value.', 'resonator']
+  49: ['An exact resonator amount (byte / 128, 128 is unity); empty keeps the built-in value.', 'resonator'],
+  50: ['Trim both synth audio outputs to Stock, Half, Quarter or Eighth after effects and limiting. OUT R triggers keep their level; granular, delay and spectral audio stay unchanged.', 'synth-output-level'],
+  51: ['When OUT R carries grain gates, pass the first gate and then every 2nd, 4th, 8th or 16th grain. Gate widths and grain timing stay unchanged; delay, spectral and synths keep stock output.', 'grain-trigger-output'],
+  52: ['Limit automatic input gain to Stock (+32 dB), +24 dB, +18 dB or +12 dB. Manual gain stays unchanged. Assign a page knob to preview and save the ceiling.', 'gain-ceiling']
 };
 // Firmware with the Rings synth offers it as Synth value 2.
 const rings = (feature) => feature.id === 7 && feature.values?.includes('Rings');
 
 export function featureHelp(feature, release) {
-  const [description, section] = rings(feature) ? ['Beads, Plaits or Rings synth; only installed synths are offered.',
+  const [baseDescription, section] = rings(feature) ? ['Beads, Plaits or Rings synth; only installed synths are offered.',
     'synth-and-rings-polyphony'] : descriptions[feature.id];
+  const send = feature.id === 32 && feature.values?.includes('Send');
+  const description = baseDescription + (send ? ' Send keeps dry at full level; DRY/WET sets each new grain’s level. At zero, existing grains and reverb finish. Granular only.' : '');
   const recent = feature.values?.includes('Recent notes') ? ' Recent notes: with PITCH patched, each CCW grain plays one of the last 1-8 notes sent to PITCH (more as you turn further CCW); unpatched it plays as Free.' : '';
   const details = feature.id === 10 ? 'Around C, the steps are C and G across octaves, including G below C (a fourth down). Pitch scale applies afterwards and can change these intervals. Works on granular and Beads wavetable grains, not the continuous oscillator, Plaits or Spectral.' + recent :
     rings(feature) ? 'Rings is Mutable Instruments’ Rings (MIT), a removable part of the update. A Synth action steps over synths that are not installed.' :
     feature.id === 31 ? 'While the Plaits synth plays, hold [A] and press FREEZE to step green, red, yellow; the bank is saved. Other modes keep that gesture.' :
-    feature.id === 32 ? 'The dry level and both ends of the knob stay stock; DRY/WET CV follows the same law. Granular, delay and spectral; the synths keep their own DRY/WET.' :
+    feature.id === 32 && !send ? 'The dry level and both ends of the knob stay stock; DRY/WET CV follows the same law. Granular, delay and spectral; the synths keep their own DRY/WET.' :
     feature.id === 33 ? 'Turning DRY/WET down cuts the tail too. In Scorched cassette the wow and flutter comes after the reverb. Granular, delay and spectral; the synths keep the stock routing.' : '';
   return { description, details, url: docs.replace('{TAG}', encodeURIComponent(release.development ? release.source_commit : release.tag)) + '#' + section };
 }

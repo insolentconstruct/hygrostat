@@ -23,12 +23,12 @@
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
 // Knob cards port options_guide.py: 270-degree arcs and the same LED ladder.
-import { effectiveScales, PULSE_NAMES } from './scales.js?v=4273d18f21910bb5';
-import { synthLock } from './palette.js?v=4273d18f21910bb5';
-import { defaults, equal, encodeProfile, pageLeds, PAGE_LEDS, GAIN } from './profile.js?v=4273d18f21910bb5';
-import { pageLedName, usedPages } from './layout.js?v=4273d18f21910bb5';
-import { RELEASE_GUIDES } from './release_guides.js?v=4273d18f21910bb5';
-import { placeable, bankWarning } from './layout.js?v=4273d18f21910bb5';
+import { effectiveScales, PULSE_NAMES } from './scales.js?v=fd42af3d70d68f49';
+import { synthLock } from './palette.js?v=fd42af3d70d68f49';
+import { defaults, equal, encodeProfile, pageLeds, PAGE_LEDS, GAIN } from './profile.js?v=fd42af3d70d68f49';
+import { pageLedName, usedPages } from './layout.js?v=fd42af3d70d68f49';
+import { RELEASE_GUIDES } from './release_guides.js?v=fd42af3d70d68f49';
+import { placeable, bankWarning } from './layout.js?v=fd42af3d70d68f49';
 
 const KNOBS = ['FEEDBACK', 'DRY/WET', 'REVERB'];
 export const ACTIONS = ['None', '[A]+SEED', '[A]+FREEZE', '[A] hold'];
@@ -113,9 +113,10 @@ class Drawing {
       const meter = !f.values && i === 1;
       const scale = f.scales && i >= 2 ? f.scales[i - 2] : null;
       const rgb = scale && rgbOf(scale);
-      const shown = scale ? `${colourName(scale)}; ${PULSE_NAMES[scale.pulses].toLowerCase()}` : meter ? 'green → yellow → red' : indication(i);
+      const gainPulse = f.id === 52 && i === 3;
+      const shown = gainPulse ? 'yellow; slow blink' : scale ? `${colourName(scale)}; ${PULSE_NAMES[scale.pulses].toLowerCase()}` : meter ? 'green → yellow → red' : indication(i);
       const pattern = scale ? [0, 3, 6, 9][scale.pulses] : i;
-      this.circle(x + 9, base - 5, 8, scale ? rgb : meter ? '#777' : COLOURS[i === 9 ? 1 : i % 3], pattern);
+      this.circle(x + 9, base - 5, 8, scale ? rgb : meter ? '#777' : COLOURS[gainPulse || i === 9 ? 1 : i % 3], pattern);
       this.text(x + 25, base, value);
       if (mobile) {
         this.text(x + 25, base + 19, shown, 15, 'normal', '#555');

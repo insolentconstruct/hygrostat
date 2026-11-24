@@ -47,7 +47,7 @@ The tests check the page against the firmware it offers. They need a supported N
 ```sh
 git clone --branch drizzlet https://github.com/insolentconstruct/eurorack.git firmware
 git -C firmware submodule update --init stmlib
-for t in manifest profile draft scales scales_firmware event_costs module_costs downloads combo help layout option_pages readiness costs idle_timeout recent_notes beta3_options hold_rules start_quality options_entry configurable_gestures region catalogue resonator rings wavetables terrain palette; do node test/$t.js; done
+for t in manifest profile draft scales scales_firmware event_costs module_costs downloads combo help layout option_pages readiness costs idle_timeout recent_notes beta3_options hold_rules start_quality options_entry configurable_gestures region catalogue resonator rings wavetables terrain palette starter_banks beta4_output; do node test/$t.js; done
 ```
 
 `test/browser.mjs` and `test/scales_browser.mjs` run the page in Chromium, Firefox and WebKit (CI runs it in the Playwright 1.65.0 image). It needs Playwright with its browsers and the page served locally: `SITE=static BASE=http://localhost:8000/ node test/browser.mjs` (and the same command with `test/scales_browser.mjs`, `test/draft_browser.mjs`, `test/beta3_browser.mjs`, `test/pages_browser.mjs` and `test/gestures_browser.mjs`). The scale, Beta 3 and page browser tests use synthetic release lists and never build or offer a synthetic firmware image. `test/option_pages.js` checks options pages 5–7 with a synthetic seven-page release. `test/idle_timeout.js`, `test/recent_notes.js`, `test/beta3_options.js` and `test/option_pages.js` check against the final Beta 3 firmware commit (override with `BETA3_FIRMWARE_REF`); the firmware clone needs its branches. `test/hold_rules.js` checks the Beta 4 [A] hold rules against the firmware merge commit (override with `HOLD_RULES_FIRMWARE_REF`). `test/start_quality.js` checks the Beta 4 Start in quality against the firmware pull request's commit (override with `START_QUALITY_FIRMWARE_REF`). `test/options_entry.js` checks the Beta 4 options page preview and opening page against the firmware merge commit (override with `OPTIONS_ENTRY_FIRMWARE_REF`). `test/configurable_gestures.js` checks the Beta 4 [A] toggles and [A] + FEEDBACK slot against the firmware pull request and the parser before it (override with `GESTURES_FIRMWARE_REF` and `GESTURES_BASE_FIRMWARE_REF`). `test/resonator.js` checks the Beta 4 resonator features, their exact values, the eight Materials and the exact-value page rule against the firmware's catalogue, definitions and parser (override with `RESONATOR_FIRMWARE_REF`). `test/scales_firmware.js` checks the V2 codec against the current firmware parser; it needs firmware with scale-bank support. `test/region.js` checks the region writer (`WAVE`, `TERR`, `PLTS`, `RNGS`) and profile version 3 against the blob firmware commit and its `blob_sections.py` (override with `BLOB_FIRMWARE_REF`); the firmware clone needs its branches. `test/catalogue.js` checks catalogue format 2 (manifest digest, record bytes, factory block) and the firmware's shared profile cases in both codecs against the Beta 4 firmware commit (override with `CATALOGUE_FIRMWARE_REF`). `test/rings.js` checks the Rings synth (Synth value 2, feature 42, the `RNGS` section and the synth rules) against the Beta 4 firmware commit (override with `RINGS_FIRMWARE_REF`); with `REGION_BUILD` set to a firmware build's output directory it also checks that the untouched default region written from that build's blobs equals its `region.bin`.
@@ -81,3 +81,22 @@ If a deploy goes wrong, see [ROLLBACK.md](ROLLBACK.md). Design notes for maintai
 ## Licence
 
 MIT, see [LICENSE](LICENSE). `static/js/glibc_sincos.js` is ported from the GNU C Library (LGPL 2.1 or later, `static/js/COPYING.LIB`). The QPSK encoder follows Mutable Instruments' `stm_audio_bootloader`.
+
+Palette starter banks live in `static/starter-banks.json`. Each button adds one
+bank of eight models, preserving existing models, banks and editor content.
+The editor checks the selected release's pinned assets and available flash
+before applying it. Unavailable banks are disabled; oversized additions leave
+the setup unchanged. `test/starter_banks_browser.mjs` checks this in all three
+browsers.
+
+Beta 4 output options are prepared without changing released manifests.
+`test/beta4_output.js` checks the development firmware catalogues for Mix law's
+Send value (32), Synth output level (50), Grain output division (51) and the
+page-assignable Gain ceiling (52). It verifies manifest digests, definitions,
+record offsets and profile round trips. When firmware lands, generate its
+catalogue from `beads/resources/features.json`, read it with
+`tools/catalogue.js` (`catalogueAtRef` and `catalogueFeatures`), and include
+those features in that release's profile metadata. Never copy feature rows by
+hand. The selected release supplies the available values and controls; help
+and customized guides follow it. Keep release image and WAV pins tied to the
+actual build and run the complete agreement suites before offering it.
