@@ -23,9 +23,9 @@
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
 // Selection, banks and physical flash accounting; no DOM.
-import { knownModel, validatePlaits, SECTION_NAMES, SECTION_KINDS, SYNTH, sha256 } from './profile.js?v=6a1c50a3577e20b3';
-import { writeRegion, resolveBlobs, blobInfo, checkInstallable, regionStart, REGION_END, APP_START } from './region.js?v=6a1c50a3577e20b3';
-import { sampleCount } from './encoder.js?v=6a1c50a3577e20b3';
+import { knownModel, validatePlaits, SECTION_NAMES, SECTION_KINDS, SYNTH, sha256 } from './profile.js?v=bf6fbd1729a5f260';
+import { writeRegion, resolveBlobs, blobInfo, checkInstallable, regionStart, REGION_END, APP_START } from './region.js?v=bf6fbd1729a5f260';
+import { sampleCount } from './encoder.js?v=bf6fbd1729a5f260';
 
 export const stockBanks = () => Array.from({ length: 3 }, (_, b) => Array.from({ length: 8 }, (_, i) => [8, 16, 0][b] + i));
 
@@ -38,6 +38,20 @@ export function validateSelection(value) {
   if (value.models.length && !banks.length) throw new Error('Selected Plaits models need a bank.');
   if (!value.wave && !value.models.length) throw new Error('Keep Beads wavetables or at least one Plaits model.');
   return { wave: value.wave, rings: value.rings, models: value.models.slice(), banks };
+}
+
+// Add one bank without replacing any selected models, sections or existing bank slots.
+export function addStarterBank(selection, bank, release) {
+  validateSelection(selection);
+  if (!bank || !Array.isArray(bank.models) || bank.models.length !== 8 ||
+      !bank.models.every(knownModel)) throw new Error('A starter bank needs eight known models.');
+  if (selection.banks.length >= 15) throw new Error('Remove a bank before adding another; fifteen banks is the limit.');
+  const next = validateSelection({ ...selection,
+    models: [...new Set([...selection.models, ...bank.models])],
+    banks: [...selection.banks, bank.models.slice()] });
+  const missing = refit(next, release);
+  if (missing.missing.length || missing.ringsMissing) throw new Error('Refit required: keep or replace unavailable content before adding this bank.');
+  return next;
 }
 
 export function defaultSelection(release) {

@@ -22,7 +22,7 @@
 //
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
-import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=6a1c50a3577e20b3';
+import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=bf6fbd1729a5f260';
 
 // Six-byte entries are kept in wire order: id, state, value, page, amount, action.
 const STATES = ['Off', 'Fixed', 'Adjustable'];
