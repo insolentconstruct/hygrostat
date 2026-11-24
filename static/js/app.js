@@ -9,25 +9,26 @@
 // in the browser, check the .wav, offer it for download.
 
 import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, GAIN,
-  pageLeds, gestureFirmware, exactPageRule, offeredValues } from './profile.js?v=6a1c50a3577e20b3';
-import { effectiveScales, validateScales } from './scales.js?v=6a1c50a3577e20b3';
-import { scaleEditor } from './scale_editor.js?v=6a1c50a3577e20b3';
-import { guide } from './guide.js?v=6a1c50a3577e20b3';
-import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=6a1c50a3577e20b3';
-import { featureHelp, actionHelp } from './help.js?v=6a1c50a3577e20b3';
+  pageLeds, gestureFirmware, exactPageRule, offeredValues } from './profile.js?v=bf6fbd1729a5f260';
+import { effectiveScales, validateScales } from './scales.js?v=bf6fbd1729a5f260';
+import { scaleEditor } from './scale_editor.js?v=bf6fbd1729a5f260';
+import { guide } from './guide.js?v=bf6fbd1729a5f260';
+import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=bf6fbd1729a5f260';
+import { featureHelp, actionHelp } from './help.js?v=bf6fbd1729a5f260';
 import { KNOBS, KINDS, GROUPS, EXTRA_GROUPS, extraGroup, extraControl, ACTION_DOES, placeName, pageOf, entryOf, occupant, places, valueLabel, stateLabel,
   summary, stateHint, edit, place, adjust, unplace, afterUnplace, canSwap, freeSlot, changes, fitsSlot, placeable, bankWarning, slotCount,
-  usedPages, compaction, compact } from './layout.js?v=6a1c50a3577e20b3';
-import { drawPanel, highlight } from './panel.js?v=6a1c50a3577e20b3';
-import { comboImages } from './combo.js?v=6a1c50a3577e20b3';
-import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=6a1c50a3577e20b3';
+  usedPages, compaction, compact } from './layout.js?v=bf6fbd1729a5f260';
+import { drawPanel, highlight } from './panel.js?v=bf6fbd1729a5f260';
+import { comboImages } from './combo.js?v=bf6fbd1729a5f260';
+import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=bf6fbd1729a5f260';
 
-import { regionSupport, SECTION_NAMES, SECTION_KINDS } from './profile.js?v=6a1c50a3577e20b3';
-import { regionImage } from './region.js?v=6a1c50a3577e20b3';
-import { readContent, encodeContent, decodeContent, CONTENT } from './content.js?v=6a1c50a3577e20b3';
-import { grids } from './terrain.js?v=6a1c50a3577e20b3';
-import { factoryTable } from './wavetables.js?v=6a1c50a3577e20b3';
-import { stockBanks, defaultSelection, validateSelection, removeModel, lockSynth, synthLock, flashMeter, refit, selectedRegion, fetchAsset } from './palette.js?v=6a1c50a3577e20b3';
+import { regionSupport, SECTION_NAMES, SECTION_KINDS } from './profile.js?v=bf6fbd1729a5f260';
+import { regionImage } from './region.js?v=bf6fbd1729a5f260';
+import { readContent, encodeContent, decodeContent, CONTENT } from './content.js?v=bf6fbd1729a5f260';
+import { grids } from './terrain.js?v=bf6fbd1729a5f260';
+import { factoryTable } from './wavetables.js?v=bf6fbd1729a5f260';
+import { starterBanksHash } from './starter_banks.js?v=bf6fbd1729a5f260';
+import { stockBanks, addStarterBank, defaultSelection, validateSelection, removeModel, lockSynth, synthLock, flashMeter, refit, selectedRegion, fetchAsset } from './palette.js?v=bf6fbd1729a5f260';
 
 const $ = (id) => document.getElementById(id);
 const cap = (text) => text.replace(/^./, (c) => c.toUpperCase());
@@ -50,7 +51,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=6a1c50a3577e20b3', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=bf6fbd1729a5f260', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.ready) return;
       if (data.progress !== undefined) {
@@ -73,6 +74,7 @@ let download;
 let entries;
 let scales = null;
 let palette = null;
+let starterBanks = [];
 let portableContent = null;
 let prepared = null;
 let profileFile = null;
@@ -1097,6 +1099,32 @@ function renderPalette() {
   const children = [toggle('Beads wavetables (WAVE)', current.wave, (wave) => changePalette({ ...current, wave }), !current.models.length),
     toggle('Rings synth', current.rings, (rings) => changePalette({ ...current, rings }), !release.content?.rings && !current.rings),
     el('p', { class: 'note', text: 'CPU: not measured. Bank colours follow FEEDBACK bank order. Each bank has eight slots.' })];
+  const starters = el('fieldset', {}, el('legend', { text: 'Starter banks' }),
+    el('p', { class: 'note', text: 'Add eight models as a bank. Your models and banks stay installed. Flash fit is checked before applying.' }));
+  for (const bank of starterBanks) {
+    const available = bank.models.every((id) => rows.some((row) => row.id === id));
+    starters.append(el('button', { type: 'button', text: bank.name,
+      disabled: !available || current.banks.length >= 15, onclick: async () => {
+        const started = revision;
+        try {
+          const next = addStarterBank(current, bank, release);
+          const local = !portableContent && storage && readContent(storage);
+          if (local?.error) throw new Error('Saved editor content is damaged. Open the editor to repair it.');
+          const content = local && (local.wave || local.terrains.length) ? encodeContent(local) : portableContent;
+          const decoded = content && decodeContent(content);
+          const written = await selectedRegion(release, next, decoded ? {
+            wave: decoded.wave ?? factoryTable(), terrain: decoded.terrains.length ? grids(decoded.terrains.map((t) => t.grid)) : null
+          } : payloads(), cachedFetch);
+          const block = encodeProfile(lockSynth(entries, next), release.profile, scales, { banks: next.banks, directory: written.directory });
+          const meter = flashMeter(release.app_size, written, block);
+          if (!meter.fits) throw new Error(`${-meter.free} B too large. Choose which models to remove; nothing was changed.`);
+          if (revision !== started || selected() !== release) return;
+          portableContent = content;
+          changePalette(next);
+        } catch (error) { status(error.message, 'error'); }
+      } }));
+  }
+  children.push(starters);
   for (const row of rows) {
     if (row.id >= 28 && !row.module_rows) continue;
     children.push(toggle(`${row.name} — ${row.bytes ?? '?'} B; ${row.credit ?? 'Mutable Instruments (MIT)'}`, current.models.includes(row.id), (on) => {
@@ -1336,7 +1364,7 @@ async function checkCapabilities() {
   }
   // A constructor alone does not establish support for module workers.
   await new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=6a1c50a3577e20b3', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=bf6fbd1729a5f260', { type: 'module' });
     const done = (error) => {
       clearTimeout(timer); worker.terminate();
       error ? reject(error) : resolve();
@@ -1365,7 +1393,7 @@ async function init() {
   }
   $('compatibility').hidden = true;
   try {
-    const response = await fetch('manifest.json?v=6a1c50a3577e20b3', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=bf6fbd1729a5f260', { cache: 'no-cache' });
     manifest = await response.json();
   } catch {
     status('Could not load the release list.', 'error');
@@ -1376,6 +1404,16 @@ async function init() {
         !Number.isInteger(r.profile.format) || r.profile.format < 1 || r.profile.format > 0xffffffff || !knownPages(r.profile))) {
     status('Unsupported release list.', 'error'); return;
   }
+  try {
+    const response = await fetch('starter-banks.json?v=bf6fbd1729a5f260');
+    if (!response.ok) throw new Error('Could not load starter banks.');
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    if (await sha256(bytes) !== starterBanksHash) throw new Error('Starter banks differ from this editor version. Reload to update.');
+    const data = JSON.parse(new TextDecoder().decode(bytes));
+    if (!Array.isArray(data.banks) || data.banks.some((bank) => typeof bank.name !== 'string' ||
+        !Array.isArray(bank.models) || bank.models.length !== 8 || !bank.models.every(Number.isInteger))) throw new Error('Invalid starter banks.');
+    starterBanks = data.banks;
+  } catch (error) { status(error.message, 'error'); }
   for (const release of manifest.releases) $('release').add(new Option(release.name, release.tag));
   const showCounts = mountCounts($('download-counts'), manifest.releases);
   afterInteraction(document, () => {

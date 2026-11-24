@@ -13,6 +13,9 @@ for (const release of manifest.releases) {
   release.app = clean(release.app);
   if (release.combo) release.combo.bootloader = clean(release.combo.bootloader);
 }
+const starterHash = createHash('sha256').update(read('starter-banks.json')).digest('hex');
+writeFileSync(new URL('js/starter_banks.js', root), read('js/starter_banks.js')
+    .replace(/export const starterBanksHash = '[^']*';/, `export const starterBanksHash = '${starterHash}';`));
 const files = readdirSync(new URL('js/', root)).filter((p) => p.endsWith('.js')).sort();
 const version = createHash('sha256').update(JSON.stringify(manifest) +
     files.map((p) => clean(read('js/' + p))).join('')).digest('hex').slice(0, 16);
@@ -23,7 +26,7 @@ for (const release of manifest.releases) {
 }
 writeFileSync(new URL('manifest.json', root), JSON.stringify(manifest, null, 2) + '\n');
 for (const file of files) {
-  const source = clean(read('js/' + file)).replace(/(['"])((?:\.\/|js\/)[^'"\n]+\.js|manifest\.json)\1/g,
+  const source = clean(read('js/' + file)).replace(/(['"])((?:\.\/|js\/)[^'"\n]+\.js|manifest\.json|starter-banks\.json)\1/g,
       (_, q, path) => `${q}${path}?v=${version}${q}`);
   writeFileSync(new URL('js/' + file, root), source);
 }
