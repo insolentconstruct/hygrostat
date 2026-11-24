@@ -58,6 +58,16 @@ for t in manifest profile draft scales scales_firmware event_costs module_costs 
 
 After changing anything in `static/js/` or `static/manifest.json`, run `node tools/version-assets.js`.
 
+`REACHABILITY_FIRMWARE_REF=<candidate> node test/reachability.js` checks every
+Synth/Synth start state, value, page and gesture combination against that
+firmware's parser, including accepted bytes. Set
+`profile.reachability_rules: true` only for firmware that refuses Synth start
+on [A] + FREEZE when Plaits or Rings can be selected; older releases keep
+their own rules. Matching firmware also keeps the Plaits bank and manual Synth start
+reachable when missing or damaged Beads waves force the Plaits fallback.
+`node test/fallback_guide.js` checks the desktop and mobile fallback notes;
+historical releases keep their original guides.
+
 ## Adding a release
 
 1. After the firmware is tagged, copy the tag's `app.bin` to `static/images/<tag>/` and delete the development image.

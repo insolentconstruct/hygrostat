@@ -23,12 +23,12 @@
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
 // Knob cards port options_guide.py: 270-degree arcs and the same LED ladder.
-import { effectiveScales, PULSE_NAMES } from './scales.js?v=bf6fbd1729a5f260';
-import { synthLock } from './palette.js?v=bf6fbd1729a5f260';
-import { defaults, equal, encodeProfile, pageLeds, PAGE_LEDS, GAIN } from './profile.js?v=bf6fbd1729a5f260';
-import { pageLedName, usedPages } from './layout.js?v=bf6fbd1729a5f260';
-import { RELEASE_GUIDES } from './release_guides.js?v=bf6fbd1729a5f260';
-import { placeable, bankWarning } from './layout.js?v=bf6fbd1729a5f260';
+import { effectiveScales, PULSE_NAMES } from './scales.js?v=fd42af3d70d68f49';
+import { synthLock } from './palette.js?v=fd42af3d70d68f49';
+import { defaults, equal, encodeProfile, pageLeds, PAGE_LEDS, GAIN } from './profile.js?v=fd42af3d70d68f49';
+import { pageLedName, usedPages } from './layout.js?v=fd42af3d70d68f49';
+import { RELEASE_GUIDES } from './release_guides.js?v=fd42af3d70d68f49';
+import { placeable, bankWarning } from './layout.js?v=fd42af3d70d68f49';
 
 const KNOBS = ['FEEDBACK', 'DRY/WET', 'REVERB'];
 export const ACTIONS = ['None', '[A]+SEED', '[A]+FREEZE', '[A] hold'];
@@ -146,7 +146,7 @@ function pageSteps(entries, profile) {
 
 export function guide(entries, release, fp, mobile = false, scales = null, selection = null) {
   const drawings = RELEASE_GUIDES.get(release.tag);
-  if (selection === null && scales === null && drawings && equal(encodeProfile(entries, release.profile, scales),
+  if (!release.profile.reachability_rules && selection === null && scales === null && drawings && equal(encodeProfile(entries, release.profile, scales),
       encodeProfile(defaults(release.profile), release.profile))) {
     // Normalisation removes this added fingerprint text; the remaining SVG
     // is byte-identical to options_guide.py's release drawing.
@@ -226,6 +226,9 @@ export function guide(entries, release, fp, mobile = false, scales = null, selec
     const start = (entries.find((e) => e[0] === 31) || bank.default)[2];
     y = d.lines(margin, y + 10, `${bank.name}: starts ${bank.values[start]}. ` + (bankWarning(entries, release.profile) ||
       'While the Plaits synth plays, hold [A] and press FREEZE to step green, red, yellow.'), mobile ? 43 : 140);
+  }
+  if (release.profile.reachability_rules) {
+    y = d.lines(margin, y + 10, 'If missing or damaged Beads waves force the Plaits fallback, [A]+FREEZE steps its bank while it plays. With Synth start on Manual, [A] hold starts or stops it, with both inputs unplugged and FREEZE off. Repairing the wave content restores your profile gestures; the profile and saved settings are kept.', mobile ? 43 : 140);
   }
   if (release.profile.version === 2) {
     y = d.lines(margin, y + 20, 'Scale cycle: Off and Chromatic are separate knob choices; SEED steps the following scales in order.', mobile ? 43 : 140);

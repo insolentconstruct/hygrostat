@@ -23,9 +23,9 @@
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
 // Selection, banks and physical flash accounting; no DOM.
-import { knownModel, validatePlaits, SECTION_NAMES, SECTION_KINDS, SYNTH, sha256 } from './profile.js?v=bf6fbd1729a5f260';
-import { writeRegion, resolveBlobs, blobInfo, checkInstallable, regionStart, REGION_END, APP_START } from './region.js?v=bf6fbd1729a5f260';
-import { sampleCount } from './encoder.js?v=bf6fbd1729a5f260';
+import { knownModel, validatePlaits, SECTION_NAMES, SECTION_KINDS, SYNTH, sha256 } from './profile.js?v=fd42af3d70d68f49';
+import { writeRegion, resolveBlobs, blobInfo, checkInstallable, regionStart, REGION_END, APP_START } from './region.js?v=fd42af3d70d68f49';
+import { sampleCount } from './encoder.js?v=fd42af3d70d68f49';
 
 export const stockBanks = () => Array.from({ length: 3 }, (_, b) => Array.from({ length: 8 }, (_, i) => [8, 16, 0][b] + i));
 
