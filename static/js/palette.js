@@ -23,9 +23,9 @@
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
 // Selection, banks and physical flash accounting; no DOM.
-import { knownModel, validatePlaits, SECTION_NAMES, SECTION_KINDS, SYNTH, sha256 } from './profile.js?v=fd42af3d70d68f49';
-import { writeRegion, resolveBlobs, blobInfo, checkInstallable, regionStart, REGION_END, APP_START } from './region.js?v=fd42af3d70d68f49';
-import { sampleCount } from './encoder.js?v=fd42af3d70d68f49';
+import { knownModel, validatePlaits, SECTION_NAMES, SECTION_KINDS, SYNTH, sha256 } from './profile.js?v=93bd792661965b57';
+import { writeRegion, resolveBlobs, blobInfo, checkInstallable, regionStart, REGION_END, APP_START } from './region.js?v=93bd792661965b57';
+import { sampleCount } from './encoder.js?v=93bd792661965b57';
 
 export const stockBanks = () => Array.from({ length: 3 }, (_, b) => Array.from({ length: 8 }, (_, i) => [8, 16, 0][b] + i));
 
@@ -88,9 +88,12 @@ export function flashMeter(appSize, written, block) {
     seconds: sampleCount(end - APP_START) / 48000 };
 }
 
+// The stock models are qualified; Palette models need module rows.
+export const offeredModels = (release) => (release.content?.models ?? []).filter((row) => row.id < 28 || row.module_rows);
+
 // Nothing is discarded: the caller presents missing models and the deficit before accepting a replacement.
 export function refit(selection, release, meter = null) {
-  const offered = release.content?.models ?? [];
+  const offered = offeredModels(release);
   return { missing: selection.models.filter((id) => !offered.some((m) => m.id === id)),
     ringsMissing: selection.rings && !release.content?.rings, deficit: Math.max(0, -(meter?.free ?? 0)) };
 }
@@ -115,11 +118,11 @@ export async function selectedRegion(release, selection, content, fetcher = fetc
     const asset = assets.models.find((m) => m.id === id);
     const blob = await fetchAsset(asset, fetcher);
     const info = blobInfo(blob);
-    if (info.kind !== 1 || info.first !== id || info.ids !== 1) throw new Error('Model asset ID differs from its catalogue.');
-    return blob;
+    if (info.kind !== 1 || id < info.first || id >= info.first + info.ids) throw new Error('Model asset ID differs from its catalogue.');
+    return [asset.sha256, blob];
   }));
   const libraries = await Promise.all((assets.libraries ?? []).map((asset) => fetchAsset(asset, fetcher)));
-  const resolved = await resolveBlobs(models, libraries);
+  const resolved = await resolveBlobs([...new Map(models).values()], libraries);
   const blobs = resolved.blobs;
   if (selection.rings) blobs.push(await fetchAsset(assets.rings, fetcher));
   const written = writeRegion({ release: release.profile.region.release, wave: selection.wave ? content.wave : null,

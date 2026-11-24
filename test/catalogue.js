@@ -74,6 +74,7 @@ Object.assign(release, { tag: 'drizzlet-dev-catalogue', name: 'Synthetic fixture
   development: true, source_commit: ref });
 release.profile.features = catalogueFeatures(catalogue);
 Object.assign(release.profile, { hold_rules: true, feedback_slot: true });
+if (process.env.CATALOGUE_REACHABILITY_RULES === '1') release.profile.reachability_rules = true;
 validateProfileFormat(release, text('beads/profile.h'));
 assert(catalogue.features.every((c) => [0, pageSlots(release.profile)].includes(c.page_slots.length)));
 
