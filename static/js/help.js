@@ -21,7 +21,7 @@ const descriptions = {
   15: ['Brief blue startup cue.', 'small-beta-2-profile-options'],
   16: ['Lower manual gain to silence; automatic gain unchanged.', 'small-beta-2-profile-options'],
   17: ['Light cue when switching delay mode.', 'small-beta-2-profile-options'],
-  18: ['Set LED brightness, including warnings.', 'small-beta-2-profile-options'],
+  18: ['Set LED brightness, including warnings. Dimmed colours follow curves measured on one module; colour and brightness can vary from unit to unit and with temperature.', 'small-beta-2-profile-options'],
   19: ['Show CV strength on assignment LEDs.', 'small-beta-2-profile-options'],
   20: ['Keep FREEZE lit while saving.', 'small-beta-2-profile-options'],
   21: ['Choose latched SEED trigger behaviour.', 'small-beta-2-profile-options'],
