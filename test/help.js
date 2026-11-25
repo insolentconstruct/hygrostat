@@ -41,6 +41,29 @@ assert.match(pitchSteps.description, /CCW.*relative.*CW.*before Pitch scale/);
 assert.match(pitchSteps.details, /C and G.*G below C \(a fourth down\).*afterwards/);
 assert.match(pitchSteps.details, /granular and Beads wavetable grains, not the continuous oscillator, Plaits or Spectral/);
 assert.equal(manifest.releases[0].profile.features.find((f) => f.id === 10).name, 'Random pitch steps');
+const beta4 = JSON.parse(read('../static/images/beta4-catalogue/index.json'));
+const beta4Docs = firmwareShow(beta4.source_commit, 'beads/build/docs/FEATURES.md', { encoding: 'utf8' });
+for (const [id, heading] of [[34, 'Grain stealing'], [35, 'Delay feedback'], [36, 'Delay time']]) {
+  const feature = beta4.profile.features.find((f) => f.id === id);
+  assert(beta4Docs.split('\n').includes(`### ${heading}`));
+  const help = featureHelp(feature, { ...beta4, development: true });
+  const anchor = heading.toLowerCase().replaceAll(' ', '-');
+  assert(help.url.endsWith(`/blob/${beta4.source_commit}/beads/build/docs/FEATURES.md#${anchor}`));
+}
+const warnings = [];
+const warn = console.warn;
+try {
+  console.warn = (message) => warnings.push(message);
+  const unknown = { id: 254 };
+  const fallback = { description: 'No description available.', details: '', url: null };
+  assert.deepEqual(featureHelp(unknown, manifest.releases[0]), fallback);
+  assert.deepEqual(featureHelp(unknown, manifest.releases.at(-1)), fallback);
+  assert.deepEqual(featureHelp({ id: 255 }, manifest.releases[0]), fallback);
+  assert.deepEqual(warnings, ['Missing editor help for feature ID 254.', 'Missing editor help for feature ID 255.']);
+} finally {
+  console.warn = warn;
+}
+
 const app = read('../static/js/app.js');
 assert(app.includes('featureHelp(f, selected())') && app.includes('href: help.url'));
 assert(app.includes('text: actionHelp(f)'));
