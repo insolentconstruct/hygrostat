@@ -36,6 +36,7 @@ import { defaultSelection, offeredModels, selectedRegion } from '../static/js/pa
 import { modelInfo } from '../static/js/model_info.js';
 import { defaults, encodeProfile, regionSupport, validateProfileFormat } from '../static/js/profile.js';
 import { factoryTable } from '../static/js/wavetables.js';
+import { libraryGroups, fitsSlot } from '../static/js/layout.js';
 
 const assetRoot = new URL('../static/', import.meta.url);
 const indexPath = 'images/beta4-catalogue/index.json';
@@ -46,7 +47,12 @@ const catalogue = catalogueAtRef(firmwareShow, release.source_commit);
 assert.deepEqual(readAsset(release.catalogue.url), source(CATALOGUE));
 assert.deepEqual(release.profile.features, catalogueFeatures(catalogue));
 assert.equal(release.profile.features.length, 52);
-assert.equal(release.profile.features.at(-1).name, 'Gain ceiling');
+const gainCeiling = release.profile.features.at(-1);
+assert.equal(gainCeiling.name, 'Gain ceiling');
+assert(fitsSlot(release.profile, gainCeiling, 'page', 21));
+const libraryIds = libraryGroups(release.profile).flatMap(([, ids]) => ids);
+assert.deepEqual(libraryIds.sort((a, b) => a - b), release.profile.features.map(({ id }) => id),
+  'Every Beta 4 feature appears once in the editor library');
 assert.equal(release.content.models.length, 96);
 assert.equal(release.content.models.filter((row) => row.id >= 28 && row.blob_size !== undefined).length, 70);
 assert.equal(release.content.libraries.length, 6);

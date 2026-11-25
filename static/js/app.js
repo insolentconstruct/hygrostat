@@ -9,27 +9,27 @@
 // in the browser, check the .wav, offer it for download.
 
 import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, GAIN,
-  pageLeds, gestureFirmware, exactPageRule, offeredValues } from './profile.js?v=c00dfc6863dd24ba';
-import { effectiveScales, validateScales } from './scales.js?v=c00dfc6863dd24ba';
-import { scaleEditor } from './scale_editor.js?v=c00dfc6863dd24ba';
-import { guide } from './guide.js?v=c00dfc6863dd24ba';
-import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=c00dfc6863dd24ba';
-import { featureHelp, actionHelp } from './help.js?v=c00dfc6863dd24ba';
-import { KNOBS, KINDS, GROUPS, EXTRA_GROUPS, extraGroup, extraControl, ACTION_DOES, placeName, pageOf, entryOf, occupant, places, valueLabel, stateLabel,
+  pageLeds, gestureFirmware, exactPageRule, offeredValues } from './profile.js?v=0c0f009b84546262';
+import { effectiveScales, validateScales } from './scales.js?v=0c0f009b84546262';
+import { scaleEditor } from './scale_editor.js?v=0c0f009b84546262';
+import { guide } from './guide.js?v=0c0f009b84546262';
+import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=0c0f009b84546262';
+import { featureHelp, actionHelp } from './help.js?v=0c0f009b84546262';
+import { KNOBS, KINDS, libraryGroups, EXTRA_GROUPS, extraGroup, extraControl, ACTION_DOES, placeName, pageOf, entryOf, occupant, places, valueLabel, stateLabel,
   summary, stateHint, edit, place, adjust, unplace, afterUnplace, canSwap, freeSlot, changes, fitsSlot, placeable, bankWarning, slotCount,
-  usedPages, compaction, compact } from './layout.js?v=c00dfc6863dd24ba';
-import { drawPanel, highlight } from './panel.js?v=c00dfc6863dd24ba';
-import { comboImages } from './combo.js?v=c00dfc6863dd24ba';
-import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=c00dfc6863dd24ba';
+  usedPages, compaction, compact } from './layout.js?v=0c0f009b84546262';
+import { drawPanel, highlight } from './panel.js?v=0c0f009b84546262';
+import { comboImages } from './combo.js?v=0c0f009b84546262';
+import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=0c0f009b84546262';
 
-import { regionSupport, SECTION_NAMES, SECTION_KINDS } from './profile.js?v=c00dfc6863dd24ba';
-import { regionImage } from './region.js?v=c00dfc6863dd24ba';
-import { readContent, encodeContent, decodeContent, CONTENT } from './content.js?v=c00dfc6863dd24ba';
-import { grids } from './terrain.js?v=c00dfc6863dd24ba';
-import { factoryTable } from './wavetables.js?v=c00dfc6863dd24ba';
-import { modelInfo } from './model_info.js?v=c00dfc6863dd24ba';
-import { starterBanksHash } from './starter_banks.js?v=c00dfc6863dd24ba';
-import { stockBanks, offeredModels, addStarterBank, defaultSelection, validateSelection, removeModel, lockSynth, synthLock, flashMeter, refit, selectedRegion, fetchAsset } from './palette.js?v=c00dfc6863dd24ba';
+import { regionSupport, SECTION_NAMES, SECTION_KINDS } from './profile.js?v=0c0f009b84546262';
+import { regionImage } from './region.js?v=0c0f009b84546262';
+import { readContent, encodeContent, decodeContent, CONTENT } from './content.js?v=0c0f009b84546262';
+import { grids } from './terrain.js?v=0c0f009b84546262';
+import { factoryTable } from './wavetables.js?v=0c0f009b84546262';
+import { modelInfo } from './model_info.js?v=0c0f009b84546262';
+import { starterBanksHash } from './starter_banks.js?v=0c0f009b84546262';
+import { stockBanks, offeredModels, addStarterBank, defaultSelection, validateSelection, removeModel, lockSynth, synthLock, flashMeter, refit, selectedRegion, fetchAsset } from './palette.js?v=0c0f009b84546262';
 
 const $ = (id) => document.getElementById(id);
 const cap = (text) => text.replace(/^./, (c) => c.toUpperCase());
@@ -52,7 +52,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=c00dfc6863dd24ba', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=0c0f009b84546262', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.ready) return;
       if (data.progress !== undefined) {
@@ -900,7 +900,7 @@ function renderLibrary(confirm = null) {
   const target = libraryTarget;
   const query = $('library-search').value.trim().toLowerCase();
   const here = target && occupant(entries, target.kind, target.slot);
-  const groups = GROUPS.map(([name, ids]) => {
+  const groups = libraryGroups(profile()).map(([name, ids]) => {
     const items = ids.map(featureById).filter((f) => f && (!target || fitsSlot(profile(), f, target.kind, target.slot)))
       .filter((f) => !query || `${f.name} ${featureHelp(f, selected()).description}`.toLowerCase().includes(query))
       .map((f) => {
@@ -1367,7 +1367,7 @@ async function checkCapabilities() {
   }
   // A constructor alone does not establish support for module workers.
   await new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=c00dfc6863dd24ba', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=0c0f009b84546262', { type: 'module' });
     const done = (error) => {
       clearTimeout(timer); worker.terminate();
       error ? reject(error) : resolve();
@@ -1396,7 +1396,7 @@ async function init() {
   }
   $('compatibility').hidden = true;
   try {
-    const response = await fetch('manifest.json?v=c00dfc6863dd24ba', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=0c0f009b84546262', { cache: 'no-cache' });
     manifest = await response.json();
   } catch {
     status('Could not load the release list.', 'error');
@@ -1408,7 +1408,7 @@ async function init() {
     status('Unsupported release list.', 'error'); return;
   }
   try {
-    const response = await fetch('starter-banks.json?v=c00dfc6863dd24ba');
+    const response = await fetch('starter-banks.json?v=0c0f009b84546262');
     if (!response.ok) throw new Error('Could not load starter banks.');
     const bytes = new Uint8Array(await response.arrayBuffer());
     if (await sha256(bytes) !== starterBanksHash) throw new Error('Starter banks differ from this editor version. Reload to update.');

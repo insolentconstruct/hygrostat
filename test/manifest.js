@@ -15,7 +15,7 @@ import { firmwareShow, firmwareRepo } from './firmware.js';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { decodeProfile, defaults, encodeProfile, equal, validateProfileFormat, pageSlots, regionSupport } from '../static/js/profile.js';
-import { validateRegionFirmware } from '../static/js/region.js';
+import { regionImage, validateRegionFirmware } from '../static/js/region.js';
 import { decode } from '../static/js/decoder.js';
 import { encode, MAX_APP_SIZE } from '../static/js/encoder.js';
 
@@ -36,15 +36,36 @@ for (const release of manifest.releases) {
   check(hash(app) === release.app_sha256, `${release.tag}: app SHA-256`);
   check(release.profile && release.profile.offset === 1024 && release.profile.size === (release.profile.version === 2 ? 4096 : 512) && [1, 2].includes(release.profile.version), `${release.tag}: profile metadata`);
   check(equal(encodeProfile(defaults(release.profile), release.profile), app.subarray(1024, 1024 + release.profile.size)), `${release.tag}: default profile equals firmware`);
-  const wav = encode(app);
-  check(equal(decode(wav, app.length), app), `${release.tag}: WAV decodes byte for byte`);
+  const ref = release.development ? release.source_commit : `refs/tags/${release.tag}`;
+  const pinned = (file) => firmwareShow(ref, `beads/build/${file}`, { encoding: 'utf8' }).split('\n');
+  let image = app;
+  if (release.profile.region !== undefined) {
+    const asset = release.content.region;
+    const region = readFileSync(new URL(asset.url, root));
+    check(hash(region) === asset.sha256 && pinned('expected-hashes.sha256').includes(`${asset.sha256}  region.bin`),
+        `${release.tag}: stock region SHA-256 pinned in firmware`);
+    for (const { kind, offset, size, sha256 } of release.profile.region.default_layout) {
+      const section = region.subarray(offset, offset + size);
+      check(section.length === size && hash(section) === sha256, `${release.tag}: ${kind} section SHA-256`);
+    }
+    check(pinned('expected-hashes.sha256').includes(`${hash(app)}  app.bin`),
+        `${release.tag}: app SHA-256 pinned in firmware`);
+    image = regionImage(app, region);
+    check(pinned('expected-hashes.sha256').includes(`${hash(image)}  image.bin`),
+        `${release.tag}: full image SHA-256 pinned in firmware`);
+  }
+  const wav = encode(image);
+  check(equal(decode(wav, image.length), image), `${release.tag}: WAV decodes byte for byte`);
   const hasWavHash = release.wav_sha256 !== undefined;
   if (hasWavHash) {
     check(hash(wav) === release.wav_sha256, `${release.tag}: .wav byte-identical`);
+    if (release.profile.region !== undefined && release.development && !release.binary_source_commit) {
+      check(pinned('expected-wav.sha256').includes(`${release.wav_sha256}  app.wav`),
+          `${release.tag}: .wav SHA-256 pinned in firmware`);
+    }
   } else {
     check(release.development === true, `${release.tag}: missing release WAV hash`);
   }
-  const ref = release.development ? release.source_commit : `refs/tags/${release.tag}`;
   const header = firmwareShow(ref, 'beads/profile.h', { encoding: 'utf8' });
   try { validateProfileFormat(release, header); check(true, `${release.tag}: firmware profile format`); }
   catch { check(false, `${release.tag}: firmware profile format`); }
@@ -85,10 +106,10 @@ for (const release of manifest.releases) {
       }
     }
   } else {
-    const pinned = (file) => firmwareShow(`refs/tags/${release.tag}`, `beads/build/${file}`,
-        { encoding: 'utf8' }).split('\n');
-    check(pinned('expected-hashes.sha256').includes(`${release.app_sha256}  app.bin`),
-        `${release.tag}: app SHA-256 pinned at the tag`);
+    if (release.profile.region === undefined) {
+      check(pinned('expected-hashes.sha256').includes(`${release.app_sha256}  app.bin`),
+          `${release.tag}: app SHA-256 pinned at the tag`);
+    }
     check(pinned('expected-wav.sha256').includes(`${release.wav_sha256}  app.wav`),
         `${release.tag}: .wav SHA-256 pinned at the tag`);
     const date = new Date(`${release.date}T00:00:00Z`);
