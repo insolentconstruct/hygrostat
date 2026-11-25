@@ -77,11 +77,13 @@ jobs:
           node test/region.js
           node test/catalogue.js
           node test/beta4_catalogue.js
+          node test/beta4_output.js
           node test/resonator.js
           node test/rings.js
           PYTHON="$RUNNER_TEMP/py/bin/python3" node test/wavetables.js
           node test/terrain.js
           node test/palette.js
+          node test/starter_banks.js
       - name: Install the pinned Hugo
         run: |
           archive="hugo_${HUGO_VERSION}_linux-amd64.tar.gz"
@@ -129,6 +131,7 @@ jobs:
           SITE=static BASE=http://127.0.0.1:8080/ node test/editor_browser.mjs
           SITE=static BASE=http://127.0.0.1:8080/ node test/palette_browser.mjs
           SITE=static BASE=http://127.0.0.1:8080/ node test/palette_regressions_browser.mjs
+          SITE=static BASE=http://127.0.0.1:8080/ node test/starter_banks_browser.mjs
           BASE=http://127.0.0.1:8080/ node test/security_browser.mjs
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: failure()

@@ -68,6 +68,21 @@ reachable when missing or damaged Beads waves force the Plaits fallback.
 `node test/fallback_guide.js` checks the desktop and mobile fallback notes;
 historical releases keep their original guides.
 
+To check the staged Beta 4 entry against an integration build, pass the
+firmware ref, the build output containing `app.bin` and the entry JSON
+(`releases/beta4-development.json` on the staged entry branch):
+
+```sh
+node tools/check-beta4-wav.js firmware origin/beta4/integration BUILD_DIR ENTRY_JSON
+```
+
+The check reads the pins from the supplied ref. It rebuilds the stock region
+from the entry's blobs and checks the full install image and WAV. For a new
+freeze, re-import the catalogue from the matching build and use its index as
+`ENTRY_JSON`; pass the asset root as the last argument if it differs from
+`static`. The Pages manifest test performs the full-image pin check for
+region-enabled releases in the live manifest.
+
 ## Adding a release
 
 1. After the firmware is tagged, copy the tag's `app.bin` to `static/images/<tag>/` and delete the development image.
