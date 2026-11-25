@@ -22,7 +22,7 @@
 //
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
-// Synthetic content checks the app without offering a firmware download.
+// Synthetic content and a non-installable app exercise the editor and export.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -52,7 +52,14 @@ const models = [0, 1].map((id) => {
 const written = writeRegion({ release: 20261121, wave: factoryTable(), blobs: models });
 release.content = { models: models.map((bytes, id) => ({ id, name: `Model ${id}`, bytes: bytes.length, ...asset(`model${id}`, bytes) })),
   libraries: [], region: asset('region', written.region) };
-const selection = { wave: true, rings: false, models: [0, 1], banks: [Array(8).fill(0)] };
+release.content.model_cpu = { screening_ratio: 1.044, working_limits: { 48000: 96.5, 32000: 97, 24000: 90 } };
+release.content.models[0].seed3_peak = { 48000: 95, 32000: 40, 24000: 35 };
+release.content.models[1].seed3_peak = { 48000: 50, 24000: 25 };
+const app = new Uint8Array(release.profile.offset + release.profile.size);
+app.set(encodeProfile(defaults(release.profile), release.profile), release.profile.offset);
+const appAsset = asset('app.bin', app);
+Object.assign(release, { development: true, app: appAsset.url, app_sha256: appAsset.sha256, app_size: app.length });
+const selection = { wave: true, rings: false, models: [0, 1], banks: [[1, 0, 0, 0, 0, 0, 0, 0]] };
 const block = encodeProfile(defaults(release.profile), release.profile, null, { banks: selection.banks, directory: written.directory });
 const fragment = share(release, block, { selection, content: null });
 const until = async (test) => {
@@ -77,6 +84,17 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     await page.goto(base + '#' + fragment);
     await until(async () => await page.locator('#build').isEnabled());
     assert.match(await page.textContent('#flash-meter'), /WAVE: 100396 B/);
+    assert.match(await page.locator('.bank-cpu-warning').textContent(), /CPU WARNING: Bank 1 may crackle at 48 kHz/);
+    assert.match(await page.locator('#palette-controls').textContent(), /32 kHz · Seed3 peak 40.0% · screened 41.8% · limit 97.0% · incomplete screening/);
+    await page.click('#build');
+    await page.locator('#download').waitFor({ state: 'visible', timeout: 60000 });
+    assert.match(await page.textContent('#download'), /Download WAV/);
+    assert(await page.locator('.bank-cpu-warning').isVisible());
+    const audioDownload = page.waitForEvent('download');
+    await page.click('#download');
+    const audio = readFileSync(await (await audioDownload).path());
+    assert.equal(audio.toString('ascii', 0, 4), 'RIFF');
+    assert.equal(audio.toString('ascii', 8, 12), 'WAVE');
     await page.getByLabel('Beads wavetables (WAVE)', { exact: true }).uncheck();
     await until(async () => (await page.textContent('#palette-status')).includes('locked to Plaits'));
     await page.getByLabel('Beads wavetables (WAVE)', { exact: true }).check();
@@ -86,6 +104,8 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     for (let slot = 1; slot <= 8; ++slot) await page.getByLabel(`Bank 1, slot ${slot}`, { exact: true }).selectOption('1');
     await page.getByLabel('Model 0', { exact: false }).uncheck();
     await until(async () => await page.locator('#build').isEnabled());
+    assert.equal(await page.locator('.bank-cpu-warning').count(), 0);
+    assert.match(await page.locator('#palette-controls').textContent(), /32 kHz · CPU unmeasured/);
     const link = await page.getAttribute('#share', 'href');
     await page.goto(base + link);
     await until(async () => await page.locator('#build').isEnabled());

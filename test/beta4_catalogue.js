@@ -33,6 +33,8 @@ import { fileURLToPath } from 'node:url';
 import { firmwareRepo, firmwareShow } from './firmware.js';
 import { CATALOGUE, catalogueAtRef, catalogueFeatures } from '../tools/catalogue.js';
 import { defaultSelection, offeredModels, selectedRegion } from '../static/js/palette.js';
+import { factoryScales } from '../static/js/scales.js';
+import { guide } from '../static/js/guide.js';
 import { modelInfo } from '../static/js/model_info.js';
 import { defaults, encodeProfile, regionSupport, validateProfileFormat } from '../static/js/profile.js';
 import { factoryTable } from '../static/js/wavetables.js';
@@ -42,6 +44,8 @@ const assetRoot = new URL('../static/', import.meta.url);
 const indexPath = 'images/beta4-catalogue/index.json';
 const readAsset = (path) => readFileSync(new URL(path, assetRoot));
 const release = JSON.parse(readAsset(indexPath));
+const staged = JSON.parse(readFileSync(new URL('../releases/beta4-development.json', import.meta.url)));
+for (const key of Object.keys(release)) assert.deepEqual(staged[key], release[key], key);
 const source = (path) => firmwareShow(release.source_commit, path);
 const catalogue = catalogueAtRef(firmwareShow, release.source_commit);
 assert.deepEqual(readAsset(release.catalogue.url), source(CATALOGUE));
@@ -58,6 +62,30 @@ assert.equal(release.content.models.filter((row) => row.id >= 28 && row.blob_siz
 assert.equal(release.content.libraries.length, 6);
 assert.equal(offeredModels(release).length, 24);
 const { content, profile } = release;
+const guides = ['options-guide.svg', 'options-guide-mobile.svg'];
+for (const name of guides) assert.deepEqual(readAsset(`images/beta4-catalogue/${name}`), source(`beads/build/docs/${name}`));
+assert.deepEqual(profile.features.find(({ id }) => id === 18).values, ['100%', '66%', '33%', '15%']);
+assert.deepEqual(profile.leds.boot, [0, 211, 255]);
+assert.deepEqual(profile.leds.brightness_15, [255, 0, 0]);
+assert.equal(profile.leds.brightness_zone_band, .025);
+assert.deepEqual(factoryScales(profile.leds).map(({ color }) => color), [
+  [255, 89, 92], [255, 209, 0], [95, 222, 255], [255, 209, 0],
+  [95, 222, 255], [0, 255, 253], [240, 0, 255], [255, 0, 170]
+]);
+for (const mobile of [false, true]) {
+  const entries = [...defaults(profile), [15, 1, 1, 0, 0, 0]];
+  const svg = guide(entries, { ...release, tag: 'beta4-test' }, 'test', mobile);
+  for (const color of ['ff595c', 'ffd100', '5fdeff', '00fffd', 'f000ff', 'ff00aa', '00d3ff']) assert(svg.includes(`fill="#${color}"`));
+  assert.match(svg, /fill="#ff0000"[^>]*stroke-dasharray="6 4"[^>]*\/>\s*<text[^>]*>15%<\/text>/);
+  assert.match(svg, /15%<\/text>\s*<text[^>]*>red; slow(?: blink)?<\/text>/);
+}
+assert.equal(content.models.flatMap(({ seed3_peak }) => Object.values(seed3_peak)).length, 288);
+assert.equal(content.models.find(({ id }) => id === 7).sha256,
+  '372129b1e04f0b426aeb427248e8f73a1b3dbc78dd12990181b9803f2d8c9ebe');
+assert.deepEqual(content.model_cpu.working_limits, { 48000: 96.5, 32000: 97, 24000: 90 });
+for (const [rate, limit] of Object.entries(content.model_cpu.working_limits)) {
+  assert(Math.max(...content.models.map(({ seed3_peak }) => seed3_peak[rate])) * content.model_cpu.screening_ratio < limit);
+}
 validateProfileFormat(release, source('beads/profile.h').toString());
 assert(regionSupport(profile));
 const factory = source('beads/profile.cc').toString().split('kProfileBlock[kProfileSize]')[1].split('};')[0];
@@ -93,7 +121,7 @@ try {
   const output = join(scratch, 'images');
   execFileSync(process.execPath, [fileURLToPath(new URL('../tools/import-catalogue.js', import.meta.url)),
     firmwareRepo, release.source_commit, scratch, output]);
-  for (const path of [...blobs, content.region.url, release.catalogue.url, indexPath]) {
+  for (const path of [...blobs, content.region.url, release.catalogue.url, indexPath, ...guides.map((name) => `images/beta4-catalogue/${name}`)]) {
     assert.deepEqual(readAsset(path), readFileSync(join(output, path.slice('images/'.length))), path);
   }
 } finally {

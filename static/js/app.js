@@ -9,27 +9,27 @@
 // in the browser, check the .wav, offer it for download.
 
 import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, GAIN,
-  pageLeds, gestureFirmware, exactPageRule, offeredValues } from './profile.js?v=0c0f009b84546262';
-import { effectiveScales, validateScales } from './scales.js?v=0c0f009b84546262';
-import { scaleEditor } from './scale_editor.js?v=0c0f009b84546262';
-import { guide } from './guide.js?v=0c0f009b84546262';
-import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=0c0f009b84546262';
-import { featureHelp, actionHelp } from './help.js?v=0c0f009b84546262';
+  pageLeds, gestureFirmware, exactPageRule, offeredValues } from './profile.js?v=61033485aef34a7f';
+import { effectiveScales, validateScales } from './scales.js?v=61033485aef34a7f';
+import { scaleEditor } from './scale_editor.js?v=61033485aef34a7f';
+import { guide } from './guide.js?v=61033485aef34a7f';
+import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=61033485aef34a7f';
+import { featureHelp, actionHelp } from './help.js?v=61033485aef34a7f';
 import { KNOBS, KINDS, libraryGroups, EXTRA_GROUPS, extraGroup, extraControl, ACTION_DOES, placeName, pageOf, entryOf, occupant, places, valueLabel, stateLabel,
   summary, stateHint, edit, place, adjust, unplace, afterUnplace, canSwap, freeSlot, changes, fitsSlot, placeable, bankWarning, slotCount,
-  usedPages, compaction, compact } from './layout.js?v=0c0f009b84546262';
-import { drawPanel, highlight } from './panel.js?v=0c0f009b84546262';
-import { comboImages } from './combo.js?v=0c0f009b84546262';
-import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=0c0f009b84546262';
+  usedPages, compaction, compact } from './layout.js?v=61033485aef34a7f';
+import { drawPanel, highlight } from './panel.js?v=61033485aef34a7f';
+import { comboImages } from './combo.js?v=61033485aef34a7f';
+import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=61033485aef34a7f';
 
-import { regionSupport, SECTION_NAMES, SECTION_KINDS } from './profile.js?v=0c0f009b84546262';
-import { regionImage } from './region.js?v=0c0f009b84546262';
-import { readContent, encodeContent, decodeContent, CONTENT } from './content.js?v=0c0f009b84546262';
-import { grids } from './terrain.js?v=0c0f009b84546262';
-import { factoryTable } from './wavetables.js?v=0c0f009b84546262';
-import { modelInfo } from './model_info.js?v=0c0f009b84546262';
-import { starterBanksHash } from './starter_banks.js?v=0c0f009b84546262';
-import { stockBanks, offeredModels, addStarterBank, defaultSelection, validateSelection, removeModel, lockSynth, synthLock, flashMeter, refit, selectedRegion, fetchAsset } from './palette.js?v=0c0f009b84546262';
+import { regionSupport, SECTION_NAMES, SECTION_KINDS } from './profile.js?v=61033485aef34a7f';
+import { regionImage } from './region.js?v=61033485aef34a7f';
+import { readContent, encodeContent, decodeContent, CONTENT } from './content.js?v=61033485aef34a7f';
+import { grids } from './terrain.js?v=61033485aef34a7f';
+import { factoryTable } from './wavetables.js?v=61033485aef34a7f';
+import { modelInfo } from './model_info.js?v=61033485aef34a7f';
+import { starterBanksHash } from './starter_banks.js?v=61033485aef34a7f';
+import { stockBanks, offeredModels, addStarterBank, defaultSelection, validateSelection, removeModel, lockSynth, synthLock, flashMeter, refit, selectedRegion, fetchAsset } from './palette.js?v=61033485aef34a7f';
 
 const $ = (id) => document.getElementById(id);
 const cap = (text) => text.replace(/^./, (c) => c.toUpperCase());
@@ -52,7 +52,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=0c0f009b84546262', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=61033485aef34a7f', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.ready) return;
       if (data.progress !== undefined) {
@@ -212,6 +212,7 @@ const profile = () => {
 const renderScales = scaleEditor($('scale-editor'), {
   get: () => scales,
   releaseKey: () => selected().tag,
+  getLeds: () => selected().profile.leds,
   error: (message) => status(message, 'error'),
   set: (bank, message) => {
     if (busy || selected().profile.version !== 2) throw new Error('Scale editing is unavailable right now.');
@@ -1100,7 +1101,11 @@ function renderPalette() {
   };
   const children = [toggle('Beads wavetables (WAVE)', current.wave, (wave) => changePalette({ ...current, wave }), !current.models.length),
     toggle('Rings synth', current.rings, (rings) => changePalette({ ...current, rings }), !release.content?.rings && !current.rings),
-    el('p', { class: 'note', text: 'CPU: not measured. Bank colours follow FEEDBACK bank order. Each bank has eight slots.' })];
+    el('p', { class: 'note', text: 'Bank colours follow FEEDBACK bank order. Each bank has eight slots.' })];
+  const cpu = release.content?.model_cpu;
+  if (cpu && current.banks.length) children.push(el('p', { class: 'note', text:
+    `CPU screening uses the highest observed six-voice Seed3 callback peak in each bank, multiplied by ${cpu.screening_ratio}.` +
+    ' These estimates use a historical margin. Beads transfer is unverified. Production Plaits uses 48 kHz. The 24 kHz limit is provisional.' }));
   const starters = el('fieldset', {}, el('legend', { text: 'Starter banks' }),
     el('p', { class: 'note', text: 'Add eight models as a bank. Your models and banks stay installed. Flash fit is checked before applying.' }));
   for (const bank of starterBanks) {
@@ -1143,6 +1148,23 @@ function renderPalette() {
   } }));
   current.banks.forEach((bank, index) => {
     const group = el('fieldset', {}, el('legend', { text: `Bank ${index + 1}` }));
+    if (cpu) {
+      for (const rate of Object.keys(cpu.working_limits).map(Number).sort((a, b) => b - a)) {
+        const peaks = bank.map((id) => rows.find((row) => row.id === id)?.seed3_peak?.[rate]).filter(Number.isFinite);
+        const limit = cpu.working_limits[rate];
+        const peak = peaks.length ? Math.max(...peaks) : null;
+        const screened = peak === null ? null : peak * cpu.screening_ratio;
+        const label = `${rate / 1000} kHz`;
+        const coverage = peaks.length < bank.length ? ' · incomplete screening (some slots unmeasured)' : '';
+        group.append(el('p', { class: 'note', text: screened === null ? `${label} · CPU unmeasured` :
+          `${label} · Seed3 peak ${peak.toFixed(1)}% · screened ${screened.toFixed(1)}% · limit ${limit.toFixed(1)}%` +
+          coverage }));
+        if (screened > limit) group.append(el('p', { class: 'bank-cpu-warning', role: 'alert',
+          text: `CPU WARNING: Bank ${index + 1} may crackle at ${label}. The estimate exceeds the working limit. You can still export.` }));
+      }
+    } else {
+      group.append(el('p', { class: 'note', text: 'CPU unmeasured for this release.' }));
+    }
     bank.forEach((id, slot) => {
       const select = el('select', { 'aria-label': `Bank ${index + 1}, slot ${slot + 1}` });
       for (const model of current.models) select.add(new Option(rows.find((m) => m.id === model)?.name ?? `Unavailable model ${model}`, model));
@@ -1367,7 +1389,7 @@ async function checkCapabilities() {
   }
   // A constructor alone does not establish support for module workers.
   await new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=0c0f009b84546262', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=61033485aef34a7f', { type: 'module' });
     const done = (error) => {
       clearTimeout(timer); worker.terminate();
       error ? reject(error) : resolve();
@@ -1396,7 +1418,7 @@ async function init() {
   }
   $('compatibility').hidden = true;
   try {
-    const response = await fetch('manifest.json?v=0c0f009b84546262', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=61033485aef34a7f', { cache: 'no-cache' });
     manifest = await response.json();
   } catch {
     status('Could not load the release list.', 'error');
@@ -1408,7 +1430,7 @@ async function init() {
     status('Unsupported release list.', 'error'); return;
   }
   try {
-    const response = await fetch('starter-banks.json?v=0c0f009b84546262');
+    const response = await fetch('starter-banks.json?v=61033485aef34a7f');
     if (!response.ok) throw new Error('Could not load starter banks.');
     const bytes = new Uint8Array(await response.arrayBuffer());
     if (await sha256(bytes) !== starterBanksHash) throw new Error('Starter banks differ from this editor version. Reload to update.');
