@@ -1,7 +1,7 @@
 // Copyright 2026 Insolent Construct.
 // MIT licence: see encoder.js.
 // Links follow the selected release, including its source revision during development.
-import { TOGGLES } from './profile.js?v=93bd792661965b57';
+import { TOGGLES } from './profile.js?v=c00dfc6863dd24ba';
 const docs = 'https://github.com/insolentconstruct/eurorack/blob/{TAG}/beads/build/docs/FEATURES.md';
 const descriptions = {
   1: ['Snap final pitch, including PITCH, CV and randomness, to a scale.', 'drizzlet-options'],
@@ -37,6 +37,9 @@ const descriptions = {
   31: ['Which eight Plaits models the synth starts with: green, red or yellow. While Plaits plays, [A] + FREEZE steps the bank and FEEDBACK picks a model in it.', 'plaits-bank'],
   32: ['How fast DRY/WET brings in the grains: at 9 o’clock they sit 2.5 dB under the dry (stock) or 7.6 dB (Gentle; Clouds 8.8 dB).', 'mix-law'],
   33: ['Reverb the whole mix, as stock, or only the grains before DRY/WET, as on Clouds: fully dry has no reverb.', 'reverb-input'],
+  34: ['Choose how a new grain takes over when all 32 are playing: the shipped 2021/2024 rule or the published 2026 rule.', 'grain-stealing'],
+  35: ['In delay mode, Unity notch gives FEEDBACK a spot near 3 o’clock where repeats layer at the same level.', 'delay-feedback'],
+  36: ['With knob timing in delay mode, glide as DENSITY moves or crossfade to the new delay time after it stops.', 'delay-time'],
   37: ['When an options page opens, show each knob’s stored value in turn on [A], or only the page’s first setting at once.', 'options-page-preview'],
   38: ['Open the options pages on the page last used, or always on the first page.', 'options-page-on-opening'],
   39: ['The quality the module starts in after this firmware is installed and after a settings reset, at each start-up until something is saved; once anything is saved, your choice wins.', 'start-in-quality'],
@@ -57,7 +60,17 @@ const descriptions = {
 // Firmware with the Rings synth offers it as Synth value 2.
 const rings = (feature) => feature.id === 7 && feature.values?.includes('Rings');
 
+export const hasFeatureHelp = (id) => Object.hasOwn(descriptions, id);
+const warned = new Set();
+
 export function featureHelp(feature, release) {
+  if (!hasFeatureHelp(feature.id)) {
+    if (!warned.has(feature.id)) {
+      warned.add(feature.id);
+      console.warn(`Missing editor help for feature ID ${feature.id}.`);
+    }
+    return { description: 'No description available.', details: '', url: null };
+  }
   const [baseDescription, section] = rings(feature) ? ['Beads, Plaits or Rings synth; only installed synths are offered.',
     'synth-and-rings-polyphony'] : descriptions[feature.id];
   const send = feature.id === 32 && feature.values?.includes('Send');

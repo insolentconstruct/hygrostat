@@ -15,6 +15,8 @@ const manifest = JSON.parse(readFileSync(`${site}/manifest.json`));
 const release = manifest.releases[0];
 release.profile.features.push(...additions, bank);
 manifest.releases = [release];
+const beta4Options = JSON.parse(readFileSync(`${site}/images/beta4-catalogue/index.json`))
+  .profile.features.filter(({ id }) => id >= 34 && id <= 36);
 const { unshare } = await import(pathToFileURL(resolve(site, 'js/profile.js')).href);
 const { featureHelp } = await import(pathToFileURL(resolve(site, 'js/help.js')).href);
 const { bankWarning, EXTRA_GROUPS, extraGroup, placeable } = await import(pathToFileURL(resolve(site, 'js/layout.js')).href);
@@ -134,8 +136,33 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     await until(async () => (await entries()).some((e) => e[0] === 9 && e[5] === 3));
     await until(async () => await page.isHidden('#bank-warning'));
     assert.equal(await page.locator('#inspector-bank-warning').count(), 0);
+    const unknownId = 254;
+    const unknown = { ...additions.find((f) => f.id === 33), id: unknownId,
+      name: 'Future option', default: [unknownId, 0, 0, 0, 0, 0] };
+    release.profile.features.push(...beta4Options, unknown);
+    const warnings = [];
+    page.on('console', (message) => {
+      if (message.type() === 'warning' && message.text().includes('Missing editor help')) warnings.push(message.text());
+    });
+    await page.reload();
+    const fallback = 'No description available.';
+    await until(async () => {
+      assert.deepEqual(errors, []);
+      return page.isVisible(`#extra-${unknownId}`);
+    });
+    for (const f of beta4Options) {
+      assert.equal(await page.textContent(`#extra-${f.id}-about`), featureHelp(f, release).description);
+      assert.equal(await page.getAttribute(`#extra-${f.id}-more a`, 'href'), featureHelp(f, release).url);
+    }
+    assert.equal(await page.textContent(`#extra-${unknownId}-about`), fallback);
+    assert.equal(await page.locator(`#extra-${unknownId}-more`).count(), 0);
+    await page.selectOption(`#extra-${unknownId}`, '1');
+    await until(async () => (await entries()).some((e) => e[0] === unknownId && e[2] === 1));
+    assert.equal(await page.isDisabled('#build'), false);
+    assert.deepEqual(warnings, [`Missing editor help for feature ID ${unknownId}.`]);
+    release.profile.features.splice(-beta4Options.length - 1);
     assert.deepEqual(errors, []);
     await context.close();
-    console.log(`PASS ${name}: Extras grouped with details and documentation; Beta 3 options 25-30, 32 and 33 render, encode Fixed values, return to Off and link their documentation; Plaits bank starts and warns; no firmware built.`);
+    console.log(`PASS ${name}: Extras grouped with details and documentation; Beta 3 options 25-30, 32 and 33 render, encode Fixed values, return to Off and link their documentation; Plaits bank starts and warns; missing help warns once and leaves the editor usable; no firmware built.`);
   } finally { await browser.close(); }
 }

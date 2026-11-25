@@ -9,27 +9,27 @@
 // in the browser, check the .wav, offer it for download.
 
 import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, GAIN,
-  pageLeds, gestureFirmware, exactPageRule, offeredValues } from './profile.js?v=93bd792661965b57';
-import { effectiveScales, validateScales } from './scales.js?v=93bd792661965b57';
-import { scaleEditor } from './scale_editor.js?v=93bd792661965b57';
-import { guide } from './guide.js?v=93bd792661965b57';
-import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=93bd792661965b57';
-import { featureHelp, actionHelp } from './help.js?v=93bd792661965b57';
+  pageLeds, gestureFirmware, exactPageRule, offeredValues } from './profile.js?v=c00dfc6863dd24ba';
+import { effectiveScales, validateScales } from './scales.js?v=c00dfc6863dd24ba';
+import { scaleEditor } from './scale_editor.js?v=c00dfc6863dd24ba';
+import { guide } from './guide.js?v=c00dfc6863dd24ba';
+import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=c00dfc6863dd24ba';
+import { featureHelp, actionHelp } from './help.js?v=c00dfc6863dd24ba';
 import { KNOBS, KINDS, GROUPS, EXTRA_GROUPS, extraGroup, extraControl, ACTION_DOES, placeName, pageOf, entryOf, occupant, places, valueLabel, stateLabel,
   summary, stateHint, edit, place, adjust, unplace, afterUnplace, canSwap, freeSlot, changes, fitsSlot, placeable, bankWarning, slotCount,
-  usedPages, compaction, compact } from './layout.js?v=93bd792661965b57';
-import { drawPanel, highlight } from './panel.js?v=93bd792661965b57';
-import { comboImages } from './combo.js?v=93bd792661965b57';
-import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=93bd792661965b57';
+  usedPages, compaction, compact } from './layout.js?v=c00dfc6863dd24ba';
+import { drawPanel, highlight } from './panel.js?v=c00dfc6863dd24ba';
+import { comboImages } from './combo.js?v=c00dfc6863dd24ba';
+import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=c00dfc6863dd24ba';
 
-import { regionSupport, SECTION_NAMES, SECTION_KINDS } from './profile.js?v=93bd792661965b57';
-import { regionImage } from './region.js?v=93bd792661965b57';
-import { readContent, encodeContent, decodeContent, CONTENT } from './content.js?v=93bd792661965b57';
-import { grids } from './terrain.js?v=93bd792661965b57';
-import { factoryTable } from './wavetables.js?v=93bd792661965b57';
-import { modelInfo } from './model_info.js?v=93bd792661965b57';
-import { starterBanksHash } from './starter_banks.js?v=93bd792661965b57';
-import { stockBanks, offeredModels, addStarterBank, defaultSelection, validateSelection, removeModel, lockSynth, synthLock, flashMeter, refit, selectedRegion, fetchAsset } from './palette.js?v=93bd792661965b57';
+import { regionSupport, SECTION_NAMES, SECTION_KINDS } from './profile.js?v=c00dfc6863dd24ba';
+import { regionImage } from './region.js?v=c00dfc6863dd24ba';
+import { readContent, encodeContent, decodeContent, CONTENT } from './content.js?v=c00dfc6863dd24ba';
+import { grids } from './terrain.js?v=c00dfc6863dd24ba';
+import { factoryTable } from './wavetables.js?v=c00dfc6863dd24ba';
+import { modelInfo } from './model_info.js?v=c00dfc6863dd24ba';
+import { starterBanksHash } from './starter_banks.js?v=c00dfc6863dd24ba';
+import { stockBanks, offeredModels, addStarterBank, defaultSelection, validateSelection, removeModel, lockSynth, synthLock, flashMeter, refit, selectedRegion, fetchAsset } from './palette.js?v=c00dfc6863dd24ba';
 
 const $ = (id) => document.getElementById(id);
 const cap = (text) => text.replace(/^./, (c) => c.toUpperCase());
@@ -52,7 +52,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=93bd792661965b57', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=c00dfc6863dd24ba', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.ready) return;
       if (data.progress !== undefined) {
@@ -645,9 +645,9 @@ function extra(f) {
   // A value the module itself can change is only where it starts.
   const start = e[1] === 2 && !placeable(f) ? el('small', { class: 'start', id: `extra-${f.id}-start`, text: `Starting value. ${stateHint(f, 2)}` }) : null;
   const described = [about, start].filter(Boolean).map((part) => part.id).join(' ');
-  const more = el('details', { class: 'extra-more', id: `extra-${f.id}-more` }, el('summary', {}, 'More', el('span', { class: 'sr-only', text: ` about ${title}` })),
+  const more = (help.details || help.url) ? el('details', { class: 'extra-more', id: `extra-${f.id}-more` }, el('summary', {}, 'More', el('span', { class: 'sr-only', text: ` about ${title}` })),
     help.details ? el('p', { id: `extra-${f.id}-details`, text: help.details }) : null,
-    el('a', { class: 'linkish', href: help.url, text: 'Documentation', 'aria-label': `${f.name} documentation` }));
+    help.url ? el('a', { class: 'linkish', href: help.url, text: 'Documentation', 'aria-label': `${f.name} documentation` }) : null) : null;
   if (control === 'switch') {
     const input = el('input', { type: 'checkbox', role: 'switch', id: `extra-${f.id}`, 'aria-labelledby': `extra-${f.id}-name`,
       'aria-describedby': described, onchange: (event) => commit(() => edit(entries, profile(), f, 1, event.target.checked ? 1 : 0)) });
@@ -774,8 +774,9 @@ function renderInspector() {
   const e = entryOf(entries, f);
   const help = featureHelp(f, selected());
   body.push(el('h3', { id: 'inspector-title', tabindex: '-1', text: f.name }),
-    el('p', { class: 'description' }, help.description + ' ',
-      el('a', { href: help.url, text: 'Documentation', 'aria-label': `${f.name} documentation` })));
+    el('p', { class: 'description' }, help.description,
+      help.url ? ' ' : null,
+      help.url ? el('a', { href: help.url, text: 'Documentation', 'aria-label': `${f.name} documentation` }) : null));
   if (help.details) body.push(el('p', { class: 'note', id: 'feature-details', text: help.details }));
   if (actionHelp(f)) body.push(el('p', { class: 'note', id: 'action-help', text: actionHelp(f) }));
   if (palette && ((f.id === 7 && synthLock(palette)) || (f.id === 31 && !palette.models.length))) {
@@ -1366,7 +1367,7 @@ async function checkCapabilities() {
   }
   // A constructor alone does not establish support for module workers.
   await new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=93bd792661965b57', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=c00dfc6863dd24ba', { type: 'module' });
     const done = (error) => {
       clearTimeout(timer); worker.terminate();
       error ? reject(error) : resolve();
@@ -1395,7 +1396,7 @@ async function init() {
   }
   $('compatibility').hidden = true;
   try {
-    const response = await fetch('manifest.json?v=93bd792661965b57', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=c00dfc6863dd24ba', { cache: 'no-cache' });
     manifest = await response.json();
   } catch {
     status('Could not load the release list.', 'error');
@@ -1407,7 +1408,7 @@ async function init() {
     status('Unsupported release list.', 'error'); return;
   }
   try {
-    const response = await fetch('starter-banks.json?v=93bd792661965b57');
+    const response = await fetch('starter-banks.json?v=c00dfc6863dd24ba');
     if (!response.ok) throw new Error('Could not load starter banks.');
     const bytes = new Uint8Array(await response.arrayBuffer());
     if (await sha256(bytes) !== starterBanksHash) throw new Error('Starter banks differ from this editor version. Reload to update.');

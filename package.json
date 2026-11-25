@@ -6,7 +6,7 @@
     "node": "^22.13.0 || >=24.0.0"
   },
   "scripts": {
-    "lint": "npm run lint:js && npm run lint:html && npm run lint:css",
+    "lint": "npm run lint:js && npm run lint:html && npm run lint:css && node tools/check-feature-help.js",
     "lint:js": "eslint . --max-warnings=0",
     "lint:html": "htmlhint \"static/**/*.html\"",
     "lint:css": "stylelint \"static/**/*.{css,html}\" --max-warnings=0",
