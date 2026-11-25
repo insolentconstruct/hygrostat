@@ -1,7 +1,7 @@
 // Copyright 2026 Insolent Construct.
 // MIT licence: see encoder.js.
 // Links follow the selected release, including its source revision during development.
-import { TOGGLES } from './profile.js?v=0c0f009b84546262';
+import { TOGGLES } from './profile.js?v=44fb6759b0ce7548';
 const docs = 'https://github.com/insolentconstruct/eurorack/blob/{TAG}/beads/build/docs/FEATURES.md';
 const descriptions = {
   1: ['Snap final pitch, including PITCH, CV and randomness, to a scale.', 'drizzlet-options'],
@@ -21,7 +21,7 @@ const descriptions = {
   15: ['Brief blue startup cue.', 'small-beta-2-profile-options'],
   16: ['Lower manual gain to silence; automatic gain unchanged.', 'small-beta-2-profile-options'],
   17: ['Light cue when switching delay mode.', 'small-beta-2-profile-options'],
-  18: ['Set LED brightness, including warnings.', 'small-beta-2-profile-options'],
+  18: ['Set LED brightness, including warnings. Dimmed colours follow curves measured on one module; colour and brightness can vary from unit to unit and with temperature.', 'small-beta-2-profile-options'],
   19: ['Show CV strength on assignment LEDs.', 'small-beta-2-profile-options'],
   20: ['Keep FREEZE lit while saving.', 'small-beta-2-profile-options'],
   21: ['Choose latched SEED trigger behaviour.', 'small-beta-2-profile-options'],
@@ -74,10 +74,11 @@ export function featureHelp(feature, release) {
   const [baseDescription, section] = rings(feature) ? ['Beads, Plaits or Rings synth; only installed synths are offered.',
     'synth-and-rings-polyphony'] : descriptions[feature.id];
   const send = feature.id === 32 && feature.values?.includes('Send');
-  const description = baseDescription + (send ? ' Send keeps dry at full level; DRY/WET sets each new grain’s level. At zero, existing grains and reverb finish. Granular only.' : '');
+  const description = (feature.id === 15 && release.profile?.leds ? 'Brief light-blue startup cue.' : baseDescription) + (send ? ' Send keeps dry at full level; DRY/WET sets each new grain’s level. At zero, existing grains and reverb finish. Granular only.' : '');
   const recent = feature.values?.includes('Recent notes') ? ' Recent notes: with PITCH patched, each CCW grain plays one of the last 1-8 notes sent to PITCH (more as you turn further CCW); unpatched it plays as Free.' : '';
   const details = feature.id === 10 ? 'Around C, the steps are C and G across octaves, including G below C (a fourth down). Pitch scale applies afterwards and can change these intervals. Works on granular and Beads wavetable grains, not the continuous oscillator, Plaits or Spectral.' + recent :
     rings(feature) ? 'Rings is Mutable Instruments’ Rings (MIT), a removable part of the update. A Synth action steps over synths that are not installed.' :
+    feature.id === 18 && feature.values?.includes('15%') ? 'At 15%, the options LED shows slow red.' :
     feature.id === 31 ? 'While the Plaits synth plays, hold [A] and press FREEZE to step green, red, yellow; the bank is saved. Other modes keep that gesture.' :
     feature.id === 32 && !send ? 'The dry level and both ends of the knob stay stock; DRY/WET CV follows the same law. Granular, delay and spectral; the synths keep their own DRY/WET.' :
     feature.id === 33 ? 'Turning DRY/WET down cuts the tail too. In Scorched cassette the wow and flutter comes after the reverb. Granular, delay and spectral; the synths keep the stock routing.' : '';

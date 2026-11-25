@@ -23,12 +23,12 @@
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
 // Knob cards port options_guide.py: 270-degree arcs and the same LED ladder.
-import { effectiveScales, PULSE_NAMES } from './scales.js?v=0c0f009b84546262';
-import { synthLock } from './palette.js?v=0c0f009b84546262';
-import { defaults, equal, encodeProfile, pageLeds, PAGE_LEDS, GAIN } from './profile.js?v=0c0f009b84546262';
-import { pageLedName, usedPages } from './layout.js?v=0c0f009b84546262';
-import { RELEASE_GUIDES } from './release_guides.js?v=0c0f009b84546262';
-import { placeable, bankWarning } from './layout.js?v=0c0f009b84546262';
+import { effectiveScales, PULSE_NAMES } from './scales.js?v=44fb6759b0ce7548';
+import { synthLock } from './palette.js?v=44fb6759b0ce7548';
+import { defaults, equal, encodeProfile, pageLeds, PAGE_LEDS, GAIN } from './profile.js?v=44fb6759b0ce7548';
+import { pageLedName, usedPages } from './layout.js?v=44fb6759b0ce7548';
+import { RELEASE_GUIDES } from './release_guides.js?v=44fb6759b0ce7548';
+import { placeable, bankWarning } from './layout.js?v=44fb6759b0ce7548';
 
 const KNOBS = ['FEEDBACK', 'DRY/WET', 'REVERB'];
 export const ACTIONS = ['None', '[A]+SEED', '[A]+FREEZE', '[A] hold'];
@@ -48,7 +48,11 @@ const COLOURS = ['#247443', '#a87900', '#bd3030'];
 // The release guide's names for the factory scale colours (options_guide.py).
 const SCALE_COLOURS = { '#ff4020': 'coral', '#ffa000': 'amber', '#2060ff': 'blue', '#00dca0': 'teal', '#a030ff': 'violet', '#ff2090': 'pink' };
 const rgbOf = (scale) => '#' + scale.color.map((v) => v.toString(16).padStart(2, '0')).join('');
-const colourName = (scale) => SCALE_COLOURS[rgbOf(scale)] || rgbOf(scale);
+const colourName = (scale, leds) => {
+  const rgb = rgbOf(scale);
+  return Object.entries(leds?.colors ?? {}).find(([, color]) => rgbOf({ color }) === rgb)?.[0] ??
+    SCALE_COLOURS[rgb] ?? rgb;
+};
 export function indication(index) {
   const colour = index === 9 ? 'yellow' : ['green', 'yellow', 'red'][index % 3];
   return `${colour}; ${index === 9 ? 'two pulses' : index >= 6 ? 'fast blink' : index >= 3 ? 'slow blink' : 'steady'}`;
@@ -90,7 +94,8 @@ class Drawing {
     this.circle(cx, cy, 22);
     this.items.push(`<path d="M ${cx} ${cy} v -16" stroke="#222" stroke-width="2"/>`);
     const count = f.id === 1 ? 3 : f.values ? f.values.length : 2;
-    const bands = f.id === 12 ? [] : f.id === 11 ? [[.07, .13]] : count === 2 ? [[.47, .53]] : Array.from({ length: count - 1 }, (_, i) => [(i + 1) / count - .03, (i + 1) / count + .03]);
+    const zoneBand = f.id === 18 ? f.leds?.brightness_zone_band ?? .03 : .03;
+    const bands = f.id === 12 ? [] : f.id === 11 ? [[.07, .13]] : count === 2 ? [[.47, .53]] : Array.from({ length: count - 1 }, (_, i) => [(i + 1) / count - zoneBand, (i + 1) / count + zoneBand]);
     const starts = [0, ...bands.map((b) => b[1])];
     const ends = [...bands.map((b) => b[0]), 1];
     const zoneLabels = f.id === 12 ? ['more →'] : f.id === 1 ? [f.values[0], f.values[1], 'Scale'] :
@@ -114,9 +119,12 @@ class Drawing {
       const scale = f.scales && i >= 2 ? f.scales[i - 2] : null;
       const rgb = scale && rgbOf(scale);
       const gainPulse = f.id === 52 && i === 3;
-      const shown = gainPulse ? 'yellow; slow blink' : scale ? `${colourName(scale)}; ${PULSE_NAMES[scale.pulses].toLowerCase()}` : meter ? 'green → yellow → red' : indication(i);
+      const dim = f.id === 18 && i === 3 ? f.leds?.brightness_15 : null;
+      const dimRgb = dim && rgbOf({ color: dim });
+      const dimName = dimRgb === '#ff0000' ? 'red' : dimRgb;
+      const shown = dimRgb ? `${dimName}; slow blink` : gainPulse ? 'yellow; slow blink' : scale ? `${colourName(scale, f.leds)}; ${PULSE_NAMES[scale.pulses].toLowerCase()}` : meter ? 'green → yellow → red' : indication(i);
       const pattern = scale ? [0, 3, 6, 9][scale.pulses] : i;
-      this.circle(x + 9, base - 5, 8, scale ? rgb : meter ? '#777' : COLOURS[gainPulse || i === 9 ? 1 : i % 3], pattern);
+      this.circle(x + 9, base - 5, 8, scale ? rgb : dimRgb ? dimRgb : meter ? '#777' : COLOURS[gainPulse || i === 9 ? 1 : i % 3], pattern);
       this.text(x + 25, base, value);
       if (mobile) {
         this.text(x + 25, base + 19, shown, 15, 'normal', '#555');
@@ -158,9 +166,11 @@ export function guide(entries, release, fp, mobile = false, scales = null, selec
   const d = new Drawing();
   const width = mobile ? 390 : 1100;
   const margin = mobile ? 22 : 35;
-  const features = release.profile.features.map((f) => f.id !== 1 || release.profile.version !== 2 ? f :
-    { ...f, scales: effectiveScales(scales), values: Array.from({ length: 16 }, (_, id) => id < 2 ? f.values[id] :
-      effectiveScales(scales).find((s) => s.id === id)?.name || 'Off (scale removed)') }).map((f) => f.id === 31 && selection?.banks.length ?
+  const leds = release.profile.leds;
+  const scaleBank = effectiveScales(scales, leds);
+  const features = release.profile.features.map((f) => f.id !== 1 || release.profile.version !== 2 ? { ...f, leds } :
+    { ...f, leds, scales: scaleBank, values: Array.from({ length: 16 }, (_, id) => id < 2 ? f.values[id] :
+      scaleBank.find((s) => s.id === id)?.name || 'Off (scale removed)') }).map((f) => f.id === 31 && selection?.banks.length ?
     { ...f, values: selection.banks.map((_, i) => `Bank ${i + 1}`) } : f);
   const feature = (e) => features.find((f) => f.id === e[0]);
   const idle = entries.find((e) => e[0] === 25 && e[1] === 1 && e[2]);
@@ -217,6 +227,11 @@ export function guide(entries, release, fp, mobile = false, scales = null, selec
     const f = feature(e);
     y = d.lines(margin, y + 10, `${f.name}: Fixed · ${f.values ? f.values[e[2]] : e[2]}`, mobile ? 43 : 140);
   }
+  if (leds?.boot && fixed(15)) {
+    d.circle(margin + 8, y + 12, 8, rgbOf({ color: leds.boot }));
+    d.text(margin + 24, y + 17, 'Drizzlet version LED at boot.');
+    y += 30;
+  }
   for (const e of entries.filter((e) => e[1] === 2 && !e[3] && !e[4] && !e[5] && placeable(feature(e)))) {
     const f = feature(e);
     y = d.lines(margin, y + 10, `${f.name}: ${f.values ? f.values[e[2]] : e[2]} · set on the page: not placed`, mobile ? 43 : 140);
@@ -232,11 +247,11 @@ export function guide(entries, release, fp, mobile = false, scales = null, selec
   }
   if (release.profile.version === 2) {
     y = d.lines(margin, y + 20, 'Scale cycle: Off and Chromatic are separate knob choices; SEED steps the following scales in order.', mobile ? 43 : 140);
-    for (const scale of effectiveScales(scales)) {
+    for (const scale of scaleBank) {
       const notes = scale.notes.map((v) => Number((v * 100).toFixed(4))).join(', ');
-      y = d.lines(margin, y + 10, `${scale.name}: ${colourName(scale)}, ${PULSE_NAMES[scale.pulses].toLowerCase()}. Notes ${notes} cents; repeat ${Number((scale.repeat * 100).toFixed(4))} cents.`, mobile ? 43 : 140);
+      y = d.lines(margin, y + 10, `${scale.name}: ${colourName(scale, leds)}, ${PULSE_NAMES[scale.pulses].toLowerCase()}. Notes ${notes} cents; repeat ${Number((scale.repeat * 100).toFixed(4))} cents.`, mobile ? 43 : 140);
     }
-    if (!effectiveScales(scales).length) y = d.lines(margin, y + 10, 'No scales in the cycle; the Scale position selects Off.', mobile ? 43 : 140);
+    if (!scaleBank.length) y = d.lines(margin, y + 10, 'No scales in the cycle; the Scale position selects Off.', mobile ? 43 : 140);
   }
   y = d.lines(margin, y + 20, 'Do not hold SEED while powering on: it resets all settings to the profile defaults. Calibration is kept.', mobile ? 43 : 140);
   d.text(margin, y + 15, `Author: Insolent Construct · Profile ${fp}`, 15);

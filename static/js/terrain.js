@@ -25,7 +25,7 @@
 //
 // Wave terrain grids (TERR) sampled as Mutable Instruments' Plaits editor does; equations
 // are parsed by a fixed grammar and evaluated as a tree, never as JavaScript.
-import { checkTerrains } from './region.js?v=0c0f009b84546262';
+import { checkTerrains } from './region.js?v=44fb6759b0ce7548';
 
 export const GRID = 64;
 export const GRID_SIZE = GRID * GRID;

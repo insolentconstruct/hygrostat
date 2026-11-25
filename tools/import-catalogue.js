@@ -91,6 +91,34 @@ const header = text('beads/profile.h');
 const constant = (name) => firmwareConstant(header, name);
 const pageLeds = PAGE_LEDS.find((leds) => leds.length * 3 === constant('kNumPageSlots') - 1);
 if (!pageLeds) throw new Error('Unsupported firmware page layout.');
+const optionTables = text('beads/build/tools/options_tables.cc');
+const namedColors = [...optionTables.matchAll(/\{ \{ (\d+), (\d+), (\d+) \}, "(coral|amber|blue|teal|violet|pink)" \}/g)];
+const bootCue = /const Leds::Color cue = \{\s*0, uint8_t\(lit \? (\d+) : 0\), uint8_t\(lit \? (\d+) : 0\)/.exec(text('beads/ui.cc'));
+const dimming = /FEATURE_BRIGHTNESS, 3, \{ (\d+), (\d+), (\d+) \}, PULSE_SLOW/.exec(text('beads/options.cc'));
+const features = catalogueFeatures(catalogue);
+const leds = features.find(({ id }) => id === 18)?.values[3] === '15%' ? {
+  colors: Object.fromEntries(namedColors.map(([, r, g, b, name]) => [name, [r, g, b].map(Number)])),
+  scale_colors: Object.fromEntries([...text('beads/options.cc').matchAll(
+    /FEATURE_PITCH, (\d+), \{ (\d+), (\d+), (\d+) \}, PULSE_/g)]
+    .map(([, id, r, g, b]) => [id, [r, g, b].map(Number)])),
+  boot: [0, Number(bootCue[1]), Number(bootCue[2])],
+  brightness_15: dimming.slice(1).map(Number),
+  brightness_zone_band: Number(/kOptionsProfileZoneBand = ([\d.]+)f;/.exec(text('beads/options.h'))[1])
+} : undefined;
+if (leds && (namedColors.length !== 6 || Object.keys(leds.scale_colors).length !== 8)) {
+  throw new Error('Incomplete firmware LED tables.');
+}
+const measurements = JSON.parse(readFileSync(new URL('../costs/hygrostat-model-costs.json', import.meta.url)));
+const modelKey = (id, sha) => id + ':' + sha;
+const measuredModels = new Map([...measurements.content.models.filter(({ cpu }) => cpu),
+  ...measurements.unmatched_model_costs].map(({ id, cpu }) => [modelKey(id, cpu.asset_sha256), cpu]));
+const modelCpu = {
+  source: 'Seed3',
+  firmware_source: measurements.firmware_source,
+  screening_ratio: measurements.historical_ratio_screen,
+  working_limits: measurements.working_limits_percent
+};
+
 const index = {
   copyright: catalogue.copyright,
   source_commit: commit,
@@ -98,15 +126,20 @@ const index = {
   profile: {
     offset: 1024, size: constant('kProfileSize'), version: 2, format: constant('kProfileFormat'),
     page_leds: pageLeds, hold_rules: true, feedback_slot: true, reachability_rules: true,
-    features: catalogueFeatures(catalogue),
+    features,
+    leds,
     region: { profile_version: constant('kProfileVersionBlobs'), release, services_version: 2, default_layout: layout }
   },
   content: {
     models: catalogue.plaits_models.map((row) => {
       const blob = models.find(({ info }) => row.id >= info.first && row.id < info.first + info.ids);
       if (!blob || (row.blob_size !== undefined && blob.info.size !== row.blob_size)) throw new Error(`Blob size differs for model ${row.id}.`);
-      return { ...row, ...blob.asset, bytes: blob.info.size };
+      const cpu = measuredModels.get(modelKey(row.id, blob.asset.sha256));
+      const seed3_peak = cpu ?
+        Object.fromEntries(Object.entries(cpu.rates).map(([rate, capture]) => [rate, capture.peak_percent])) : undefined;
+      return { ...row, ...blob.asset, bytes: blob.info.size, seed3_peak };
     }),
+    model_cpu: modelCpu,
     libraries: catalogue.plaits_libraries.map((row) => {
       const blob = libraries.find(({ info }) => info.first === row.id);
       if (!blob) throw new Error(`Missing library ${row.id}.`);
@@ -122,3 +155,8 @@ for (const { name, data } of all) writeFileSync(join(out, 'blob', name), data);
 writeFileSync(join(out, 'region.bin'), region);
 writeFileSync(join(out, 'profile-features.json'), bytes);
 writeFileSync(join(out, 'index.json'), JSON.stringify(index, null, 2) + '\n');
+if (leds) {
+  for (const name of ['options-guide.svg', 'options-guide-mobile.svg']) {
+    writeFileSync(join(out, name), read('beads/build/docs/' + name));
+  }
+}

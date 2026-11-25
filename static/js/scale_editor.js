@@ -22,7 +22,7 @@
 //
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
-import { effectiveScales, importScala, MAX_SCALES, PULSE_NAMES, validateScales } from './scales.js?v=0c0f009b84546262';
+import { effectiveScales, importScala, MAX_SCALES, PULSE_NAMES, validateScales } from './scales.js?v=44fb6759b0ce7548';
 
 const node = (tag, text = '') => {
   const value = document.createElement(tag);
@@ -38,7 +38,7 @@ const button = (label, action) => {
 const hex = (color) => '#' + color.map((v) => v.toString(16).padStart(2, '0')).join('');
 const cents = (value) => String(Number((value * 100).toFixed(4)));
 
-export function scaleEditor(root, { get, set, error, releaseKey }) {
+export function scaleEditor(root, { get, set, error, releaseKey, getLeds }) {
   let chosen = null;
   const panel = root.querySelector('details');
   const body = panel.querySelector('.inner');
@@ -57,7 +57,7 @@ export function scaleEditor(root, { get, set, error, releaseKey }) {
     root.hidden = !enabled;
     if (!enabled) return;
     const scales = get();
-    const bank = effectiveScales(scales);
+    const bank = effectiveScales(scales, getLeds());
     if (!bank.some((s) => s.id === chosen)) chosen = bank[0]?.id ?? null;
     const head = node('div'); head.className = 'section-head';
     head.append(node('p', 'Choose the scales available in the Scale position, in SEED-tap order. Off and Chromatic remain separate knob choices.'),
@@ -101,7 +101,7 @@ export function scaleEditor(root, { get, set, error, releaseKey }) {
         const release = releaseKey();
         const text = await source.text();
         if (release !== releaseKey()) throw new Error('Firmware selection changed. Import the Scala file again.');
-        const current = effectiveScales(get());
+        const current = effectiveScales(get(), getLeds());
         const id = nextId(current);
         if (id === undefined) throw new Error('Remove a scale before importing another.');
         const scale = importScala(text, id);

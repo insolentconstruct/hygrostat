@@ -37,9 +37,9 @@ const factory = [
   [8, 'Raag Bhairav', [160, 48, 255], 0, [0, 0.9024, 3.8628, 4.98, 7.02, 7.9212, 10.8828]],
   [9, 'Raag Shri', [255, 32, 144], 3, [0, 2.0388, 3.156, 4.98, 7.02, 9.0588, 10.1748]]
 ];
-export const factoryScales = () => factory.map(([id, name, color, pulses, notes]) =>
-  ({ id, name, color: color.slice(), pulses, repeat: 12, notes: notes.map(Math.fround) }));
-export const effectiveScales = (scales) => scales === null ? factoryScales() : scales;
+export const factoryScales = (leds) => factory.map(([id, name, color, pulses, notes]) =>
+  ({ id, name, color: (leds?.scale_colors[id] ?? color).slice(), pulses, repeat: 12, notes: notes.map(Math.fround) }));
+export const effectiveScales = (scales, leds) => scales === null ? factoryScales(leds) : scales;
 
 export function validateScales(scales) {
   if (scales === null) return null;

@@ -139,8 +139,11 @@ Releases that declare `profile.region` and pinned `content` assets expose the
 model and bank editor. `content.models` supplies model IDs, names, asset URLs
 and SHA-256 hashes; libraries and Rings use the same pinned asset format.
 `content.region` pins the untouched release region. No development models
-without module rows are offered. CPU figures remain “not measured” until those
-rows exist. Existing releases retain their original app-only update path.
+without module rows are offered. Matching Seed3 model measurements appear
+as per-bank peak CPU figures at each codec rate. The editor shows the measured
+peak and a screening estimate using the historical 1.044× multiplier.
+An estimate above its rate's working limit triggers a crackle warning.
+Only the other profile and flash checks govern export.
 
 Banks contain eight permanent IDs, with one to fifteen banks when Plaits is
 installed. Removing a model used in a bank requires explicit replacement of
