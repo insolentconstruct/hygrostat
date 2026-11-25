@@ -7,7 +7,7 @@
 // Editor rules for the layout view: where each feature sits on the module and
 // how a placement, swap or removal changes the six-byte entries. Every result
 // goes through normalise(), so the validator stays the final gate.
-import { normalise, initialEntry, pageLeds, pageSlots, amountSlots, GAIN, FEEDBACK_SLOT, SYNTH } from './profile.js?v=c00dfc6863dd24ba';
+import { normalise, initialEntry, pageLeds, pageSlots, amountSlots, GAIN, FEEDBACK_SLOT, SYNTH } from './profile.js?v=0c0f009b84546262';
 
 export const KNOBS = ['FEEDBACK', 'DRY/WET', 'REVERB'];
 // Entry byte for each kind of destination, and how many there are; a
@@ -32,6 +32,12 @@ export const GROUPS = [
   ['Controls', [9, 16, 21, 25, 27, 29, 30, 37, 38, 40]],
   ['Indicators', [15, 17, 18, 19, 20, 22]]
 ];
+// Catalogue features without an explicit group appear under Sound.
+export function libraryGroups(profile) {
+  const known = new Set(GROUPS.flatMap(([, ids]) => ids));
+  const ungrouped = profile.features.filter(({ id }) => !known.has(id)).map(({ id }) => id);
+  return GROUPS.map(([name, ids]) => [name, name === 'Sound' ? [...ids, ...ungrouped] : ids]);
+}
 // Extras by what they change; an unlisted ID shows under Sound.
 export const EXTRA_GROUPS = [
   ['Sound', [16, 23, 24, 26, 28, 30, 31, 32, 33]],
