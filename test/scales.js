@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { webcrypto } from 'node:crypto';
 import { crc32, defaults, encodeProfile, decodeSettings, decodeProfile, decodeScaleBank, share, unshare, cpuUsage, featureDelta } from '../static/js/profile.js';
-import { factoryScales, validateScales, importScala } from '../static/js/scales.js';
+import { factoryScales, validateScales, importScala, scalaDescription } from '../static/js/scales.js';
 import { guide } from '../static/js/guide.js';
 if (!globalThis.crypto) globalThis.crypto = webcrypto;
 const original = JSON.parse(readFileSync(new URL('../static/manifest.json', import.meta.url))).releases[0];
@@ -79,6 +79,32 @@ assert.deepEqual(imported.notes, [0, 4, Math.fround(12 * Math.log2(1.5))]);
 assert.throws(() => importScala('Wrong\n2\n1200.0\n700.0', 10));
 assert.throws(() => importScala('Wrong\n1\n0/1', 10));
 assert.throws(() => importScala('Wrong\n25\n', 10));
+// Scala comments are whole lines starting with "!"; the description may hold one, be empty or be long.
+assert.equal(importScala('Wow! fifths\n 2\n 3/2\n 2/1\n', 10).name, 'Wow! fifths');
+const untitled = importScala('! empty.scl\n!\n\n 3\n!\n 700.0\n 900.0\n 2/1\n', 10, 'empty');
+assert.equal(untitled.name, 'empty');
+assert.deepEqual(untitled.notes, [0, 7, 9]);
+assert.equal(importScala('\n 1\n 2/1\n', 10).name, 'Scala scale');
+assert.equal(importScala('\n\nBlank lines first\n 1\n 2/1 octave\n', 10).name, 'Blank lines first');
+assert.equal(importScala('12\n 2\n 3/2 ! fifth\n 2/1\n', 10).name, '12');
+assert.equal(importScala('\n12\n1\n2/1\n', 10).name, '12', 'a numeric description below a blank line');
+// Where both readings fit, the format's own wins: the blank line is the description and no degree is dropped.
+const three = importScala('\n3\n2\n3/1\n4/1\n', 10, 'three');
+assert.deepEqual([three.name, three.notes.length, three.repeat], ['three', 3, 24]);
+assert.equal(importScala('\uFEFF  ! indented comment\nAfter a mark\n1\n2/1\n', 10).name, 'After a mark');
+assert.equal(importScala('! pyth_12.scl\n!\n12-tone Pythagorean scale (Pythagoras, 6th century BC)\n 2\n!\n 3/2\n 2/1\n', 10).name,
+  '12-tone Pythagorean scale (Pyth');
+// A shortened name keeps whole characters within the record's 31 bytes.
+assert.equal(importScala('é'.repeat(20) + '\n1\n2/1\n', 10).name, 'é'.repeat(15));
+assert.equal(importScala('a' + '😀'.repeat(8) + '\n1\n2/1\n', 10).name, 'a' + '😀'.repeat(7));
+assert.equal(importScala('a'.repeat(30) + ' b\n1\n2/1\n', 10).name, 'a'.repeat(30));
+assert.equal(importScala('\n1\n2/1\n', 10, 'x'.repeat(40)).name, 'x'.repeat(31));
+assert.equal(importScala('\n1\n2/1\n', 10, 'Tab\tin a  file name').name, 'Tab in a file name');
+assert.equal(scalaDescription('! c\n  Tabs\tand   spaces \n1\n2/1\n'), 'Tabs and spaces');
+assert.equal(importScala('Bell !\u0007\u009f\n1\n2/1\n', 10).name, 'Bell !', 'control characters never reach the name');
+assert.throws(() => importScala('No count\n3/2\n2/1\n', 10), /Invalid Scala/);
+assert.throws(() => importScala('Words after the count\n1 extra\n2/1\n', 10), /Invalid Scala/);
+assert.equal(importScala('Remark after the count\n1 ! one\n2/1\n', 10).repeat, 12);
 const missingDefault = entries.map((e) => e[0] === 1 ? [1, 2, 15, 1, 0, 0] : e);
 assert.throws(() => encodeProfile(missingDefault, profile), /present/);
 assert.throws(() => encodeProfile(missingDefault, profile, []), /present/);

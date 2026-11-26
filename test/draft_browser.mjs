@@ -11,6 +11,10 @@ const release = JSON.parse(readFileSync(`${site}/manifest.json`)).releases.at(-1
 const { encodeProfile, defaults, share, unshare, templates } = await import(pathToFileURL(resolve(site, 'js/profile.js')).href);
 const keys = ['hygrostat-draft', 'hygrostat-draft-before-link', 'hygrostat-draft-refused'];
 const stored = (page) => page.evaluate((keys) => keys.map((k) => localStorage.getItem(k)), keys);
+const earlier = JSON.parse(readFileSync(`${site}/manifest.json`)).releases.at(-2);
+const { encodeContent } = await import(pathToFileURL(resolve(site, 'js/content.js')).href);
+const spectralDraft = JSON.stringify({ v: 1, saved: 1, share: share(release, encodeProfile(templates(release.profile).Spectral, release.profile)),
+  name: release.name, version: release.profile.version, format: release.profile.format });
 const spectral = share(release, encodeProfile(templates(release.profile).Spectral, release.profile));
 
 for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['webkit', webkit]]) {
@@ -162,6 +166,10 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     assert.match(await noticeText(), /Restored your last setup/);
     assert.equal(await page.locator('#draft-open').count(), 0, 'a refused second slot is not offered');
     assert.equal(await page.locator('#draft-notice p', { hasText: 'can’t be opened' }).count(), 2);
+    // While saving is paused, a Firmware change says that nothing saved changes.
+    await page.selectOption('#release', earlier.tag);
+    assert.match(await page.textContent('#release-keep'), /^Saving is paused: nothing saved in this browser changes$/);
+    await page.click('#release-cancel');
     await page.click('#draft-discard-1');
     assert.deepEqual(await stored(page), [kept, null, '{x']);
     await page.click('#draft-discard-0');
@@ -208,8 +216,115 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     assert.deepEqual((await stored(page)).filter((_, i) => i), [kept, refused]);
     await page.evaluate(() => localStorage.clear());
 
+    // A Firmware change asks before replacing a customised setup, and keeps it to reopen.
+    await page.goto(base);
+    await ready();
+    const untouched = await shareHref();
+    await page.click('#extra-15');
+    await until(async () => ![untouched, null].includes(await shareHref()) && (await stored(page))[0] !== null);
+    const custom = await shareHref();
+    const mine = (await stored(page))[0];
+    assert.equal(JSON.parse(mine).share, custom.slice(1));
+    await page.selectOption('#release', earlier.tag);
+    assert.equal(await page.isVisible('#release-confirm'), true, 'a customised setup is not replaced at once');
+    assert.match(await page.textContent('#release-confirm-text'), new RegExp(`Switch to ${earlier.name}\\?`));
+    assert.equal(await page.inputValue('#release'), release.tag, 'the list shows the firmware still on screen');
+    assert.equal(await page.evaluate(() => document.activeElement.id), 'release-switch');
+    assert.match(await page.textContent('#release-keep'), /stays saved in this browser to reopen/);
+    assert.equal(await shareHref(), custom);
+    await page.click('#release-cancel');
+    assert.equal(await page.isVisible('#release-confirm'), false);
+    assert.equal(await page.evaluate(() => document.activeElement.id), 'release');
+    assert.deepEqual(await stored(page), [mine, null, null]);
+    await page.selectOption('#release', earlier.tag);
+    await page.click('#release-switch');
+    const defaultsHref = '#' + share(earlier, encodeProfile(defaults(earlier.profile), earlier.profile));
+    await until(async () => await shareHref() === defaultsHref);
+    assert.equal(await page.inputValue('#release'), earlier.tag);
+    assert.equal(await page.isVisible('#release-confirm'), false);
+    assert.equal((await stored(page))[1], mine, 'the replaced setup is kept in the second slot');
+    assert.match(await noticeText(), /Another saved setup is also kept\./);
+    await page.click('#draft-open');
+    await until(async () => await shareHref() === custom);
+    assert.equal(await page.inputValue('#release'), release.tag);
+    // The prompt says when Switch replaces another saved setup; a copy that fails changes nothing.
+    await ready();
+    assert.deepEqual((await stored(page)).map(Boolean), [true, true, false]);
+    const [, other] = await stored(page);
+    await page.selectOption('#release', earlier.tag);
+    assert.match(await page.textContent('#release-keep'), /replacing the other saved setup/);
+    await page.evaluate(() => {
+      const setItem = Storage.prototype.setItem;
+      Storage.prototype.setItem = function(key, value) {
+        if (key === 'hygrostat-draft-before-link') throw new Error('full');
+        setItem.call(this, key, value);
+      };
+      window.restoreStorage = () => { Storage.prototype.setItem = setItem; };
+    });
+    await page.click('#release-switch');
+    assert.match(await page.textContent('#status'), /could not keep your setup/);
+    assert.equal(await page.inputValue('#release'), release.tag);
+    assert.equal(await page.isVisible('#release-confirm'), true);
+    assert.deepEqual(await stored(page), [mine, other, null]);
+    assert.equal(await shareHref(), custom);
+    await page.evaluate(() => window.restoreStorage());
+    // Saved setups that change under the prompt, as from another tab, are shown before anything is replaced:
+    // first one the prompt's wording cannot tell apart, then one it can.
+    await page.evaluate((text) => localStorage.setItem('hygrostat-draft-before-link', text), spectralDraft);
+    await page.click('#release-switch');
+    assert.match(await page.textContent('#status'), /saved setups changed/);
+    assert.match(await page.textContent('#release-keep'), /replacing the other saved setup/);
+    assert.equal(await page.inputValue('#release'), release.tag);
+    assert.deepEqual(await stored(page), [mine, spectralDraft, null]);
+    await page.click('#extra-16');
+    await until(async () => (await stored(page))[0] !== mine);
+    await page.click('#extra-16');
+    await until(async () => JSON.parse((await stored(page))[0]).share === custom.slice(1));
+    assert.doesNotMatch(await page.textContent('#status'), /saved setups changed/);
+    await page.evaluate(() => localStorage.removeItem('hygrostat-draft-before-link'));
+    await page.click('#release-switch');
+    assert.match(await page.textContent('#status'), /saved setups changed/);
+    assert.match(await page.textContent('#release-keep'), /stays saved in this browser to reopen$/);
+    assert.equal(await page.inputValue('#release'), release.tag);
+    assert.deepEqual((await stored(page)).slice(1), [null, null]);
+    await page.click('#release-cancel');
+    // An opened link is not the saved draft: the prompt says the last saved setup is the one kept.
+    await page.goto(base + '#' + spectral);
+    await until(async () => await shareHref() === '#' + spectral);
+    await page.selectOption('#release', earlier.tag);
+    assert.match(await page.textContent('#release-keep'), /^This setup is not saved; your last saved setup stays in this browser to reopen$/);
+    const [last] = await stored(page);
+    await page.click('#release-switch');
+    await until(async () => await shareHref() === defaultsHref);
+    assert.equal((await stored(page))[1], last);
+    assert.equal(JSON.parse(last).share, custom.slice(1));
+    assert.match(await noticeText(), /Another saved setup is also kept\./);
+    // A starting point has nothing to lose: the change is immediate, and editor content never follows it.
+    await page.evaluate(() => localStorage.clear());
+    await page.goto(base);
+    await ready();
+    await page.selectOption('#release', earlier.tag);
+    await until(async () => await shareHref() === defaultsHref);
+    assert.equal(await page.isVisible('#release-confirm'), false);
+    assert.deepEqual((await stored(page)).slice(1), [null, null]);
+
+    // Content saved by the editor tab is ignored by firmware without a region: the page still builds.
+    await page.evaluate((raw) => {
+      localStorage.setItem('hygrostat-content', raw);
+      window.dispatchEvent(new StorageEvent('storage', { key: 'hygrostat-content', newValue: raw }));
+    }, encodeContent({ terrains: [{ equation: null, grid: new Int8Array(4096) }] }));
+    await page.click('#extra-15');
+    await until(async () => await shareHref() !== defaultsHref && await shareHref() !== null);
+    assert.notEqual(await page.getAttribute('#status', 'class'), 'error', await page.textContent('#status'));
+    assert.equal(await page.isDisabled('#build'), false);
+    assert(!(await shareHref()).includes('setup='), 'no editor content in the shared setup');
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+    await ready();
+
     // Nothing persisted leaves the browser.
-    const bank = (await shown()).scales;
+    const bank = unshare(own, [release]).scales;
+    assert.equal(bank.length, 7);
     const profileHex = new URLSearchParams(own.slice(1)).get('profile');
     for (const request of requests) {
       assert(!request.includes(profileHex.slice(32, 96)), `profile bytes sent: ${request.slice(0, 80)}`);

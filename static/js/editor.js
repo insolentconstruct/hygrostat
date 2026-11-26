@@ -24,9 +24,9 @@
 //
 // The wavetable and terrain editor page (editor.html).
 import { FACTORY, WAVES_PER_BANK, WAVE_SIZE, TABLE_BYTES, MAX_IMPORT, factoryRows, integrate, table, rows,
-  shape, parseWav, resample, cycles, preview as wavePreview } from './wavetables.js?v=44fb6759b0ce7548';
-import { terrain, fromLuminance, preview as terrainPreview, GRID, MAX_GRIDS } from './terrain.js?v=44fb6759b0ce7548';
-import { readContent, saveContent, decodeContent } from './content.js?v=44fb6759b0ce7548';
+  shape, parseWav, resample, cycles, preview as wavePreview } from './wavetables.js?v=4789eb4758a8cae2';
+import { terrain, fromLuminance, preview as terrainPreview, GRID, MAX_GRIDS } from './terrain.js?v=4789eb4758a8cae2';
+import { readContent, saveContent, decodeContent } from './content.js?v=4789eb4758a8cae2';
 
 const $ = (id) => document.getElementById(id);
 const SAMPLE_RATE = 48000;

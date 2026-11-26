@@ -114,14 +114,41 @@ export function readScales(bytes, offset, count) {
   return validateScales(scales);
 }
 
-// Scala lists include the repeat as their last degree and omit the root.
-export function importScala(text, id, color = [255, 160, 0], pulses = 0) {
-  const lines = text.split(/\r?\n/).map((line) => line.split('!')[0].trim()).filter(Boolean);
-  if (lines.length < 3 || !/^\d+$/.test(lines[1])) throw new Error('Invalid Scala file.');
-  const count = Number(lines[1]);
-  if (count < 1 || count > MAX_DEGREES || lines.length !== count + 2) throw new Error('Scala files need 1–24 degrees.');
-  const values = lines.slice(2).map((line) => {
-    const value = line.split(/\s+/)[0];
+// Scala comments are whole lines starting with "!"; the first other line is the description.
+// A blank first line is an empty description when a count and its degrees follow, as the format reads it.
+const scalaText = (text) => text.replace(/[\p{Cc}\s]+/gu, ' ').trim();
+const scalaCounted = (values) => /^\d+$/.test(values[0] ?? '') && Number(values[0]) === values.length - 1;
+function scalaLines(text) {
+  const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/).map((line) => line.trim()).filter((line) => !line.startsWith('!'));
+  // The count line whole and each degree line's first word, both less any "!" remark.
+  const tokens = (from) => lines.slice(from).map((line) => line.split('!')[0].trim()).filter(Boolean)
+    .map((line, i) => i ? line.split(/\s+/)[0] : line);
+  const first = Math.max(lines.findIndex(Boolean), 0);
+  const untitled = !lines[0] && scalaCounted(tokens(first));
+  return untitled || !lines[first] ? { description: '', values: tokens(first) } :
+    { description: scalaText(lines[first]), values: tokens(first + 1) };
+}
+export const scalaDescription = (text) => scalaLines(text).description;
+
+// The longest run of whole characters within a scale record's 31 name bytes.
+function fitName(text) {
+  const encoder = new TextEncoder();
+  let name = '';
+  for (const character of scalaText(text)) {
+    if (encoder.encode(name + character).length > 31) break;
+    name += character;
+  }
+  return name.trimEnd();
+}
+
+// Scala lists include the repeat as their last degree and omit the root. A long description is
+// shortened to fit the name; an empty one takes fallback, such as the file name.
+export function importScala(text, id, fallback = '', color = [255, 160, 0], pulses = 0) {
+  const { description, values: [size = '', ...degrees] } = scalaLines(text);
+  if (!degrees.length || !/^\d+$/.test(size)) throw new Error('Invalid Scala file.');
+  const count = Number(size);
+  if (count < 1 || count > MAX_DEGREES || degrees.length !== count) throw new Error('Scala files need 1–24 degrees.');
+  const values = degrees.map((value) => {
     if (/^\d+\/\d+$/.test(value)) {
       const [a, b] = value.split('/').map(Number);
       return a > 0 && b > 0 ? 12 * Math.log2(a / b) : NaN;
@@ -130,5 +157,6 @@ export function importScala(text, id, color = [255, 160, 0], pulses = 0) {
     return /^\d+\.\d*$/.test(value) ? Number(value) / 100 : NaN;
   });
   const repeat = values.pop();
-  return validateScales([{ id, name: lines[0], color, pulses, repeat, notes: [0, ...values] }])[0];
+  const name = fitName(description) || fitName(fallback) || 'Scala scale';
+  return validateScales([{ id, name, color, pulses, repeat, notes: [0, ...values] }])[0];
 }

@@ -3,7 +3,7 @@
 // The setup kept in this browser so a reload reopens it. No DOM; storage is passed in.
 // A draft is the share fragment plus a little context; see docs/DESIGN.md.
 
-import { defaults, encodeProfile, equal, normalise, share, templates, unshare } from './profile.js?v=44fb6759b0ce7548';
+import { defaults, encodeProfile, equal, normalise, share, templates, unshare } from './profile.js?v=4789eb4758a8cae2';
 
 export const DRAFT = 'hygrostat-draft';
 export const BEFORE_LINK = 'hygrostat-draft-before-link';
@@ -94,6 +94,16 @@ export function put(storage, key, text) {
   }
 }
 
+// Copies the draft over the second slot before a new setup replaces it. False when it could not be kept.
+export function keepAside(storage) {
+  try {
+    const own = storage.getItem(DRAFT);
+    return own === null || put(storage, BEFORE_LINK, own);
+  } catch {
+    return false;
+  }
+}
+
 export function forgetDraft(storage) {
   return [DRAFT, BEFORE_LINK, REFUSED].map((key) => put(storage, key, null)).every(Boolean);
 }
@@ -102,12 +112,18 @@ export function forgetDraft(storage) {
 // The first save after a link copies the draft to BEFORE_LINK, unless that slot already
 // holds work and the draft itself came from a link.
 export function keeper(storage) {
-  let dirty = false, stash = false, paused = false, link = false;
+  // shown is the draft text stored for the setup on screen: null for none, undefined when it is not that setup's.
+  let dirty = false, stash = false, paused = false, link = false, shown = null;
   return {
     get paused() { return paused; },
+    // Whether the stored draft is the setup on screen: not after a link, an unsaved edit or another tab's save.
+    get kept() {
+      if (dirty || paused || typeof shown !== 'string') return false;
+      try { return storage.getItem(DRAFT) === shown; } catch { return false; }
+    },
     edited() { dirty = true; },
-    linked() { dirty = false; stash = true; link = true; },
-    settled(fromLink = false) { dirty = false; stash = false; link = fromLink; },
+    linked() { dirty = false; stash = true; link = true; shown = undefined; },
+    settled(fromLink = false, raw = null) { dirty = false; stash = false; link = fromLink; shown = raw; },
     clean() { dirty = false; },
     pause(on = true) { paused = on; },
     // Returns null (nothing to do), 'saved', 'removed' or 'failed'.
@@ -121,7 +137,9 @@ export function keeper(storage) {
         stash = false;
       }
       const fresh = !setup && isFresh(release, block, newest);
-      return put(storage, DRAFT, fresh ? null : draftText(release, block, preset, now, link, setup)) ? (fresh ? 'removed' : 'saved') : 'failed';
+      const text = fresh ? null : draftText(release, block, preset, now, link, setup);
+      shown = put(storage, DRAFT, text) ? text : undefined;
+      return shown === undefined ? 'failed' : fresh ? 'removed' : 'saved';
     }
   };
 }

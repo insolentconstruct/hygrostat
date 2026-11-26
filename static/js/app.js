@@ -9,27 +9,27 @@
 // in the browser, check the .wav, offer it for download.
 
 import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, GAIN,
-  pageLeds, gestureFirmware, exactPageRule, offeredValues } from './profile.js?v=44fb6759b0ce7548';
-import { effectiveScales, validateScales } from './scales.js?v=44fb6759b0ce7548';
-import { scaleEditor } from './scale_editor.js?v=44fb6759b0ce7548';
-import { guide } from './guide.js?v=44fb6759b0ce7548';
-import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=44fb6759b0ce7548';
-import { featureHelp, actionHelp } from './help.js?v=44fb6759b0ce7548';
+  pageLeds, gestureFirmware, exactPageRule, offeredValues } from './profile.js?v=4789eb4758a8cae2';
+import { effectiveScales, validateScales } from './scales.js?v=4789eb4758a8cae2';
+import { scaleEditor } from './scale_editor.js?v=4789eb4758a8cae2';
+import { guide } from './guide.js?v=4789eb4758a8cae2';
+import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=4789eb4758a8cae2';
+import { featureHelp, actionHelp } from './help.js?v=4789eb4758a8cae2';
 import { KNOBS, KINDS, libraryGroups, EXTRA_GROUPS, extraGroup, extraControl, ACTION_DOES, placeName, pageOf, entryOf, occupant, places, valueLabel, stateLabel,
   summary, stateHint, edit, place, adjust, unplace, afterUnplace, canSwap, freeSlot, changes, fitsSlot, placeable, bankWarning, slotCount,
-  usedPages, compaction, compact } from './layout.js?v=44fb6759b0ce7548';
-import { drawPanel, highlight } from './panel.js?v=44fb6759b0ce7548';
-import { comboImages } from './combo.js?v=44fb6759b0ce7548';
-import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keeper, describe } from './draft.js?v=44fb6759b0ce7548';
+  usedPages, compaction, compact } from './layout.js?v=4789eb4758a8cae2';
+import { drawPanel, highlight } from './panel.js?v=4789eb4758a8cae2';
+import { comboImages } from './combo.js?v=4789eb4758a8cae2';
+import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keepAside, keeper, describe } from './draft.js?v=4789eb4758a8cae2';
 
-import { regionSupport, SECTION_NAMES, SECTION_KINDS } from './profile.js?v=44fb6759b0ce7548';
-import { regionImage } from './region.js?v=44fb6759b0ce7548';
-import { readContent, encodeContent, decodeContent, CONTENT } from './content.js?v=44fb6759b0ce7548';
-import { grids } from './terrain.js?v=44fb6759b0ce7548';
-import { factoryTable } from './wavetables.js?v=44fb6759b0ce7548';
-import { modelInfo } from './model_info.js?v=44fb6759b0ce7548';
-import { starterBanksHash } from './starter_banks.js?v=44fb6759b0ce7548';
-import { stockBanks, offeredModels, addStarterBank, defaultSelection, validateSelection, removeModel, lockSynth, synthLock, flashMeter, refit, selectedRegion, fetchAsset } from './palette.js?v=44fb6759b0ce7548';
+import { regionSupport, SECTION_NAMES, SECTION_KINDS } from './profile.js?v=4789eb4758a8cae2';
+import { regionImage } from './region.js?v=4789eb4758a8cae2';
+import { readContent, encodeContent, decodeContent, CONTENT } from './content.js?v=4789eb4758a8cae2';
+import { grids } from './terrain.js?v=4789eb4758a8cae2';
+import { factoryTable } from './wavetables.js?v=4789eb4758a8cae2';
+import { modelInfo } from './model_info.js?v=4789eb4758a8cae2';
+import { starterBanksHash } from './starter_banks.js?v=4789eb4758a8cae2';
+import { stockBanks, offeredModels, addStarterBank, defaultSelection, validateSelection, removeModel, lockSynth, synthLock, flashMeter, refit, selectedRegion, fetchAsset } from './palette.js?v=4789eb4758a8cae2';
 
 const $ = (id) => document.getElementById(id);
 const cap = (text) => text.replace(/^./, (c) => c.toUpperCase());
@@ -52,7 +52,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=44fb6759b0ce7548', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=4789eb4758a8cae2', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.ready) return;
       if (data.progress !== undefined) {
@@ -104,6 +104,9 @@ let selection = { kind: 'page', slot: 1 };
 let pageTab = 1;
 let pending = null; // An inspector placement waiting for Swap or Replace.
 let presetPending = null; // A starting-point chip waiting for Replace.
+let releaseShown = null; // The tag of the release on screen.
+let releasePending = null; // A Firmware choice waiting for Switch.
+let releaseSlots = null; // The saved setups its prompt described.
 let templatePreview = null;
 let compactPreview = false;
 const startingPoints = [
@@ -231,7 +234,7 @@ let busy = false;
 async function run() {
   if (busy) return;
   busy = true;
-  $('palette-editor').inert = $('scale-editor').inert = $('workspace').inert = $('presets').inert = $('preset-confirm').inert = $('template-gallery').inert = $('draft-notice').inert = true;
+  $('palette-editor').inert = $('scale-editor').inert = $('workspace').inert = $('presets').inert = $('preset-confirm').inert = $('release-confirm').inert = $('template-gallery').inert = $('draft-notice').inert = true;
   $('build').disabled = $('release').disabled = true;
   $('result').hidden = true;
   try {
@@ -244,7 +247,7 @@ async function run() {
     $('build').disabled = $('release').disabled = false;
     busy = false;
     if (pendingShare) { pendingShare = false; loadSharedProfile(); }
-    $('palette-editor').inert = $('scale-editor').inert = $('workspace').inert = $('presets').inert = $('preset-confirm').inert = $('template-gallery').inert = $('draft-notice').inert = false;
+    $('palette-editor').inert = $('scale-editor').inert = $('workspace').inert = $('presets').inert = $('preset-confirm').inert = $('release-confirm').inert = $('template-gallery').inert = $('draft-notice').inert = false;
   }
 }
 
@@ -331,10 +334,83 @@ function setupEditor() {
   pending = null; templatePreview = presetPending = null; compactPreview = false;
   if (selection.kind === 'page' && selection.slot > slotCount('page', profile())) selection = { kind: 'page', slot: 1 };
   if (pageTab > pageNumbers().length) pageTab = 1;
+  releaseShown = selected().tag;
+  releasePending = null;
+  renderReleaseConfirm();
   $('development').hidden = !selected().development;
   $('expected-hash').textContent = selected().wav_sha256;
   preset = matchingTemplate() || preset;
   render();
+}
+
+// A Firmware change starts from that release's defaults. A starting point changes at once;
+// any other setup asks first, and its saved draft is kept in the second slot to reopen.
+function chooseRelease() {
+  const tag = $('release').value;
+  $('release').value = releaseShown;
+  if (matchingTemplate() && !palette && !portableContent && (ownDraft() === null || drafts.kept)) { useRelease(tag, false); return; }
+  releasePending = tag;
+  renderReleaseConfirm();
+  $('release-switch').focus();
+}
+
+// The draft Switch copies aside: the setup on screen or, after a link or an unsaved edit, the last saved one.
+const ownDraft = () => drafts.paused ? null : saved(DRAFT);
+function releaseHint() {
+  if (drafts.paused) return 'Saving is paused: nothing saved in this browser changes';
+  const own = ownDraft();
+  const replaced = own !== null && ![null, own].includes(saved(BEFORE_LINK)) ? ', replacing the other saved setup' : '';
+  return own === null ? 'This setup is not saved in this browser: copy the Share link first to keep it' :
+    drafts.kept ? `Your setup stays saved in this browser to reopen${replaced}` :
+      `This setup is not saved; your last saved setup stays in this browser to reopen${replaced}`;
+}
+
+// Writes the prompt's second line and notes the stored slots it describes.
+const savedSlots = () => JSON.stringify([saved(DRAFT), saved(BEFORE_LINK), drafts.kept]);
+function showReleaseHint() {
+  releaseSlots = savedSlots();
+  $('release-keep').textContent = releaseHint();
+}
+
+function useRelease(tag, confirmed) {
+  if (confirmed && savedSlots() !== releaseSlots) {
+    showReleaseHint();
+    status('The saved setups changed. Check the prompt, then choose again.', 'error');
+    return;
+  }
+  const keep = confirmed && ownDraft() !== null;
+  if (keep && !keepAside(storage)) {
+    status('This browser could not keep your setup, so the firmware was not changed. Copy the Share link, then use Forget saved setup.', 'error');
+    return;
+  }
+  $('release').value = tag;
+  $('template-gallery').hidden = true;
+  entries = defaults(selected().profile);
+  scales = null;
+  palette = null; portableContent = null;
+  preset = 'Drizzlet';
+  notice.restored = null;
+  notice.linked = false;
+  if (keep) notice.dismissed = false;
+  drafts.settled();
+  edited();
+  status('');
+  setupEditor();
+  renderNotice();
+  $('release').focus();
+}
+
+function renderReleaseConfirm() {
+  const release = manifest.releases.find((r) => r.tag === releasePending);
+  const back = () => { releasePending = null; renderReleaseConfirm(); $('release').focus(); };
+  $('release-confirm').hidden = !release;
+  $('release-confirm').replaceChildren(...release ? [
+    el('p', { id: 'release-confirm-text', text: `Switch to ${release.name}? Your setup is replaced by its Drizzlet defaults.` }),
+    el('div', { class: 'options' },
+      el('button', { type: 'button', id: 'release-switch', onclick: () => useRelease(release.tag, true) },
+        el('b', { text: 'Switch' }), el('span', { id: 'release-keep' })),
+      el('button', { type: 'button', id: 'release-cancel', onclick: back }, el('b', { text: 'Cancel' })))] : []);
+  if (release) showReleaseHint();
 }
 
 function useTemplate(name) {
@@ -991,6 +1067,7 @@ async function refresh() {
     notice.dismissed = false;
     renderNotice();
   }
+  if (releasePending) showReleaseHint();
   $('build').disabled = busy || !next.meter.fits;
   $('save-profile').disabled = false;
   const changed = changes(entries, templates(release.profile)[preset] || defaults(release.profile), release.profile).length + Number(scales !== null);
@@ -1252,7 +1329,7 @@ function show(draft) {
   if (palette) entries = lockSynth(entries, palette);
   preset = draft.preset;
   notice.restored = draft;
-  drafts.settled(draft.link);
+  drafts.settled(draft.link, draft.raw);
 }
 
 // A draft this page cannot open is kept aside, never deleted; if it cannot be, saving pauses.
@@ -1271,7 +1348,7 @@ function restoreDraft() {
 const focusStart = () => $('presets').querySelector('button')?.focus();
 
 function startFresh() {
-  notice.undo = { tag: selected().tag, entries, scales, palette, portableContent, preset, raw: saved(DRAFT), link: notice.restored?.link ?? false };
+  notice.undo = { tag: selected().tag, entries, scales, palette, portableContent, preset, raw: saved(DRAFT), kept: drafts.kept, link: notice.restored?.link ?? false };
   notice.restored = null;
   notice.linked = false;
   $('release').selectedIndex = manifest.releases.length - 1;
@@ -1289,12 +1366,12 @@ function startFresh() {
 }
 
 function undoFresh() {
-  const { tag, raw, link, ...previous } = notice.undo;
+  const { tag, raw, kept, link, ...previous } = notice.undo;
   notice.undo = null;
   $('release').value = tag;
   ({ entries, scales, palette, portableContent, preset } = previous);
   if (raw !== null) put(storage, DRAFT, raw);
-  drafts.settled(link);
+  drafts.settled(link, kept ? raw : null);
   status('Previous setup back.');
   setupEditor();
   renderNotice();
@@ -1389,7 +1466,7 @@ async function checkCapabilities() {
   }
   // A constructor alone does not establish support for module workers.
   await new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=44fb6759b0ce7548', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=4789eb4758a8cae2', { type: 'module' });
     const done = (error) => {
       clearTimeout(timer); worker.terminate();
       error ? reject(error) : resolve();
@@ -1418,7 +1495,7 @@ async function init() {
   }
   $('compatibility').hidden = true;
   try {
-    const response = await fetch('manifest.json?v=44fb6759b0ce7548', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=4789eb4758a8cae2', { cache: 'no-cache' });
     manifest = await response.json();
   } catch {
     status('Could not load the release list.', 'error');
@@ -1430,7 +1507,7 @@ async function init() {
     status('Unsupported release list.', 'error'); return;
   }
   try {
-    const response = await fetch('starter-banks.json?v=44fb6759b0ce7548');
+    const response = await fetch('starter-banks.json?v=4789eb4758a8cae2');
     if (!response.ok) throw new Error('Could not load starter banks.');
     const bytes = new Uint8Array(await response.arrayBuffer());
     if (await sha256(bytes) !== starterBanksHash) throw new Error('Starter banks differ from this editor version. Reload to update.');
@@ -1479,7 +1556,7 @@ async function init() {
     if (busy) pendingShare = true;
     else loadSharedProfile();
   });
-  $('release').onchange = () => { templatePreview = null; compactPreview = false; $('template-gallery').hidden = true; entries = defaults(selected().profile); scales = null; preset = 'Drizzlet'; edited(); setupEditor(); };
+  $('release').onchange = chooseRelease;
   $('forget-draft').onclick = forgetSaved;
   $('save-profile').onclick = () => {
     if (!prepared) return;
@@ -1506,7 +1583,8 @@ async function init() {
     $('open-profile').value = '';
   };
   window.addEventListener('storage', (event) => {
-    if (event.key === CONTENT) {
+    // Firmware without a region takes no editor content; a later release with one reads it from storage.
+    if (event.key === CONTENT && regionSupport(selected().profile)) {
       const content = storage && readContent(storage);
       if (content?.error) { status('Saved editor content is damaged.', 'error'); return; }
       portableContent = content ? encodeContent(content) : null;

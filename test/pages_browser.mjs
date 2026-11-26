@@ -96,6 +96,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
         await page.selectOption('#where-page', '1');
         assert.equal(await page.locator('#confirm-replace').count(), 1);
         await page.selectOption('#release', published.releases[0].tag);
+        await page.click('#release-switch');
         await until(async () => await page.locator('#confirm-replace').count() === 0);
         await until(async () => await page.locator('#grid tbody tr').count() === 4);
         assert.equal(await page.getAttribute('#cell-1', 'aria-pressed'), 'true');

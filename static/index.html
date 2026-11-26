@@ -10,7 +10,7 @@
 <meta name="description" content="Build custom Drizzlet firmware for Mutable Instruments Beads in your browser: choose features, control layout and defaults.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <title>Drizzlet Hygrostat</title>
-<script src="js/theme.js?v=44fb6759b0ce7548"></script>
+<script src="js/theme.js?v=4789eb4758a8cae2"></script>
 <style>
   /* Brushed panel greys, with the module's own LED colours as the only accents. */
   :root {
@@ -75,7 +75,7 @@
   .presets { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-bottom: .75rem; }
   .presets > span { font-weight: 600; margin-right: .25rem; }
   #presets { display: flex; flex-wrap: wrap; gap: .5rem; }
-  #preset-confirm { max-width: 40rem; margin: 0 0 .75rem; }
+  #preset-confirm, #release-confirm { max-width: 40rem; margin: 0 0 .75rem; }
   #draft-notice { max-width: 40rem; margin: 0 0 .75rem; padding: .4rem .75rem; border-radius: 6px; background: var(--sunk); }
   #draft-notice p { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .6rem; margin: .35rem 0; }
   .chip { min-height: 44px; padding: .4rem .95rem; border: 1px solid var(--rule); border-radius: 999px; background: var(--plate); }
@@ -363,6 +363,7 @@
       <div id="download-counts" aria-live="polite"></div>
     </div>
   </div>
+  <div id="release-confirm" class="confirm" role="group" aria-labelledby="release-confirm-text" hidden></div>
   <p class="lead">Choose Beads features and where you control them.</p>
   <p class="steps">Select a position, choose a feature and its starting value, then build the update.</p>
   <p id="starting-point-note" class="note" hidden>Starting points replace your setup and restore default scales.</p>
@@ -543,6 +544,6 @@
   </div>
   <div id="library-body"></div>
 </dialog>
-<script type="module" src="js/app.js?v=44fb6759b0ce7548"></script>
+<script type="module" src="js/app.js?v=4789eb4758a8cae2"></script>
 </body>
 </html>

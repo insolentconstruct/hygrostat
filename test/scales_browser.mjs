@@ -125,6 +125,37 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     assert.match(await page.textContent('#status'), /increase/);
     assert.equal((await bank()).find((s) => s.name === 'Imported scale').notes.length, 3);
     assert.match(await page.textContent('#scale-error'), /increase/);
+    // A file with an empty description takes its file name; unedited notes keep their stored values.
+    const ratios = ['16/15', '9/8', '6/5', '5/4', '4/3', '45/32', '3/2', '8/5', '5/3', '9/5', '15/8'];
+    await page.evaluate(() => { window.finishScaleRead = null; });
+    await page.setInputFiles('#scale-import', { name: 'just.scl', mimeType: 'text/plain',
+      buffer: Buffer.from(`! just.scl\n!\n\n 12\n!\n ${ratios.join('\n ')}\n 2/1\n`) });
+    await until(async () => await page.evaluate(() => typeof window.finishScaleRead === 'function'));
+    await page.evaluate(() => window.finishScaleRead());
+    await until(async () => (await bank())?.some((s) => s.name === 'just'));
+    assert.match(await page.textContent('#status'), /imported as “just”/);
+    const just = (await bank()).find((s) => s.name === 'just').notes;
+    assert.deepEqual(just, [0, ...ratios.map((r) => Math.fround(12 * Math.log2(r.split('/')[0] / r.split('/')[1])))]);
+    await page.fill('#scale-name', 'Just');
+    await page.getByRole('button', { name: 'Apply scale', exact: true }).click();
+    await until(async () => (await bank())?.some((s) => s.name === 'Just'));
+    assert.deepEqual((await bank()).find((s) => s.name === 'Just').notes, just, 'a name edit leaves the notes bit for bit');
+    await page.fill('#scale-notes', '0 111.7313 701.955');
+    await page.getByRole('button', { name: 'Apply scale', exact: true }).click();
+    await until(async () => (await bank())?.find((s) => s.name === 'Just')?.notes.length === 3);
+    assert.deepEqual((await bank()).find((s) => s.name === 'Just').notes, [0, 1.117313, 7.01955].map(Math.fround), 'edited notes are read as typed');
+    // Likewise the repeat: 16/15 is not the 111.7313 cents shown.
+    await page.evaluate(() => { window.finishScaleRead = null; });
+    await page.setInputFiles('#scale-import', { name: 'narrow.scl', mimeType: 'text/plain', buffer: Buffer.from('Narrow\n1\n16/15\n') });
+    await until(async () => await page.evaluate(() => typeof window.finishScaleRead === 'function'));
+    await page.evaluate(() => window.finishScaleRead());
+    await until(async () => (await bank())?.some((s) => s.name === 'Narrow'));
+    assert.equal(await page.inputValue('#scale-repeat'), '111.7313');
+    await page.fill('#scale-name', 'Narrower');
+    await page.getByRole('button', { name: 'Apply scale', exact: true }).click();
+    await until(async () => (await bank())?.some((s) => s.name === 'Narrower'));
+    assert.equal((await bank()).find((s) => s.name === 'Narrower').repeat, Math.fround(12 * Math.log2(16 / 15)), 'a name edit leaves the repeat bit for bit');
+    assert.notEqual(Math.fround(1.117313), Math.fround(12 * Math.log2(16 / 15)));
     // A template restores its factory bank even after its named scale was removed.
     await page.click('#cell-1');
     await page.check('#state-1');
