@@ -45,9 +45,10 @@ These are direct-use lint guards, not data-flow analysis or a sanitizer; review
 aliases and dynamic property access rather than evading the checks.
 
 HTML attributes use double quotes. Retain semantic elements, labels, keyboard
-access and existing focus behaviour. CSS stays in index.html unless a change
-has a clear reason to move it; Stylelint parses its style blocks and attributes
-with postcss-html. Reuse existing variables and responsive breakpoints.
+access and existing focus behaviour. CSS lives in static/css, one file per
+page, so the content policy can refuse inline styles: add no style element or
+style attribute, and set dynamic values through element.style properties.
+Reuse existing variables and responsive breakpoints.
 The descending-specificity rule is disabled because it compares selectors in
 independent components without knowing their DOM; preserve each component
 cascade instead of globally sorting unrelated selectors.
@@ -55,7 +56,8 @@ cascade instead of globally sorting unrelated selectors.
 ## Checks and review
 
 Development tooling needs Node 22.13+ on the 22 LTS line, or Node 24+. CI uses
-Node 22. Dependencies have exact direct versions and a committed npm lockfile.
+Node 22. Dependencies have exact direct versions and a committed npm lockfile;
+Playwright is one of them and must match the browser image in the workflow.
 
 ```sh
 npm ci
@@ -65,7 +67,7 @@ npm run lint:controls
 
 The lint command runs ESLint recommended checks on maintained JavaScript,
 including tests and tools, HTMLHint on static HTML and Stylelint recommended
-checks on CSS and HTML-embedded CSS. Browser, worker and Node globals are
+checks on the CSS files and any CSS in HTML. Browser, worker and Node globals are
 separate; Playwright test files also contain page callbacks. Negative controls
 check that representative bad JavaScript, markup and CSS are actually refused.
 The lint job is required before deployment, alongside build and browser tests.
@@ -83,7 +85,7 @@ need the complete Node set and pinned firmware agreement. DOM, CSS, worker or
 download-flow changes need both browser suites in Chromium, Firefox and WebKit.
 Keep meaningful negative cases; fix failures without weakening expectations.
 
-After browser JavaScript or manifest edits run node tools/version-assets.js.
+After browser JavaScript, CSS or manifest edits run node tools/version-assets.js.
 Review the diff, run the relevant checks, obtain an independent review, verify
 findings and re-review fixes before committing. Agent work follows the same
 sequence; read this file first and report checks and remaining limits clearly.

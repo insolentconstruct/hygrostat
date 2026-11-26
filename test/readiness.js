@@ -4,12 +4,13 @@
 // Release-readiness regressions use the shipped catalogue and manifest.
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { firmwareShow } from './firmware.js';
 import { defaults, encodeProfile, equal, cpuUsage, profileKey, modes,
   validateProfileFormat, initialEntry, pageSlots } from '../static/js/profile.js';
 import { importedCost, tableBytes, tableSha256, importCosts, costTable, moduleCosts } from '../tools/import-costs.js';
 import { readCatalogue, firmwareDefinitions, firmwareRecord, checkDefinitions, MANIFEST } from '../tools/catalogue.js';
+import { cleanManifest, versionManifest } from '../tools/version-assets.js';
 import './costs.js';
 import './help.js';
 import { guide } from '../static/js/guide.js';
@@ -219,23 +220,42 @@ for (const format of [undefined, 0, 2 ** 32]) {
 const version = manifest.asset_version;
 assert.match(version, /^[a-f0-9]{16}$/);
 const unversion = (s) => s.replace(/\?v=[a-f0-9]+/g, '');
+const pinned = (r) => r.content ? [...r.content.models, ...r.content.libraries ?? [], r.content.rings, r.content.region].filter(Boolean) : [];
 const bare = structuredClone(manifest); delete bare.asset_version;
 for (const r of bare.releases) {
   r.app = unversion(r.app);
   if (r.combo) r.combo.bootloader = unversion(r.combo.bootloader);
+  for (const asset of pinned(r)) asset.url = unversion(asset.url);
 }
 const modules = readdirSync(new URL('js/', root)).filter((p) => p.endsWith('.js')).sort();
+const styles = readdirSync(new URL('css/', root)).filter((p) => p.endsWith('.css')).sort();
 assert.equal(version, createHash('sha256').update(JSON.stringify(bare) +
-  modules.map((p) => unversion(read('js/' + p))).join('')).digest('hex').slice(0, 16),
-  'run version-assets after changing the manifest or modules');
-
-const paths = [...read('index.html').matchAll(/src="([^"]+)"/g)].map((m) => m[1]);
-for (const file of readdirSync(new URL('js/', root)).filter((f) => f.endsWith('.js'))) {
-  paths.push(...[...read('js/' + file).matchAll(/['"]((?:\.\/|js\/)[^'"\n]+\.js[^'"\n]*|manifest\.json[^'"\n]*)['"]/g)].map((m) => m[1]));
+  modules.map((p) => unversion(read('js/' + p))).join('') + styles.map((p) => read('css/' + p)).join('')).digest('hex').slice(0, 16),
+  'run version-assets after changing the manifest, modules or styles');
+// The tool versions a release's catalogue blobs and region by their own hashes, and strips them again.
+{
+  const staged = { releases: [JSON.parse(readFileSync('releases/beta4-development.json', 'utf8'))] };
+  Object.assign(staged.releases[0], { app: 'images/staged/app.bin', app_sha256: 'a'.repeat(64) });
+  const original = structuredClone(staged);
+  const assets = pinned(versionManifest(staged, version).releases[0]);
+  assert(assets.length > 100);
+  for (const asset of assets) {
+    assert.equal(new URL(asset.url, 'https://local.invalid/').search, `?v=${asset.sha256}`);
+    assert(statSync(new URL(unversion(asset.url), root)).isFile(), asset.url);
+  }
+  assert.deepEqual(versionManifest(cleanManifest(structuredClone(staged)), version), staged, 'versioning twice changes nothing');
+  assert.deepEqual(cleanManifest(staged), original);
 }
-assert(paths.length > 10);
+
+const paths = ['index.html', 'editor.html'].flatMap((page) => [...read(page).matchAll(/(?:src|href)="((?:js|css)\/[^"]+)"/g)].map((m) => m[1]));
+assert(paths.some((path) => path.startsWith('css/index.css')) && paths.some((path) => path.startsWith('css/editor.css')));
+for (const file of readdirSync(new URL('js/', root)).filter((f) => f.endsWith('.js'))) {
+  paths.push(...[...read('js/' + file).matchAll(/['"]((?:\.\/|js\/)[^'"\n]+\.js[^'"\n]*|(?:manifest|starter-banks)\.json[^'"\n]*)['"]/g)].map((m) => m[1]));
+}
+assert(paths.length > 10 && paths.some((path) => path.startsWith('starter-banks.json')));
 for (const path of paths) assert.equal(new URL(path, 'https://local.invalid/').searchParams.get('v'), version, path);
 for (const r of manifest.releases) {
+  for (const asset of pinned(r)) assert.equal(new URL(asset.url, 'https://local.invalid/').searchParams.get('v'), asset.sha256, asset.url);
   assert.equal(new URL(r.app, 'https://local.invalid/').searchParams.get('v'), r.app_sha256);
   if (r.combo || !r.development) {
     assert.equal(new URL(r.combo.bootloader, 'https://local.invalid/').searchParams.get('v'), r.combo.bootloader_sha256);
@@ -245,5 +265,13 @@ const workflow = readFileSync('.github/workflows/pages.yml', 'utf8');
 assert(workflow.includes('  pull_request:'));
 assert(workflow.includes("github.event_name != 'pull_request' && github.ref == 'refs/heads/main'"));
 const html = read('index.html');
-for (const text of ['How to install', 'storage-recovery-2026.10.27', ':focus-visible', 'min-height: 44px', 'Made by Insolent Construct']) assert(html.includes(text));
+for (const text of ['How to install', 'storage-recovery-2026.10.27', 'Made by Insolent Construct']) assert(html.includes(text));
+for (const text of [':focus-visible', 'min-height: 44px']) assert(read('css/index.css').includes(text));
+// The guide drawings stay out of the page's static imports: only a dynamic import reaches them.
+assert(!/^import [^\n]*guide\.js/m.test(read('js/app.js')) && read('js/app.js').includes("import('./guide.js?v="));
+// Styles are files: the policy allows no inline CSS, and neither page carries any.
+for (const page of ['index.html', 'editor.html']) {
+  assert(read(page).includes("; style-src 'self'; "), `${page}: style-src is 'self' only`);
+  assert(!/<style|\sstyle=/.test(read(page)), `${page}: no inline styles`);
+}
 console.log(`PASS readiness catalogue, default bytes, partial measurements, synthetic CPU thresholds and traced per-engine shipped costs (${cpuUsage(warning, measuredCosts(release)).percent}/${cpuUsage(heavy, measuredCosts(release)).percent}), guides, profile format, assets and PR CI`);

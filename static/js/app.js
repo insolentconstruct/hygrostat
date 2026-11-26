@@ -9,27 +9,26 @@
 // in the browser, check the .wav, offer it for download.
 
 import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, GAIN,
-  pageLeds, gestureFirmware, exactPageRule, offeredValues } from './profile.js?v=4789eb4758a8cae2';
-import { effectiveScales, validateScales } from './scales.js?v=4789eb4758a8cae2';
-import { scaleEditor } from './scale_editor.js?v=4789eb4758a8cae2';
-import { guide } from './guide.js?v=4789eb4758a8cae2';
-import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=4789eb4758a8cae2';
-import { featureHelp, actionHelp } from './help.js?v=4789eb4758a8cae2';
+  pageLeds, gestureFirmware, exactPageRule, offeredValues } from './profile.js?v=51ce921e4a13abc4';
+import { effectiveScales, validateScales } from './scales.js?v=51ce921e4a13abc4';
+import { scaleEditor } from './scale_editor.js?v=51ce921e4a13abc4';
+import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=51ce921e4a13abc4';
+import { featureHelp, actionHelp } from './help.js?v=51ce921e4a13abc4';
 import { KNOBS, KINDS, libraryGroups, EXTRA_GROUPS, extraGroup, extraControl, ACTION_DOES, placeName, pageOf, entryOf, occupant, places, valueLabel, stateLabel,
   summary, stateHint, edit, place, adjust, unplace, afterUnplace, canSwap, freeSlot, changes, fitsSlot, placeable, bankWarning, slotCount,
-  usedPages, compaction, compact } from './layout.js?v=4789eb4758a8cae2';
-import { drawPanel, highlight } from './panel.js?v=4789eb4758a8cae2';
-import { comboImages } from './combo.js?v=4789eb4758a8cae2';
-import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keepAside, keeper, describe } from './draft.js?v=4789eb4758a8cae2';
+  usedPages, compaction, compact } from './layout.js?v=51ce921e4a13abc4';
+import { drawPanel, highlight } from './panel.js?v=51ce921e4a13abc4';
+import { comboImages } from './combo.js?v=51ce921e4a13abc4';
+import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keepAside, keeper, describe } from './draft.js?v=51ce921e4a13abc4';
 
-import { regionSupport, SECTION_NAMES, SECTION_KINDS } from './profile.js?v=4789eb4758a8cae2';
-import { regionImage } from './region.js?v=4789eb4758a8cae2';
-import { readContent, encodeContent, decodeContent, CONTENT } from './content.js?v=4789eb4758a8cae2';
-import { grids } from './terrain.js?v=4789eb4758a8cae2';
-import { factoryTable } from './wavetables.js?v=4789eb4758a8cae2';
-import { modelInfo } from './model_info.js?v=4789eb4758a8cae2';
-import { starterBanksHash } from './starter_banks.js?v=4789eb4758a8cae2';
-import { stockBanks, offeredModels, addStarterBank, defaultSelection, validateSelection, removeModel, lockSynth, synthLock, flashMeter, refit, selectedRegion, fetchAsset } from './palette.js?v=4789eb4758a8cae2';
+import { regionSupport, SECTION_NAMES, SECTION_KINDS, MAX_SHARE } from './profile.js?v=51ce921e4a13abc4';
+import { regionImage } from './region.js?v=51ce921e4a13abc4';
+import { readContent, encodeContent, decodeContent, CONTENT } from './content.js?v=51ce921e4a13abc4';
+import { grids } from './terrain.js?v=51ce921e4a13abc4';
+import { factoryTable } from './wavetables.js?v=51ce921e4a13abc4';
+import { modelInfo } from './model_info.js?v=51ce921e4a13abc4';
+import { starterBanksHash } from './starter_banks.js?v=51ce921e4a13abc4';
+import { stockBanks, offeredModels, addStarterBank, defaultSelection, validateSelection, removeModel, lockSynth, synthLock, flashMeter, refit, selectedRegion, fetchAsset } from './palette.js?v=51ce921e4a13abc4';
 
 const $ = (id) => document.getElementById(id);
 const cap = (text) => text.replace(/^./, (c) => c.toUpperCase());
@@ -52,7 +51,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=4789eb4758a8cae2', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=51ce921e4a13abc4', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.ready) return;
       if (data.progress !== undefined) {
@@ -95,6 +94,9 @@ const payloads = () => {
 };
 
 let revision = 0;
+// The guide drawings are the largest module and only feed the guide downloads: fetched once the page is usable.
+const guideModule = () => import('./guide.js?v=51ce921e4a13abc4')
+  .catch((cause) => { throw new Error('Could not load the guide drawings. Reload the page.', { cause }); });
 const guideURLs = [];
 const comboURLs = [];
 // The preset the change count is measured from, the selected destination
@@ -131,6 +133,7 @@ const notice = { restored: null, linked: false, undo: null, failed: false, dismi
 const held = new Set(); // Keys of refused drafts that could not be set aside; saving pauses meanwhile.
 
 async function build(release, app) {
+  await guideModule(); // Before encoding: a build without its guides stops here.
   if (download) URL.revokeObjectURL(download);
   clearCombo();
   $('result').hidden = true;
@@ -298,7 +301,10 @@ async function updateCombo(release, app, isDefault, fp, names) {
   }
 }
 
-async function updateGuides(release, chosen, fp, names, chosenScales = scales) {
+// current says whether the caller's setup is still the one on screen once the drawings have loaded.
+async function updateGuides(release, chosen, fp, names, chosenScales = scales, current = () => true) {
+  const { guide } = await guideModule();
+  if (!current()) return;
   guideURLs.splice(0).forEach((url) => URL.revokeObjectURL(url));
   for (const mobile of [false, true]) {
     const url = URL.createObjectURL(new Blob([guide(chosen, release, fp, mobile, chosenScales, palette)], { type: 'image/svg+xml' }));
@@ -1080,8 +1086,13 @@ async function refresh() {
   $('fingerprint').textContent = fp;
   $('share').href = '#' + share(release, block, setupData());
   $('share').onclick = () => { history.replaceState(null, '', $('share').href); status('Copy this address to share.'); };
-  await updateGuides(release, entries, fp, filenames(release, fp,
-      equal(block, encodeProfile(defaults(release.profile), release.profile))));
+  try {
+    await updateGuides(release, entries, fp, filenames(release, fp,
+        equal(block, encodeProfile(defaults(release.profile), release.profile))), scales, () => token === revision);
+  } catch (error) {
+    if (token === revision) status(error.message, 'error');
+    return;
+  }
   if (token === revision) $('summary').dataset.fingerprint = fp;
 }
 
@@ -1306,7 +1317,8 @@ function linkOpened() {
   drafts.linked();
   const own = saved(DRAFT);
   const params = (text) => new URLSearchParams(text.replace(/^#/, '')).toString();
-  notice.linked = own !== null && describe(own).fragment !== null && params(describe(own).fragment) !== params(location.hash);
+  notice.linked = own !== null && describe(own).fragment !== null &&
+    (location.hash.length > MAX_SHARE + 1 || params(describe(own).fragment) !== params(location.hash));
   notice.restored = notice.undo = null;
   notice.dismissed = false;
   renderNotice();
@@ -1466,7 +1478,7 @@ async function checkCapabilities() {
   }
   // A constructor alone does not establish support for module workers.
   await new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=4789eb4758a8cae2', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=51ce921e4a13abc4', { type: 'module' });
     const done = (error) => {
       clearTimeout(timer); worker.terminate();
       error ? reject(error) : resolve();
@@ -1495,7 +1507,7 @@ async function init() {
   }
   $('compatibility').hidden = true;
   try {
-    const response = await fetch('manifest.json?v=4789eb4758a8cae2', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=51ce921e4a13abc4', { cache: 'no-cache' });
     manifest = await response.json();
   } catch {
     status('Could not load the release list.', 'error');
@@ -1507,7 +1519,7 @@ async function init() {
     status('Unsupported release list.', 'error'); return;
   }
   try {
-    const response = await fetch('starter-banks.json?v=4789eb4758a8cae2');
+    const response = await fetch('starter-banks.json?v=51ce921e4a13abc4');
     if (!response.ok) throw new Error('Could not load starter banks.');
     const bytes = new Uint8Array(await response.arrayBuffer());
     if (await sha256(bytes) !== starterBanksHash) throw new Error('Starter banks differ from this editor version. Reload to update.');
