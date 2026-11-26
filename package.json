@@ -20,7 +20,7 @@
     "htmlhint": "1.9.2",
     "playwright": "1.65.0",
     "postcss": "8.5.32",
-    "postcss-html": "2.0.0",
+    "postcss-html": "2.0.1",
     "stylelint": "17.16.0",
     "stylelint-config-recommended": "18.0.0"
   },
