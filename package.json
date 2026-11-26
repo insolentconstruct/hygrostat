@@ -22,7 +22,7 @@
     "postcss": "8.5.32",
     "postcss-html": "2.0.0",
     "stylelint": "17.16.0",
-    "stylelint-config-recommended": "18.0.0"
+    "stylelint-config-recommended": "19.1.0"
   },
   "overrides": {
     "glob": "14.0.3",
