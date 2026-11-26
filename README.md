@@ -119,9 +119,10 @@ and customized guides follow it. Keep release image and WAV pins tied to the
 actual build and run the complete agreement suites before offering it.
 
 Beta 4 Palette bank CPU figures use the largest matching six-voice Seed3
-callback peak per rate. The 1.044× historical screening margin is an estimate
-with unverified transfer to Beads. The limits are 96.5% at 48 kHz, 97.0% at
-32 kHz and a provisional 90.0% at 24 kHz. Over-limit banks can still export.
+callback peak at 48 kHz: the synths always run at 48 kHz, whatever the quality
+setting. The 1.044× historical screening margin is an estimate with unverified
+transfer to Beads. The working limit is 96.5%. Over-limit banks can still
+export. The 32 and 24 kHz measurements stay in the import but raise no warning.
 The import in `costs/hygrostat-model-costs.json` includes 282 primary and six
 supplemental measurements. It joins them by model ID and blob SHA-256,
 including Chiptune under its measured blob hash. Model availability still

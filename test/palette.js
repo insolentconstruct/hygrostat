@@ -25,7 +25,7 @@
 // Selection invariants and portable bank round trips.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { validateSelection, removeModel, lockSynth, synthLock, flashMeter, refit, stockBanks } from '../static/js/palette.js';
+import { validateSelection, removeModel, lockSynth, synthLock, flashMeter, refit, stockBanks, bankCpu, SYNTH_RATE } from '../static/js/palette.js';
 import { defaults, encodeProfile, decodeSettings, share, unshare } from '../static/js/profile.js';
 import { draftText, readDraft, DRAFT } from '../static/js/draft.js';
 const manifest = JSON.parse(readFileSync(new URL('../static/manifest.json', import.meta.url)));
@@ -66,4 +66,17 @@ assert(meter.seconds > 0 && meter.fits);
 assert.equal(flashMeter(917505, null, block).fits, false);
 assert.deepEqual(refit(selection, { content: { models: [{ id: 1 }] } }, { free: -42 }),
   { missing: [0], ringsMissing: false, deficit: 42 });
-console.log('PASS palette: synth locks, explicit replacement, profile/link/draft banks, flash and refit');
+// Plaits banks are screened at 48 kHz only: figures at 32 and 24 kHz never change the result.
+const cpu = { screening_ratio: 1.044, working_limits: { 48000: 96.5, 32000: 97, 24000: 90 } };
+const rows = [{ id: 0, seed3_peak: { 48000: 50, 32000: 99, 24000: 95 } }, { id: 1, seed3_peak: { 48000: 93, 32000: 10, 24000: 10 } }, { id: 2 }];
+assert.equal(SYNTH_RATE, 48000);
+const quiet = bankCpu([0, 0], rows, cpu);
+assert.deepEqual({ ...quiet, screened: quiet.screened.toFixed(3) },
+  { rate: 48000, peak: 50, screened: '52.200', limit: 96.5, complete: true, over: false });
+const loud = bankCpu([0, 1], rows, cpu);
+assert.deepEqual([loud.peak, loud.screened.toFixed(3), loud.over], [93, '97.092', true]);
+assert.deepEqual(bankCpu([0, 2], rows, cpu), { ...quiet, complete: false });
+assert.deepEqual(bankCpu([2], rows, cpu), { rate: 48000, peak: null, screened: null, limit: 96.5, complete: false, over: false });
+// The rate stays a parameter for work that follows the codec rate.
+assert.deepEqual([bankCpu([0], rows, cpu, 24000).over, bankCpu([1], rows, cpu, 24000).over], [true, false]);
+console.log('PASS palette: synth locks, explicit replacement, profile/link/draft banks, flash, refit and 48 kHz bank CPU');
