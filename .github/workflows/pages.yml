@@ -22,6 +22,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: '22'
@@ -34,12 +36,16 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      # The firmware the tests read: a drizzlet commit, with full history for the refs they pin. Bump it by hand.
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           repository: insolentconstruct/eurorack
-          ref: drizzlet
+          ref: d71c411c2834932884ab3434c6608e7768c28836 # drizzlet, 2026-11-26
           path: firmware
           fetch-depth: 0
+          persist-credentials: false
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: '22'
@@ -84,6 +90,9 @@ jobs:
           node test/terrain.js
           node test/palette.js
           node test/starter_banks.js
+          node test/costs.js
+          node test/fallback_guide.js
+          node test/input_limits.js
       - name: Install the pinned Hugo
         run: |
           archive="hugo_${HUGO_VERSION}_linux-amd64.tar.gz"
@@ -112,11 +121,13 @@ jobs:
       HOME: /root
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: '22'
-      - name: Install the Playwright matching the image
-        run: npm install --omit=dev --no-save --no-package-lock --no-audit --no-fund playwright@1.65.0
+      - name: Install the locked Playwright, which matches the image
+        run: npm ci --no-audit --no-fund
       - name: The page works in three browsers
         run: |
           mkdir -p test-artifacts

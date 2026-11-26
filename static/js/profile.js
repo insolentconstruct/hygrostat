@@ -22,7 +22,7 @@
 //
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
-import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=4789eb4758a8cae2';
+import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=51ce921e4a13abc4';
 
 // Six-byte entries are kept in wire order: id, state, value, page, amount, action.
 const STATES = ['Off', 'Fixed', 'Adjustable'];
@@ -334,7 +334,10 @@ export function share(release, block, setup = null) {
     profile: Array.from(block, (v) => v.toString(16).padStart(2, '0')).join(''),
     ...setup ? { setup: JSON.stringify(setup) } : {} }).toString();
 }
+// More than twice the longest setup: a profile, 15 banks, a wavetable and 16 terrains.
+export const MAX_SHARE = 1000000;
 export function unshare(text, releases) {
+  if (text.length - Number(text.startsWith('#')) > MAX_SHARE) throw new Error('Share link is too long.');
   const params = new URLSearchParams(text.replace(/^#/, ''));
   const release = releases.find((r) => r.tag === params.get('release'));
   const hex = params.get('profile');

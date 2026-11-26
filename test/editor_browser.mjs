@@ -1,5 +1,6 @@
 // Copyright 2026 Insolent Construct. MIT licence: see ../static/js/encoder.js.
 import assert from 'node:assert/strict';
+import { deflateSync, crc32 } from 'node:zlib';
 import { chromium, firefox, webkit } from 'playwright';
 
 const base = process.env.BASE || 'http://127.0.0.1:8080/';
@@ -18,6 +19,24 @@ wav.writeUInt16LE(16, 34);
 wav.write('data', 36);
 wav.writeUInt32LE(1200, 40);
 for (let i = 0; i < 600; ++i) wav.writeInt16LE(Math.round(30000 * Math.sin(2 * Math.PI * i / 600)), 44 + i * 2);
+
+// A greyscale PNG of black pixels; rows may be fewer than the header claims.
+const chunk = (type, data) => {
+  const body = Buffer.concat([Buffer.from(type), data]);
+  const out = Buffer.alloc(body.length + 8);
+  out.writeUInt32BE(data.length, 0);
+  body.copy(out, 4);
+  out.writeUInt32BE(crc32(body), body.length + 4);
+  return out;
+};
+const png = (width, height, rows = height) => {
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header[8] = 8;
+  return Buffer.concat([Buffer.from('\x89PNG\r\n\x1a\n', 'latin1'), chunk('IHDR', header),
+    chunk('IDAT', deflateSync(Buffer.alloc(rows * (width + 1)))), chunk('IEND', Buffer.alloc(0))]);
+};
 
 for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['webkit', webkit]]) {
   const browser = await engine.launch();
@@ -85,6 +104,23 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     assert.equal(await page.textContent('#terrain-count'), '1 of 16');
     assert.equal(await page.getAttribute('#terrain-list button', 'aria-label'), 'Terrain 1: sin(5 * (y + theta))');
     assert.equal((await stored()).terrain, savedTerrain);
+    // An image's header gives its size before any decoding; oversized or unknown files are refused.
+    await page.setInputFiles('#image-file', { name: 'small.png', mimeType: 'image/png', buffer: png(8, 8) });
+    await until(async () => await page.textContent('#terrain-status') === 'Image added.');
+    assert.equal(await page.textContent('#terrain-count'), '2 of 16');
+    await page.setInputFiles('#image-file', { name: 'huge.png', mimeType: 'image/png', buffer: png(20000, 20000, 1) });
+    await until(async () => await page.textContent('#terrain-status') === 'huge.png: Images are 16 megapixels at most.');
+    await page.setInputFiles('#image-file', { name: 'notes.png', mimeType: 'image/png', buffer: Buffer.from('not an image') });
+    await until(async () => await page.textContent('#terrain-status') === 'notes.png: Use a PNG, JPEG or GIF image.');
+    assert.equal(await page.textContent('#terrain-count'), '2 of 16');
+    assert.equal(await page.locator('main').count(), 1, 'the editor has a main landmark');
+    // A fragment too long to hold content is not parsed; the saved content still opens. Other engines cap URLs lower.
+    if (name === 'chromium') {
+      await page.evaluate(() => { location.hash = 'unused=' + 'a'.repeat(1200001); });
+      await page.reload();
+      await until(async () => await page.textContent('#wave-status') === 'This link is too long to open.');
+      assert.equal(await page.textContent('#terrain-count'), '2 of 16');
+    }
     assert.deepEqual(errors, []);
     await context.close();
     console.log(`PASS ${name}: wave drawing, reset, terrain validation, WAV/table imports and persistence`);

@@ -24,9 +24,9 @@
 //
 // The editor's wavetables and terrains, kept in this browser for the region writer:
 // regionContent gives writeRegion's wave (factory bytes unless edited) and terrain (null: no grids).
-import { checkWaves } from './region.js?v=4789eb4758a8cae2';
-import { factoryTable } from './wavetables.js?v=4789eb4758a8cae2';
-import { grids, readGrids, parse, MAX_GRIDS } from './terrain.js?v=4789eb4758a8cae2';
+import { checkWaves } from './region.js?v=51ce921e4a13abc4';
+import { factoryTable } from './wavetables.js?v=51ce921e4a13abc4';
+import { grids, readGrids, parse, MAX_GRIDS } from './terrain.js?v=51ce921e4a13abc4';
 
 export const CONTENT = 'hygrostat-content';
 const SCHEMA = 1;
@@ -47,8 +47,13 @@ export function encodeContent({ wave = null, terrains = [] }) {
     equations: terrains.map((t) => (typeof t.equation === 'string' ? t.equation : null)) });
 }
 
-// The saved content, validated as the writer does; throws on anything malformed.
+// Well above a wavetable and 16 terrains in Base64 (about 225,000 characters).
+export const MAX_CONTENT = 400000;
+
+// The saved content, validated as the writer does; throws on anything malformed, and on oversized text unparsed.
 export function decodeContent(raw) {
+  if (typeof raw !== 'string') throw new Error('Unknown saved content.');
+  if (raw.length > MAX_CONTENT) throw new Error('Saved content is too large.');
   const saved = JSON.parse(raw);
   if (saved?.v !== SCHEMA || !Array.isArray(saved.equations)) throw new Error('Unknown saved content.');
   const wave = saved.wave === null ? null : fromBase64(saved.wave);

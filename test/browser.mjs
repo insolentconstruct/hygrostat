@@ -131,6 +131,30 @@ async function checkThemes(browser) {
     assert.equal(await first.evaluate(() => window.firstBodyTheme), saved);
     await initial.close();
   }
+  // The guide drawings load after the page is usable; if they cannot, the page says so and a build stops early.
+  {
+    const late = await browser.newContext();
+    let refused = 0;
+    await late.route('**/*', (route) => {
+      const url = new URL(route.request().url());
+      if (/\/js\/(?:guide|release_guides)\.js$/.test(url.pathname)) { ++refused; return route.abort('failed'); }
+      return url.origin === new URL(base).origin ? route.continue() : route.abort('internetdisconnected');
+    });
+    const check = await late.newPage();
+    const errors = [];
+    check.on('pageerror', (error) => errors.push(String(error)));
+    await check.goto(base);
+    await check.waitForFunction(() => document.getElementById('status').textContent.includes('guide drawings'));
+    assert(refused >= 1);
+    assert.equal(await check.isDisabled('#build'), false, 'the page is usable without the guide drawings');
+    assert.match(await check.getAttribute('#share', 'href'), /^#release=/);
+    assert.equal(await check.getAttribute('#guide', 'href'), null);
+    await check.click('#build');
+    await check.waitForFunction(() => document.getElementById('status').textContent.startsWith('Stopped: Could not load the guide drawings'));
+    assert.equal(await check.isHidden('#result'), true);
+    assert.deepEqual(errors, []);
+    await late.close();
+  }
 }
 for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['webkit', webkit]]) {
   const browser = await engine.launch();

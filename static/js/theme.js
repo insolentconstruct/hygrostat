@@ -1,4 +1,13 @@
 // Copyright 2026 Insolent Construct. MIT licence: see encoder.js.
+// The host cannot send frame-ancestors: a framed page stays hidden and asks to leave the frame.
+if (window.top !== window.self) {
+  document.documentElement.hidden = true;
+  try {
+    window.top.location = window.location.href;
+  } catch {
+    // A frame that may not navigate its parent stays hidden.
+  }
+}
 (() => {
   const key = 'hygrostat-theme';
   const values = ['system', 'light', 'dark'];

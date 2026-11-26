@@ -24,9 +24,10 @@
 //
 // The wavetable and terrain editor page (editor.html).
 import { FACTORY, WAVES_PER_BANK, WAVE_SIZE, TABLE_BYTES, MAX_IMPORT, factoryRows, integrate, table, rows,
-  shape, parseWav, resample, cycles, preview as wavePreview } from './wavetables.js?v=4789eb4758a8cae2';
-import { terrain, fromLuminance, preview as terrainPreview, GRID, MAX_GRIDS } from './terrain.js?v=4789eb4758a8cae2';
-import { readContent, saveContent, decodeContent } from './content.js?v=4789eb4758a8cae2';
+  shape, parseWav, resample, cycles, preview as wavePreview } from './wavetables.js?v=51ce921e4a13abc4';
+import { terrain, fromLuminance, preview as terrainPreview, GRID, MAX_GRIDS } from './terrain.js?v=51ce921e4a13abc4';
+import { readContent, saveContent, decodeContent, MAX_CONTENT } from './content.js?v=51ce921e4a13abc4';
+import { checkImageSize } from './image_size.js?v=51ce921e4a13abc4';
 
 const $ = (id) => document.getElementById(id);
 const SAMPLE_RATE = 48000;
@@ -60,12 +61,16 @@ function save(id) {
 
 function load() {
   let saved;
+  // Percent-encoding at most triples the content; a longer fragment is not parsed, and the saved content opens.
+  const long = location.hash.length > 3 * MAX_CONTENT;
+  if (long) report('wave-status', 'This link is too long to open.', true);
+  const content = long ? null : new URLSearchParams(location.hash.slice(1)).get('content');
   try {
-    const content = new URLSearchParams(location.hash.slice(1)).get('content');
     saved = content === null ? storage ? readContent(storage) : null : decodeContent(content);
   } catch (error) { saved = { error }; }
   if (saved?.error) {
-    report('wave-status', 'Your saved wavetables or terrains were damaged and could not be opened.', true);
+    report('wave-status', content === null ? 'Your saved wavetables or terrains were damaged and could not be opened.' :
+      'This link could not be opened: its wavetables or terrains are damaged or too large.', true);
     return;
   }
   if (!saved) return;
@@ -313,6 +318,7 @@ function fromEquation(replace) {
 async function fromImage(file) {
   try {
     if (file.size > MAX_IMPORT) throw new Error('Images are 4 MB at most.');
+    checkImageSize(new Uint8Array(await file.arrayBuffer()));
     const bitmap = await createImageBitmap(file);
     const side = Math.min(bitmap.width, bitmap.height);
     const canvas = document.createElement('canvas');

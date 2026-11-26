@@ -44,7 +44,46 @@ for (const [name, engine] of Object.entries({ chromium, firefox, webkit })) {
     assert.equal(await page.evaluate(async () =>
       (await fetch('https://api.github.com/hygrostat-referrer-probe')).text()), 'ok');
     assert.equal(referred, undefined, `${name}: page-wide policy omits the referrer`);
-    console.log(`PASS ${name}: real CSP blocks inline/eval, permits same-origin code, and omits referrers`);
+    // Inline CSS is refused in both forms; styles set through the CSSOM, as the page does, still apply.
+    const styles = await page.evaluate(() => {
+      const probe = document.createElement('p');
+      probe.className = 'hygrostat-style-probe';
+      document.body.append(probe);
+      const sheet = document.createElement('style');
+      sheet.textContent = '.hygrostat-style-probe { margin-right: 9px; }';
+      document.head.append(sheet);
+      probe.setAttribute('style', 'margin-top: 11px');
+      probe.style.marginLeft = '7px';
+      const { marginRight, marginTop, marginLeft } = getComputedStyle(probe);
+      return { marginRight, marginTop, marginLeft,
+        tabs: document.querySelector('.page-tabs').style.gridTemplateColumns,
+        swatch: getComputedStyle(document.querySelector('.scale-swatch')).backgroundColor };
+    });
+    assert.equal(styles.marginRight, '0px', `${name}: an inline style element is refused`);
+    assert.notEqual(styles.marginTop, '11px', `${name}: a style attribute is refused`);
+    assert.equal(styles.marginLeft, '7px', `${name}: a style property set from script applies`);
+    assert.match(styles.tabs, /^repeat\(\d+, 1fr\)$/, `${name}: the page tabs keep their script-set columns`);
+    assert.match(styles.swatch, /^rgb\(/, `${name}: scale swatches keep their script-set colour`);
+    assert.notEqual(styles.swatch, 'rgb(0, 0, 0)');
+    await page.goto(base + 'editor.html');
+    await page.waitForSelector('main canvas');
+    assert.equal(await page.evaluate(() => getComputedStyle(document.body).marginTop), '0px', `${name}: the editor stylesheet loaded`);
+    // A framed copy hides itself, and leaves a frame that lets it.
+    for (const file of ['', 'editor.html']) {
+      const framer = await browser.newPage();
+      await framer.route('**/framed-probe*', (route) => route.fulfill({ contentType: 'text/html',
+        body: `<!doctype html><title>Frame</title><iframe ${route.request().url().includes('sandbox') ? 'sandbox="allow-scripts allow-same-origin" ' : ''}src="${base}${file}"></iframe>` }));
+      await framer.goto(new URL('framed-probe-sandbox', base).href);
+      const frame = framer.frames()[1];
+      await frame.waitForFunction(() => getComputedStyle(document.documentElement).display === 'none');
+      assert.equal(framer.url(), new URL('framed-probe-sandbox', base).href, `${name}: a sandboxed frame cannot leave`);
+      // The frame may leave before the probe finishes loading, so only its commit is awaited.
+      await framer.goto(new URL('framed-probe', base).href, { waitUntil: 'commit' });
+      await framer.waitForURL(base + file);
+      await framer.waitForFunction(() => getComputedStyle(document.documentElement).display !== 'none');
+      await framer.close();
+    }
+    console.log(`PASS ${name}: real CSP blocks inline script, style and eval, permits same-origin code and CSSOM styles, omits referrers; framed pages hide`);
   } finally {
     await browser.close();
   }

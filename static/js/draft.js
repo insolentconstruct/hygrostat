@@ -3,12 +3,14 @@
 // The setup kept in this browser so a reload reopens it. No DOM; storage is passed in.
 // A draft is the share fragment plus a little context; see docs/DESIGN.md.
 
-import { defaults, encodeProfile, equal, normalise, share, templates, unshare } from './profile.js?v=4789eb4758a8cae2';
+import { defaults, encodeProfile, equal, normalise, share, templates, unshare, MAX_SHARE } from './profile.js?v=51ce921e4a13abc4';
 
 export const DRAFT = 'hygrostat-draft';
 export const BEFORE_LINK = 'hygrostat-draft-before-link';
 export const REFUSED = 'hygrostat-draft-refused';
 const SCHEMA = 1;
+// The longest share text with room for a draft's other fields: longer stored text is not parsed.
+const MAX_DRAFT = MAX_SHARE + 1024;
 
 // The page's own fresh state: Drizzlet defaults with default scales on the newest release.
 export const isFresh = (release, block, newest) => release === newest &&
@@ -28,11 +30,11 @@ const fromLink = (raw) => {
 // What a refused draft can still tell the person, from text this page could not open.
 export function describe(raw) {
   try {
+    if (raw.length > MAX_DRAFT) throw new Error('Draft is too large.');
     const draft = JSON.parse(raw);
-    const tag = typeof draft?.share === 'string' ? new URLSearchParams(draft.share).get('release') : null;
-    return { name: typeof draft?.name === 'string' ? draft.name : tag,
-      saved: Number.isFinite(draft?.saved) ? draft.saved : null,
-      fragment: typeof draft?.share === 'string' ? draft.share : null };
+    const fragment = typeof draft?.share === 'string' && draft.share.length <= MAX_SHARE ? draft.share : null;
+    return { name: typeof draft?.name === 'string' ? draft.name : fragment && new URLSearchParams(fragment).get('release'),
+      saved: Number.isFinite(draft?.saved) ? draft.saved : null, fragment };
   } catch {
     return { name: null, saved: null, fragment: null };
   }
@@ -44,8 +46,9 @@ export function readDraft(storage, releases, key = DRAFT) {
   try { raw = storage.getItem(key); } catch { return null; }
   if (raw === null) return null;
   try {
+    if (raw.length > MAX_DRAFT) throw new Error('Draft is too large.');
     const draft = JSON.parse(raw);
-    if (draft?.v !== SCHEMA || typeof draft.share !== 'string' || !Number.isFinite(draft.saved) ||
+    if (draft?.v !== SCHEMA || typeof draft.share !== 'string' || draft.share.length > MAX_SHARE || !Number.isFinite(draft.saved) ||
         !Number.isInteger(draft.version) || !Number.isInteger(draft.format)) {
       throw new Error('Unknown draft schema.');
     }

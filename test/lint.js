@@ -108,8 +108,8 @@ const end = '</body></html>\n';
 probe('htmlhint', ['--config', '.htmlhintrc'],
   html + '<p id="one">OK</p>' + end,
   html + '<p id="one">OK</p><p id="one">Duplicate</p>' + end, /id-unique/);
-probe('stylelint', ['--stdin', '--stdin-filename', 'static/lint-control.html', '--max-warnings=0'],
-  '<style>.lint-control { color: red; }</style>\n',
-  '<style>.lint-control { colour: red; }</style>\n', /property-no-unknown/);
+probe('stylelint', ['--stdin', '--stdin-filename', 'static/css/lint-control.css', '--max-warnings=0'],
+  '.lint-control { color: red; }\n',
+  '.lint-control { colour: red; }\n', /property-no-unknown/);
 
-console.log(`PASS ${positiveControls} positive and ${negativeControls} negative lint CLI controls: JS errors/style, worker/Node globals, execution/DOM guards, duplicate HTML IDs and inline CSS typos.`);
+console.log(`PASS ${positiveControls} positive and ${negativeControls} negative lint CLI controls: JS errors/style, worker/Node globals, execution/DOM guards, duplicate HTML IDs and CSS typos.`);

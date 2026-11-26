@@ -30,8 +30,11 @@ display appear as a replacement character in SVG guides.
 Local firmware must match the selected release size before it is read, then
 match its SHA-256 and default profile. Scala imports are limited to 64 KiB
 before reading. Shared profiles have exact size, version, release, field and
-checksum checks; malformed or unsupported data is rejected. These checks do
-not establish that an unrelated firmware image is safe to install.
+checksum checks; malformed or unsupported data is rejected. Links and saved
+content over a fixed length are refused before parsing or Base64 decoding, and
+an imported image over 16 megapixels by its header is refused before decoding.
+These checks do not establish that an unrelated firmware image is safe to
+install.
 
 Encoding runs off the UI thread. Workers terminate on completion or error;
 download object URLs are revoked when replaced. Keep the real firmware
@@ -42,9 +45,9 @@ changing these paths. Lint is not a substitute for them.
 
 The CSP appears before page resources. Scripts and workers are same-origin;
 inline scripts and eval are not enabled. Objects, base URLs and form submission
-are disabled. The inline-style allowance is confined to CSS for the existing
-page and dynamic presentation; it does not allow inline JavaScript. If styles
-move to separate files, revisit that allowance rather than broadening policy.
+are disabled. Styles are same-origin files too: inline style elements and
+attributes are refused, and scripts set dynamic values through style
+properties. The browser suite checks each refusal in all three engines.
 The page and counter requests use no-referrer policies.
 
 Counter requests use only release/event paths, omit credentials and respect
@@ -54,11 +57,17 @@ Share data stays in the URL fragment, which is not part of an HTTP request.
 Some controls, including CSP frame-ancestors, require HTTP headers and cannot
 be enforced through a CSP meta element. Verify available hosting controls;
 do not add an ineffective meta directive and describe it as protection.
+Instead the first script hides a framed page and asks the top window to load
+it directly. This is a script check, not a header: a frame that disables
+scripts shows the static page, which can build nothing.
 
 ## Dependencies and checks
 
-Tooling dependencies are development-only, locked and installed with npm ci;
-they are not copied into the site. The explicit glob/minimatch overrides
+Tooling dependencies, Playwright included, are development-only, locked with
+integrity hashes and installed with npm ci; they are not copied into the site.
+Checkouts keep no credentials, the firmware checkout is a pinned commit, and
+Dependabot proposes action and npm updates, except Playwright, which changes
+only together with its browser image. The explicit glob/minimatch overrides
 select patched versions and are checked with actual lint discovery and
 positive/negative controls. Review upstream compatibility before changing them.
 Run npm audit when changing the lockfile; do not apply a forced downgrade or

@@ -1,7 +1,7 @@
 // Copyright 2026 Insolent Construct. MIT licence: see ../static/js/encoder.js.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { defaults, encodeProfile, share, templates, unshare } from '../static/js/profile.js';
+import { defaults, encodeProfile, share, templates, unshare, MAX_SHARE } from '../static/js/profile.js';
 import { factoryScales, validateScales } from '../static/js/scales.js';
 import { DRAFT, BEFORE_LINK, REFUSED, draftText, describe, readDraft, setAside, put, forgetDraft, keepAside, keeper, isFresh } from '../static/js/draft.js';
 
@@ -286,6 +286,20 @@ assert.equal(describe(tweak((d) => { delete d.name; })).name, release.tag);
   failing.edited();
   assert.equal(failing.save(release, encodeProfile(pitched, profile), 'Drizzlet', now, release), 'failed');
   assert.equal(failing.kept, false, 'a failed save is not kept');
+}
+// A draft whose share text is longer than any link is refused unparsed, and described without its tag.
+{
+  const long = JSON.stringify({ ...JSON.parse(good), share: `release=${release.tag}&profile=${'0'.repeat(MAX_SHARE)}` });
+  const refused = readDraft(store({ [DRAFT]: long }), releases);
+  assert.equal(refused.refused, true);
+  assert.match(refused.error.message, /Unknown draft schema/);
+  assert.deepEqual([describe(long).name, describe(long).fragment], [release.name, null]);
+  // Stored text longer than any draft is refused and described without being parsed.
+  const padded = `${good.slice(0, -1)},"padding":"${' '.repeat(MAX_SHARE + 1024)}"}`;
+  assert.equal(JSON.parse(padded).share, JSON.parse(good).share);
+  assert.match(readDraft(store({ [DRAFT]: padded }), releases).error.message, /Draft is too large/);
+  assert.deepEqual(describe(padded), { name: null, saved: null, fragment: null });
+  assert.equal(describe(JSON.stringify({ ...JSON.parse(long), name: 1 })).name, null);
 }
 // The share link and the draft agree, so a restored setup is the shared one.
 assert.deepEqual(unshare(JSON.parse(good).share, releases).entries, pitched);
