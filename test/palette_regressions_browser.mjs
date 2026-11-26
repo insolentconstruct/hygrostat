@@ -27,7 +27,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { chromium, firefox, webkit } from 'playwright';
-import { crc32, defaults, encodeProfile, share } from '../static/js/profile.js';
+import { crc32, defaults, encodeProfile, share, unshare } from '../static/js/profile.js';
 import { writeRegion } from '../static/js/region.js';
 import { draftText, DRAFT, BEFORE_LINK, REFUSED } from '../static/js/draft.js';
 import { encodeContent } from '../static/js/content.js';
@@ -67,12 +67,12 @@ const until = async (test) => {
 let failures = 0;
 for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['webkit', webkit]]) {
   const browser = await engine.launch();
-  const check = async (label, run) => {
+  const check = async (label, run, releases = [release]) => {
     const context = await browser.newContext();
     await context.route('**/*', (route) => {
       const url = new URL(route.request().url());
       if (url.origin !== new URL(base).origin) return route.abort();
-      if (url.pathname.endsWith('/manifest.json')) return route.fulfill({ json: { ...manifest, releases: [release] } });
+      if (url.pathname.endsWith('/manifest.json')) return route.fulfill({ json: { ...manifest, releases } });
       if (assets.has(url.pathname)) return route.fulfill({ body: assets.get(url.pathname), contentType: 'application/octet-stream' });
       return route.continue();
     });
@@ -156,6 +156,59 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
       assert(await page.getByLabel(/^Model 43 —/).isChecked());
       assert.equal(await page.getByLabel('Bank 1, slot 1', { exact: true }).inputValue(), '8');
       assert.deepEqual(stockBanks().map((b) => b[0]), [8, 16, 0]);
+    });
+    await check('fourth starting bank restores from a link and a draft', async (page) => {
+      const banks = [0, 1, 0, 1].map((id) => Array(8).fill(id));
+      const start = defaults(release.profile).map((e) => e[0] === 31 ? [31, 2, 3, 0, 0, 0] : e);
+      const four = encodeProfile(start, release.profile, null, { banks, directory: written.directory });
+      const setup = { selection: { ...selection, banks }, content: null };
+      const errors = [];
+      page.on('pageerror', (error) => errors.push(error.message));
+      const restored = async () => {
+        await until(async () => await page.getAttribute('#summary', 'data-fingerprint'));
+        const shown = unshare(await page.getAttribute('#share', 'href'), [release]);
+        assert.deepEqual(shown.entries.find((e) => e[0] === 31), [31, 2, 3, 0, 0, 0]);
+        assert.deepEqual(shown.plaits.banks, banks);
+        assert.equal(await page.getAttribute('#preset-drizzlet', 'aria-pressed'), 'false');
+        assert.notEqual(await page.getAttribute('#status', 'class'), 'error', await page.textContent('#status'));
+      };
+      await page.goto(base + '#' + share(release, four, setup));
+      await restored();
+      await page.evaluate(({ key, value }) => localStorage.setItem(key, value),
+        { key: DRAFT, value: draftText(release, four, 'Drizzlet', 42, false, setup) });
+      await page.goto(base + 'editor.html');
+      await page.goto(base);
+      await restored();
+      assert.match(await page.textContent('#draft-notice'), /Restored your last setup/);
+      assert.deepEqual(errors, []);
+    });
+    await check('a Firmware change drops banks and reads local editor content again', async (page) => {
+      const plain = manifest.releases.at(-1);
+      await page.goto(base + '#' + fragment);
+      await until(async () => await page.locator('#build').isEnabled());
+      await page.selectOption('#release', plain.tag);
+      assert.match(await page.textContent('#release-keep'), /not saved in this browser/);
+      await page.click('#release-switch');
+      await until(async () => await page.getAttribute('#share', 'href') === '#' + share(plain, encodeProfile(defaults(plain.profile), plain.profile)));
+      assert.equal(await page.inputValue('#release'), plain.tag);
+      assert.notEqual(await page.getAttribute('#status', 'class'), 'error', await page.textContent('#status'));
+      assert.equal(await page.isHidden('#palette-editor'), true);
+      await page.evaluate((raw) => localStorage.setItem('hygrostat-content', raw),
+        encodeContent({ terrains: [{ equation: null, grid: new Int8Array(4096) }] }));
+      await page.selectOption('#release', release.tag);
+      await until(async () => (await page.textContent('#flash-meter')).includes('TERR:'));
+      assert.equal(await page.isVisible('#release-confirm'), false);
+    }, [manifest.releases.at(-1), release]);
+    await check('content saved in the editor tab reaches a release with a region', async (page) => {
+      await page.goto(base);
+      await until(async () => await page.locator('#build').isEnabled());
+      assert.doesNotMatch(await page.textContent('#flash-meter'), /TERR:/);
+      await page.evaluate((raw) => {
+        localStorage.setItem('hygrostat-content', raw);
+        window.dispatchEvent(new StorageEvent('storage', { key: 'hygrostat-content', newValue: raw }));
+      }, encodeContent({ terrains: [{ equation: null, grid: new Int8Array(4096) }] }));
+      await until(async () => (await page.textContent('#flash-meter')).includes('TERR:'));
+      await until(async () => await page.locator('#build').isEnabled());
     });
   } finally { await browser.close(); }
 }

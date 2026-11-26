@@ -22,7 +22,7 @@
 //
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
-import { effectiveScales, importScala, MAX_SCALES, PULSE_NAMES, validateScales } from './scales.js?v=44fb6759b0ce7548';
+import { effectiveScales, importScala, MAX_SCALES, PULSE_NAMES, scalaDescription, validateScales } from './scales.js?v=4789eb4758a8cae2';
 
 const node = (tag, text = '') => {
   const value = document.createElement(tag);
@@ -104,9 +104,9 @@ export function scaleEditor(root, { get, set, error, releaseKey, getLeds }) {
         const current = effectiveScales(get(), getLeds());
         const id = nextId(current);
         if (id === undefined) throw new Error('Remove a scale before importing another.');
-        const scale = importScala(text, id);
+        const scale = importScala(text, id, source.name.replace(/\.scl$/i, ''));
         chosen = id;
-        apply([...current, scale], 'Scala scale imported.');
+        apply([...current, scale], scale.name === scalaDescription(text) ? 'Scala scale imported.' : `Scala scale imported as “${scale.name}”.`);
       } catch (problem) { report(problem.message); }
       finally { file.value = ''; }
     };
@@ -126,9 +126,10 @@ export function scaleEditor(root, { get, set, error, releaseKey, getLeds }) {
       wrap.append(input); form.append(wrap); return input;
     };
     const name = field('Name', 'name', scale.name); name.required = true;
-    const repeat = field('Repeat (cents)', 'repeat', cents(scale.repeat), 'number');
+    const shownRepeat = cents(scale.repeat), shownNotes = scale.notes.map(cents).join(' ');
+    const repeat = field('Repeat (cents)', 'repeat', shownRepeat, 'number');
     repeat.step = 'any'; repeat.min = '1'; repeat.max = '12800'; repeat.required = true;
-    const notes = field('Notes (cents, separated by spaces or commas)', 'notes', scale.notes.map(cents).join(' '));
+    const notes = field('Notes (cents, separated by spaces or commas)', 'notes', shownNotes);
     notes.required = true;
     const color = field('LED colour', 'color', hex(scale.color), 'color');
     const label = node('label', 'LED flash pattern');
@@ -140,8 +141,9 @@ export function scaleEditor(root, { get, set, error, releaseKey, getLeds }) {
       event.preventDefault();
       const tokens = notes.value.trim().split(/[\s,]+/);
       const number = (text) => /^(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(text) ? Number(text) / 100 : NaN;
-      const updated = { ...scale, name: name.value, repeat: number(repeat.value),
-        notes: tokens.map(number), color: [1, 3, 5].map((i) => parseInt(color.value.slice(i, i + 2), 16)), pulses: Number(pulses.value) };
+      // The cents shown are rounded: text left as shown keeps the stored value.
+      const updated = { ...scale, name: name.value, repeat: repeat.value === shownRepeat ? scale.repeat : number(repeat.value),
+        notes: notes.value === shownNotes ? scale.notes : tokens.map(number), color: [1, 3, 5].map((i) => parseInt(color.value.slice(i, i + 2), 16)), pulses: Number(pulses.value) };
       apply(bank.map((s) => s.id === scale.id ? updated : s), `${updated.name} updated.`);
     };
     body.append(form);

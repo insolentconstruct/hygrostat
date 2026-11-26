@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { defaults, encodeProfile, share, templates, unshare } from '../static/js/profile.js';
 import { factoryScales, validateScales } from '../static/js/scales.js';
-import { DRAFT, BEFORE_LINK, REFUSED, draftText, describe, readDraft, setAside, put, forgetDraft, keeper, isFresh } from '../static/js/draft.js';
+import { DRAFT, BEFORE_LINK, REFUSED, draftText, describe, readDraft, setAside, put, forgetDraft, keepAside, keeper, isFresh } from '../static/js/draft.js';
 
 const manifest = JSON.parse(readFileSync(new URL('../static/manifest.json', import.meta.url)));
 const release = manifest.releases.at(-1);
@@ -245,6 +245,47 @@ assert.equal(describe(tweak((d) => { delete d.name; })).name, release.tag);
   k.edited();
   assert.equal(k.save(release, encodeProfile(pitched, profile), 'Drizzlet', now, release), 'failed');
   assert.equal(keeper(null).save(release, encodeProfile(pitched, profile), 'Drizzlet', now, release), null);
+}
+// A Firmware change keeps the draft aside before the new release's defaults replace or remove it.
+{
+  const own = saveText(pitched, custom, 'Pitched grains');
+  const s = store({ [DRAFT]: own, [BEFORE_LINK]: saveText(pitched) });
+  assert.equal(keepAside(s), true);
+  assert.equal(s.getItem(BEFORE_LINK), own, 'the setup on screen replaces the second slot');
+  const k = keeper(s);
+  assert.equal(k.kept, false, 'a draft this page has not opened is not the setup on screen');
+  k.settled(false, own);
+  assert.equal(k.kept, true, 'a restored draft is');
+  k.edited();
+  assert.equal(k.kept, false, 'an unsaved edit is not');
+  assert.equal(k.save(release, encodeProfile(defaults(profile), profile), 'Drizzlet', now, release), 'removed');
+  assert.equal(k.kept, false, 'nothing is stored for the fresh state');
+  assert.deepEqual([s.getItem(DRAFT), s.getItem(BEFORE_LINK)], [null, own]);
+  // An opened link leaves the person's own draft stored: it is not the setup on screen until an edit is saved.
+  s.setItem(DRAFT, own);
+  k.linked();
+  assert.equal(k.kept, false);
+  k.edited();
+  assert.equal(k.save(release, encodeProfile(pitched, profile), 'Drizzlet', now, release), 'saved');
+  assert.equal(k.kept, true);
+  k.pause();
+  assert.equal(k.kept, false, 'nor while saving is paused for a refused draft');
+  k.pause(false);
+  s.setItem(DRAFT, own);
+  assert.equal(k.kept, false, "nor after another tab's save");
+  assert.deepEqual(readDraft(s, releases, BEFORE_LINK).entries, pitched);
+  // Nothing saved leaves the second slot alone; a failed copy is reported.
+  const empty = store({ [BEFORE_LINK]: own });
+  assert.equal(keepAside(empty), true);
+  assert.equal(empty.getItem(BEFORE_LINK), own);
+  const full = store({ [DRAFT]: own });
+  full.setItem = () => { throw new Error('full'); };
+  assert.equal(keepAside(full), false);
+  assert.equal(full.getItem(DRAFT), own);
+  const failing = keeper(full);
+  failing.edited();
+  assert.equal(failing.save(release, encodeProfile(pitched, profile), 'Drizzlet', now, release), 'failed');
+  assert.equal(failing.kept, false, 'a failed save is not kept');
 }
 // The share link and the draft agree, so a restored setup is the shared one.
 assert.deepEqual(unshare(JSON.parse(good).share, releases).entries, pitched);
