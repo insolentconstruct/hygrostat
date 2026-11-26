@@ -54,7 +54,8 @@ release.content = { models: models.map((bytes, id) => ({ id, name: `Model ${id}`
   libraries: [], region: asset('region', written.region) };
 release.content.model_cpu = { screening_ratio: 1.044, working_limits: { 48000: 96.5, 32000: 97, 24000: 90 } };
 release.content.models[0].seed3_peak = { 48000: 95, 32000: 40, 24000: 35 };
-release.content.models[1].seed3_peak = { 48000: 50, 24000: 25 };
+// Model 1 is unmeasured at 48 kHz and over the 32 and 24 kHz limits, rates the synth never runs at.
+release.content.models[1].seed3_peak = { 32000: 99, 24000: 95 };
 const app = new Uint8Array(release.profile.offset + release.profile.size);
 app.set(encodeProfile(defaults(release.profile), release.profile), release.profile.offset);
 const appAsset = asset('app.bin', app);
@@ -84,8 +85,10 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     await page.goto(base + '#' + fragment);
     await until(async () => await page.locator('#build').isEnabled());
     assert.match(await page.textContent('#flash-meter'), /WAVE: 100396 B/);
-    assert.match(await page.locator('.bank-cpu-warning').textContent(), /CPU WARNING: Bank 1 may crackle at 48 kHz/);
-    assert.match(await page.locator('#palette-controls').textContent(), /32 kHz · Seed3 peak 40.0% · screened 41.8% · limit 97.0% · incomplete screening/);
+    assert.equal(await page.locator('.bank-cpu-warning').textContent(), 'CPU WARNING: Bank 1 may crackle. The estimate exceeds the working limit. You can still export.');
+    assert.match(await page.locator('#palette-controls').textContent(), /48 kHz · Seed3 peak 95.0% · screened 99.2% · limit 96.5% · incomplete screening \(some slots unmeasured\)/);
+    assert.match(await page.locator('#palette-controls').textContent(), /Plaits always runs at 48 kHz, whatever the quality setting\./);
+    assert.doesNotMatch(await page.locator('#palette-controls').textContent(), /(?:32|24) kHz/);
     await page.click('#build');
     await page.locator('#download').waitFor({ state: 'visible', timeout: 60000 });
     assert.match(await page.textContent('#download'), /Download WAV/);
@@ -105,7 +108,8 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     await page.getByLabel('Model 0', { exact: false }).uncheck();
     await until(async () => await page.locator('#build').isEnabled());
     assert.equal(await page.locator('.bank-cpu-warning').count(), 0);
-    assert.match(await page.locator('#palette-controls').textContent(), /32 kHz · CPU unmeasured/);
+    assert.match(await page.locator('#palette-controls').textContent(), /48 kHz · CPU unmeasured/);
+    assert.doesNotMatch(await page.locator('#palette-controls').textContent(), /(?:32|24) kHz|Seed3 peak \d/);
     const link = await page.getAttribute('#share', 'href');
     await page.goto(base + link);
     await until(async () => await page.locator('#build').isEnabled());

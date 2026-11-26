@@ -1,10 +1,13 @@
 {
   "copyright": "Copyright 2026 Insolent Construct. MIT licence: see js/encoder.js.",
-  "tag": "drizzlet-dev-1d43405",
+  "tag": "drizzlet-dev-7b9fd999",
   "name": "Drizzlet Beta 4 — development (unreleased)",
   "slug": "beta-4-development",
   "development": true,
-  "source_commit": "1d43405f9eba57b079749bdf4f1baf77fc408f9d",
+  "source_commit": "7b9fd9998dcb293bb5d5bf03f7e9b5022fe56702",
+  "app_sha256": "67493d6782630c7c8ffb5c24288fa33a0a17acf342e6d9513edfef6a9abf7221",
+  "app_size": 415080,
+  "wav_sha256": "0dbdecba38ce3a28b94ec317f43c9934fad704c3629c193f58cea3f57c2f18b4",
   "catalogue": {
     "url": "images/beta4-catalogue/profile-features.json",
     "sha256": "fd7868346d15794f1fedf3e835d082426ab0fcb3cf7cb0432c7272c2945f989c"

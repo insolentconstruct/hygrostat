@@ -23,9 +23,9 @@
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
 // Selection, banks and physical flash accounting; no DOM.
-import { knownModel, validatePlaits, SECTION_NAMES, SECTION_KINDS, SYNTH, sha256 } from './profile.js?v=51ce921e4a13abc4';
-import { writeRegion, resolveBlobs, blobInfo, checkInstallable, regionStart, REGION_END, APP_START } from './region.js?v=51ce921e4a13abc4';
-import { sampleCount } from './encoder.js?v=51ce921e4a13abc4';
+import { knownModel, validatePlaits, SECTION_NAMES, SECTION_KINDS, SYNTH, sha256 } from './profile.js?v=7a0498812d8d68e2';
+import { writeRegion, resolveBlobs, blobInfo, checkInstallable, regionStart, REGION_END, APP_START } from './region.js?v=7a0498812d8d68e2';
+import { sampleCount } from './encoder.js?v=7a0498812d8d68e2';
 
 export const stockBanks = () => Array.from({ length: 3 }, (_, b) => Array.from({ length: 8 }, (_, i) => [8, 16, 0][b] + i));
 
@@ -86,6 +86,17 @@ export function flashMeter(appSize, written, block) {
     sections: (written?.directory ?? []).map((e) => ({ kind: SECTION_NAMES[SECTION_KINDS.indexOf(e.kind)], bytes: e.size })),
     free: REGION_END - end, fits: end <= REGION_END, profile: used, profileFree: block.length - used,
     seconds: sampleCount(end - APP_START) / 48000 };
+}
+
+// Synth mode runs the codec at 48 kHz whatever the quality setting, so Plaits banks are screened there only.
+export const SYNTH_RATE = 48000;
+// A bank's highest Seed3 peak at one rate against that rate's working limit; unmeasured slots are skipped.
+export function bankCpu(bank, models, cpu, rate = SYNTH_RATE) {
+  const peaks = bank.map((id) => models.find((row) => row.id === id)?.seed3_peak?.[rate]).filter(Number.isFinite);
+  const limit = cpu.working_limits[rate];
+  const peak = peaks.length ? Math.max(...peaks) : null;
+  const screened = peak === null ? null : peak * cpu.screening_ratio;
+  return { rate, peak, screened, limit, complete: peaks.length === bank.length, over: screened !== null && screened > limit };
 }
 
 // The stock models are qualified; Palette models need module rows.
