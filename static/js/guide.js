@@ -23,12 +23,13 @@
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
 // Knob cards port options_guide.py: 270-degree arcs and the same LED ladder.
-import { effectiveScales, PULSE_NAMES } from './scales.js?v=51ce921e4a13abc4';
-import { synthLock } from './palette.js?v=51ce921e4a13abc4';
-import { defaults, equal, encodeProfile, pageLeds, PAGE_LEDS, GAIN } from './profile.js?v=51ce921e4a13abc4';
-import { pageLedName, usedPages } from './layout.js?v=51ce921e4a13abc4';
-import { RELEASE_GUIDES } from './release_guides.js?v=51ce921e4a13abc4';
-import { placeable, bankWarning } from './layout.js?v=51ce921e4a13abc4';
+import { effectiveScales, PULSE_NAMES } from './scales.js?v=28252688bdfef7bb';
+import { synthLock } from './palette.js?v=28252688bdfef7bb';
+import { defaults, equal, encodeProfile, pageLeds, PAGE_LEDS, GAIN, TOGGLES } from './profile.js?v=28252688bdfef7bb';
+import { processorActionHelp } from './help.js?v=28252688bdfef7bb';
+import { pageLedName, usedPages } from './layout.js?v=28252688bdfef7bb';
+import { RELEASE_GUIDES } from './release_guides.js?v=28252688bdfef7bb';
+import { placeable, bankWarning } from './layout.js?v=28252688bdfef7bb';
 
 const KNOBS = ['FEEDBACK', 'DRY/WET', 'REVERB'];
 export const ACTIONS = ['None', '[A]+SEED', '[A]+FREEZE', '[A] hold'];
@@ -218,10 +219,13 @@ export function guide(entries, release, fp, mobile = false, scales = null, selec
   y = d.lines(margin, y, gainLine(entries), mobile ? 43 : 140);
   for (const e of entries.filter((e) => e[5])) {
     const f = feature(e);
-    const extra = e[0] === 9 ? ' With Synth start on Manual, both inputs unplugged and FREEZE off.' :
-        e[0] === 13 ? ' Toggle monophonic grains.' : e[0] === 14 ? ' Start a fresh recording window.' :
-        ` Switch ${f.values[0]} / ${f.values[1]}; [A] shows the new colour.${e[0] === 4 ? ' Switching clears the recording.' : ''}`;
-    y = d.lines(margin, y + 10, `${ACTIONS[e[5]]}: ${feature(e).name}.${e[5] === 3 ? ' Both inputs unplugged.' : ''}${extra}`, mobile ? 43 : 140);
+    const extra = e[0] === 4 && f ? processorActionHelp(f, release.profile) :
+        e[0] === 9 ? 'With Synth start on Manual, both inputs unplugged and FREEZE off.' :
+        e[0] === 13 ? 'Toggle monophonic grains.' : e[0] === 14 ? 'Start a fresh recording window.' :
+        TOGGLES.includes(e[0]) && f?.values?.length >= 2 ? `Switch ${f.values[0]} / ${f.values[1]}; [A] shows the new colour.` :
+        '';
+    const hold = extra && e[5] === 3 ? ' Both inputs unplugged.' : '';
+    y = d.lines(margin, y + 10, `${ACTIONS[e[5]]}: ${f?.name ?? 'Unknown action'}.${hold} ${extra || 'No description available.'}`, mobile ? 43 : 140);
   }
   for (const e of entries.filter((e) => e[1] === 1 && !e[5] && e[0] !== GAIN)) {
     const f = feature(e);

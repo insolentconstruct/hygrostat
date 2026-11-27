@@ -70,6 +70,10 @@ reachable when missing or damaged Beads waves force the Plaits fallback.
 `node test/fallback_guide.js` checks the desktop and mobile fallback notes;
 historical releases keep their original guides.
 
+Set `profile.processor_spectral_toggle: true` only for releases with the
+Spectral shortcut introduced in RC1. It selects the Processor gesture help
+in the editor and generated guides.
+
 To check the staged Beta 4 entry against an integration build, pass the
 firmware ref, the build output containing `app.bin` and the entry JSON
 (`releases/beta4-development.json`):
