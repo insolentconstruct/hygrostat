@@ -19,10 +19,13 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
   const browser = await engine.launch();
   try {
     const context = await browser.newContext({ viewport: { width: 1280, height: 1000 } });
+    const spectralManifest = structuredClone(manifest);
+    spectralManifest.releases[0].profile.processor_spectral_toggle = true;
+    let offeredManifest = manifest;
     await context.route('**/*', async (route) => {
       const url = new URL(route.request().url());
       if (url.origin !== new URL(base).origin) return route.abort('internetdisconnected');
-      if (url.pathname.endsWith('/manifest.json')) return route.fulfill({ json: manifest });
+      if (url.pathname.endsWith('/manifest.json')) return route.fulfill({ json: offeredManifest });
       return route.continue();
     });
     const page = await context.newPage();
@@ -61,7 +64,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     await page.click('#confirm-replace');
     await until(async () => (await entries()).some((e) => e[0] === 4 && e[5] === 2));
     assert.match(await page.textContent('#action-2'), /Switch processor/);
-    assert.match(await page.textContent('#action-help'), /clears the recording/);
+    assert.match(await page.textContent('#action-help'), /Switch between Granular and Spectral.*clears the recording/);
     assert.equal(await page.locator('#where-action option[value="3"]').count(), 0, 'toggles never take the hold');
     // The Synth toggle is offered [A] + SEED only.
     await page.click('#browse');
@@ -69,8 +72,14 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
     assert.equal(await page.locator('#where-action option[value="1"]').count(), 1);
     assert.equal(await page.locator('#where-action option[value="2"]').count(), 0);
     assert.equal(await page.isDisabled('#build'), false);
+    offeredManifest = spectralManifest;
+    await page.reload();
+    await until(async () => await page.getAttribute('#summary', 'data-fingerprint'));
+    await page.click('#browse');
+    await page.click('#lib-4');
+    assert.match(await page.textContent('#action-help'), /Switch to Spectral from Granular, Oliverb or Abyss.*return to the previous engine/);
     assert.deepEqual(errors, []);
     await context.close();
-    console.log(`PASS ${name}: [A] + FEEDBACK slot, manual gain off the knobs and back, width on FEEDBACK, Processor toggle on [A] + FREEZE; no firmware built.`);
+    console.log(`PASS ${name}: [A] + FEEDBACK slot, manual gain, width, and release-specific Processor help; no firmware built.`);
   } finally { await browser.close(); }
 }

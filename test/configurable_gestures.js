@@ -46,7 +46,8 @@ for (const id of TOGGLES) {
   }
   assert(fitsSlot(profile, byId(id), 'action', 1) && fitsSlot(profile, byId(id), 'action', 2) === (id !== 7));
   assert(!fitsSlot(profile, byId(id), 'action', 3));
-  assert(ACTION_DOES[id] && actionHelp(byId(id)).includes('two values'));
+  assert(ACTION_DOES[id]);
+  assert.match(actionHelp(byId(id), profile), id === 4 ? /Switch between Granular and Spectral/ : /two values/);
   assert.equal(actionHelp(beta3.profile.features.find((f) => f.id === id)), '');
 }
 assert.match(actionHelp(byId(4)), /clears the recording/);
@@ -135,7 +136,7 @@ const lines = (entries) => text(guide(entries, release, 'abcd1234', false));
 assert.match(lines(factory), /Manual gain: hold \[A\] and turn FEEDBACK\./);
 assert.match(lines(swapped), /Manual gain: hold \[A\] and turn DRY\/WET\..*\[A\]\+FEEDBACK: Stereo width|\[A\]\+FEEDBACK: Stereo width.*Manual gain: hold \[A\] and turn DRY\/WET\./);
 assert.match(lines(fixed), /Manual gain: on no knob\./);
-assert.match(lines(place(factory, profile, 4, 'action', 2)), /\[A\]\+FREEZE: Processor\. Switch Granular \(Stock\) \/ Spectral.*clears the recording/);
+assert.match(lines(place(factory, profile, 4, 'action', 2)), /\[A\]\+FREEZE: Processor\. Switch between Granular and Spectral.*clears the recording/);
 assert(!lines(fixed).includes('Manual gain knob'));
 const help = featureHelp(gain, release);
 assert(help.description.length > 15 && help.description.length < 180);

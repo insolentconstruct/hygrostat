@@ -1,7 +1,7 @@
 // Copyright 2026 Insolent Construct.
 // MIT licence: see encoder.js.
 // Links follow the selected release, including its source revision during development.
-import { TOGGLES } from './profile.js?v=51ce921e4a13abc4';
+import { TOGGLES } from './profile.js?v=28252688bdfef7bb';
 const docs = 'https://github.com/insolentconstruct/eurorack/blob/{TAG}/beads/build/docs/FEATURES.md';
 const descriptions = {
   1: ['Snap final pitch, including PITCH, CV and randomness, to a scale.', 'drizzlet-options'],
@@ -85,13 +85,34 @@ export function featureHelp(feature, release) {
   return { description, details, url: docs.replace('{TAG}', encodeURIComponent(release.development ? release.source_commit : release.tag)) + '#' + section };
 }
 
-export function actionHelp(feature) {
+export function processorActionHelp(feature, profile) {
+  if (profile?.processor_spectral_toggle === true) {
+    return 'Switch to Spectral from Granular, Oliverb or Abyss. Repeat to return to the previous engine. ' +
+      'After booting into Spectral, return to Granular. Each selection saves. ' +
+      'Switching between Granular and Spectral clears the recording. ' +
+      'When the engine is ready, [A] briefly shows its colour. Spectral is steady yellow, Granular green, Oliverb red and Abyss slow blinking red. ' +
+      '[A] flashes red twice if the switch is refused. This happens when FREEZE is held or active, options are open or saving, ' +
+      'calibration or service is active, or an engine change is settling. ' +
+      'During Plaits or Rings play, [A]+FREEZE still steps the Plaits bank or Rings polyphony.';
+  }
+  const engines = feature.values.slice(2);
+  const steps = engines.length
+    ? 'With a Processor page slot, Granular switches to Spectral and any other engine switches to Granular. ' +
+      `Without a page slot, cycle through Granular → Spectral → ${engines.join(' → ')} → Granular.`
+    : 'Switch between Granular and Spectral.';
+  return steps + ' Each selection saves and [A] shows the new colour. Switching between Granular and Spectral clears the recording. ' +
+    (profile?.features?.some((f) => f.id === 42)
+      ? 'During Plaits or Rings play, [A]+FREEZE steps the Plaits bank or Rings polyphony.'
+      : 'During Plaits play, [A]+FREEZE steps the bank.');
+}
+
+export function actionHelp(feature, profile) {
   if (feature.id === 13) return 'Change on the module: an [A] gesture switches it; there is no page knob. Always: on or off, no gesture.';
   if (feature.id === 14) return 'Always On or Change on the module turns on the trim gesture.';
   if (feature.id === 9) return 'Manual needs an [A] gesture to start the synth, also when always Manual.';
+  if (feature.id === 4 && feature.action) return processorActionHelp(feature, profile);
   if (feature.action && TOGGLES.includes(feature.id)) {
     return 'On [A] + SEED or [A] + FREEZE, the gesture switches between its two values and [A] shows the new colour.' +
-      (feature.id === 4 ? ' Switching clears the recording.' : '') +
       (feature.id === 7 ? ' Synth goes on [A] + SEED only: [A] + FREEZE steps the Plaits bank.' : ' In Plaits synth play [A] + FREEZE steps the bank instead.');
   }
   return '';
