@@ -33,8 +33,8 @@ import { CATALOGUE, MANIFEST, readCatalogue, catalogueFeatures, firmwareDefiniti
 import { PAGE_LEDS } from '../static/js/profile.js';
 import { blobInfo, resolveBlobs } from '../static/js/region.js';
 
-const [repo, ref, build, images] = process.argv.slice(2);
-if (!images) throw new Error('Usage: node tools/import-catalogue.js FIRMWARE REF REGION_BUILD IMAGES_DIR');
+const [repo, ref, build, images, directory = 'beta4-catalogue'] = process.argv.slice(2);
+if (!images) throw new Error('Usage: node tools/import-catalogue.js FIRMWARE REF REGION_BUILD IMAGES_DIR [CATALOGUE_DIR]');
 const git = (...args) => execFileSync('git', ['-C', repo, ...args], { maxBuffer: 8 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] });
 const commit = git('rev-parse', '--verify', ref + '^{commit}').toString().trim();
 const read = (file) => git('show', commit + ':' + file);
@@ -66,7 +66,6 @@ if (!layout.length || layout.length !== firmwareConstant(firmware, 'kNumPlaitsDe
   throw new Error('Region or layout differs from the firmware build.');
 }
 
-const directory = 'beta4-catalogue';
 const url = (name) => `images/${directory}/${name}`;
 const inputs = join(build, 'blob');
 const blobs = new Map();

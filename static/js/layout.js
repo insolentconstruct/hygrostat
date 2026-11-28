@@ -7,7 +7,7 @@
 // Editor rules for the layout view: where each feature sits on the module and
 // how a placement, swap or removal changes the six-byte entries. Every result
 // goes through normalise(), so the validator stays the final gate.
-import { normalise, initialEntry, pageLeds, pageSlots, amountSlots, GAIN, FEEDBACK_SLOT, SYNTH } from './profile.js?v=28252688bdfef7bb';
+import { normalise, initialEntry, pageLeds, pageSlots, amountSlots, GAIN, FEEDBACK_SLOT, SYNTH, MANUAL_DELAY } from './profile.js?v=f3f0d95fa261e104';
 
 export const KNOBS = ['FEEDBACK', 'DRY/WET', 'REVERB'];
 // Entry byte for each kind of destination, and how many there are; a
@@ -25,7 +25,7 @@ export function placeName(kind, slot) {
 // What an action does, by feature.
 export const ACTION_DOES = { 9: 'Start the synth', 13: 'Switch monophonic grains', 14: 'Trim the buffer',
   2: 'Switch reverb character', 4: 'Switch processor', 6: 'Switch frozen feedback', 7: 'Switch synth',
-  23: 'Switch TIME modulation' };
+  23: 'Switch TIME modulation', [MANUAL_DELAY]: 'Toggle delay' };
 export const GROUPS = [
   ['Sound', [2, 4, 5, 6, 7, 42, 11, 12, 24, 39, 41, 43, 44, 45, 46, 47, 48, 49, 31, 32, 33]],
   ['Playback', [1, 3, 8, 10, 13, 14, 23, 26, 28]],
@@ -87,12 +87,17 @@ export function stateLabel(f, state) {
   if (f.id === GAIN) return ['On [A] + FEEDBACK', 'On no knob', 'On a knob'][state];
   if (state === 0) return f.id === 12 ? 'No diffusion' : 'Use stock behaviour';
   if (f.id === 39) return 'Start in this quality';
+  if (f.id === MANUAL_DELAY) return 'Assign a delay toggle';
   return state === 1 ? 'Always use this value' : 'Change on the module';
 }
 // The hint under each state choice.
-export function stateHint(f, state) {
+export function stateHint(f, state, entry) {
   if (f.id === GAIN) return state === 1 ? 'Hold [A] still returns to automatic gain.' : 'Hold [A] and turn it; releasing [A] saves the gain.';
   if (state === 0) return f.id === 12 ? 'Grains go to the reverb unsoftened.' : 'As in Mutable Instruments’ firmware.';
+  if (state === 1 && f.id === MANUAL_DELAY) {
+    if (entry?.[1] === 1 && !entry[2]) return 'Delay toggle is off.';
+    return 'An assigned gesture toggles delay in Granular with synth mode off.';
+  }
   if (state === 1) return f.id === 39 ? 'Each start-up until something is saved; [A] still changes it, and once saved your choice wins.' : 'No control on the module.';
   return placeable(f) ? 'On a control; your changes are saved.' : 'Its own gesture changes it; your changes are saved.';
 }
@@ -102,6 +107,7 @@ export function summary(f, e) {
   if (!e[1]) return f.id === 12 ? 'No diffusion' : 'Stock';
   // Start in quality applies at each start-up until something is saved.
   if (f.id === 39) return e[2] ? 'Starts in ' + valueLabel(f, e[2]) : valueLabel(f, 0);
+  if (f.id === MANUAL_DELAY && e[5]) return 'Toggles delay';
   return (e[1] === 1 ? 'Always ' : 'Starts ') + valueLabel(f, e[2]);
 }
 
@@ -112,6 +118,12 @@ export function edit(entries, profile, f, k, value) {
   if (!edited) { edited = initialEntry(f); candidate.push(edited); }
   edited[k] = value;
   if (k === 1 && value === 1 && f.values?.[0] === 'Off' && !edited[2]) edited[2] = 1;
+  if (f.id === MANUAL_DELAY && !edited[2]) edited[5] = 0;
+  if (f.id === MANUAL_DELAY && edited[1] === 1 && edited[2] && !edited[5]) {
+    const slot = freeSlot(candidate, 'action', profile, f);
+    if (!slot) throw new Error('Choose which [A] gesture to replace with Manual delay toggle.');
+    edited[5] = slot;
+  }
   if (k === 1 && value !== 2) {
     edited[3] = edited[4] = 0;
     if (!value || !edited[2] || !f.stateless) edited[5] = 0;
@@ -180,7 +192,11 @@ export function place(entries, profile, id, kind, slot, mode = 'replace') {
   if (taken) next = unplace(next, profile, taken[0], kind);
   const e = entryOf(next, f);
   const changes = { [index]: slot };
-  if (!(kind === 'action' && e[1] === 1 && e[2] && f.stateless) && e[1] !== 2) changes[1] = 2;
+  if (f.id === MANUAL_DELAY) {
+    changes[1] = changes[2] = 1;
+  } else if (!(kind === 'action' && e[1] === 1 && e[2] && f.stateless) && e[1] !== 2) {
+    changes[1] = 2;
+  }
   // Synth start on a page also takes the [A] hold, which only it can use.
   if (holdRules(profile) && f.id === 9 && kind !== 'action' && !e[5]) changes[5] = 3;
   return set(next, profile, f, changes);

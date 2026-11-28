@@ -23,13 +23,13 @@
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
 // Knob cards port options_guide.py: 270-degree arcs and the same LED ladder.
-import { effectiveScales, PULSE_NAMES } from './scales.js?v=28252688bdfef7bb';
-import { synthLock } from './palette.js?v=28252688bdfef7bb';
-import { defaults, equal, encodeProfile, pageLeds, PAGE_LEDS, GAIN, TOGGLES } from './profile.js?v=28252688bdfef7bb';
-import { processorActionHelp } from './help.js?v=28252688bdfef7bb';
-import { pageLedName, usedPages } from './layout.js?v=28252688bdfef7bb';
-import { RELEASE_GUIDES } from './release_guides.js?v=28252688bdfef7bb';
-import { placeable, bankWarning } from './layout.js?v=28252688bdfef7bb';
+import { effectiveScales, PULSE_NAMES } from './scales.js?v=f3f0d95fa261e104';
+import { synthLock } from './palette.js?v=f3f0d95fa261e104';
+import { defaults, equal, encodeProfile, pageLeds, PAGE_LEDS, GAIN, TOGGLES, MANUAL_DELAY } from './profile.js?v=f3f0d95fa261e104';
+import { processorActionHelp } from './help.js?v=f3f0d95fa261e104';
+import { pageLedName, usedPages } from './layout.js?v=f3f0d95fa261e104';
+import { RELEASE_GUIDES } from './release_guides.js?v=f3f0d95fa261e104';
+import { placeable, bankWarning } from './layout.js?v=f3f0d95fa261e104';
 
 const KNOBS = ['FEEDBACK', 'DRY/WET', 'REVERB'];
 export const ACTIONS = ['None', '[A]+SEED', '[A]+FREEZE', '[A] hold'];
@@ -220,6 +220,7 @@ export function guide(entries, release, fp, mobile = false, scales = null, selec
   for (const e of entries.filter((e) => e[5])) {
     const f = feature(e);
     const extra = e[0] === 4 && f ? processorActionHelp(f, release.profile) :
+        e[0] === MANUAL_DELAY ? 'Toggle delay in Granular mode.' :
         e[0] === 9 ? 'With Synth start on Manual, both inputs unplugged and FREEZE off.' :
         e[0] === 13 ? 'Toggle monophonic grains.' : e[0] === 14 ? 'Start a fresh recording window.' :
         TOGGLES.includes(e[0]) && f?.values?.length >= 2 ? `Switch ${f.values[0]} / ${f.values[1]}; [A] shows the new colour.` :

@@ -24,8 +24,8 @@
 //
 // The region after the app (firmware beads/blob/plaits_region.h): WAVE, TERR,
 // PLTS and RNGS sections, written as beads/build/tools/blob_sections.py does.
-import { crc32, sha256, SECTION_KINDS, SECTION_NAMES, MIN_SECTION_SIZE } from './profile.js?v=28252688bdfef7bb';
-import { sampleCount } from './encoder.js?v=28252688bdfef7bb';
+import { crc32, sha256, SECTION_KINDS, SECTION_NAMES, MIN_SECTION_SIZE } from './profile.js?v=f3f0d95fa261e104';
+import { sampleCount } from './encoder.js?v=f3f0d95fa261e104';
 
 export const APP_START = 0x08020000;
 export const REGION_END = 0x08100000;

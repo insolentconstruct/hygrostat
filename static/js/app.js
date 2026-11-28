@@ -9,26 +9,26 @@
 // in the browser, check the .wav, offer it for download.
 
 import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, GAIN,
-  pageLeds, gestureFirmware, exactPageRule, offeredValues } from './profile.js?v=28252688bdfef7bb';
-import { effectiveScales, validateScales } from './scales.js?v=28252688bdfef7bb';
-import { scaleEditor } from './scale_editor.js?v=28252688bdfef7bb';
-import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=28252688bdfef7bb';
-import { featureHelp, actionHelp } from './help.js?v=28252688bdfef7bb';
+  pageLeds, gestureFirmware, exactPageRule, offeredValues, MANUAL_DELAY } from './profile.js?v=f3f0d95fa261e104';
+import { effectiveScales, validateScales } from './scales.js?v=f3f0d95fa261e104';
+import { scaleEditor } from './scale_editor.js?v=f3f0d95fa261e104';
+import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=f3f0d95fa261e104';
+import { featureHelp, actionHelp } from './help.js?v=f3f0d95fa261e104';
 import { KNOBS, KINDS, libraryGroups, EXTRA_GROUPS, extraGroup, extraControl, ACTION_DOES, placeName, pageOf, entryOf, occupant, places, valueLabel, stateLabel,
   summary, stateHint, edit, place, adjust, unplace, afterUnplace, canSwap, freeSlot, changes, fitsSlot, placeable, bankWarning, slotCount,
-  usedPages, compaction, compact } from './layout.js?v=28252688bdfef7bb';
-import { drawPanel, highlight } from './panel.js?v=28252688bdfef7bb';
-import { comboImages } from './combo.js?v=28252688bdfef7bb';
-import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keepAside, keeper, describe } from './draft.js?v=28252688bdfef7bb';
+  usedPages, compaction, compact } from './layout.js?v=f3f0d95fa261e104';
+import { drawPanel, highlight } from './panel.js?v=f3f0d95fa261e104';
+import { comboImages } from './combo.js?v=f3f0d95fa261e104';
+import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keepAside, keeper, describe } from './draft.js?v=f3f0d95fa261e104';
 
-import { regionSupport, SECTION_NAMES, SECTION_KINDS, MAX_SHARE } from './profile.js?v=28252688bdfef7bb';
-import { regionImage } from './region.js?v=28252688bdfef7bb';
-import { readContent, encodeContent, decodeContent, CONTENT } from './content.js?v=28252688bdfef7bb';
-import { grids } from './terrain.js?v=28252688bdfef7bb';
-import { factoryTable } from './wavetables.js?v=28252688bdfef7bb';
-import { modelInfo } from './model_info.js?v=28252688bdfef7bb';
-import { starterBanksHash } from './starter_banks.js?v=28252688bdfef7bb';
-import { stockBanks, offeredModels, addStarterBank, defaultSelection, validateSelection, removeModel, lockSynth, synthLock, flashMeter, refit, selectedRegion, fetchAsset } from './palette.js?v=28252688bdfef7bb';
+import { regionSupport, SECTION_NAMES, SECTION_KINDS, MAX_SHARE } from './profile.js?v=f3f0d95fa261e104';
+import { regionImage } from './region.js?v=f3f0d95fa261e104';
+import { readContent, encodeContent, decodeContent, CONTENT } from './content.js?v=f3f0d95fa261e104';
+import { grids } from './terrain.js?v=f3f0d95fa261e104';
+import { factoryTable } from './wavetables.js?v=f3f0d95fa261e104';
+import { modelInfo } from './model_info.js?v=f3f0d95fa261e104';
+import { starterBanksHash } from './starter_banks.js?v=f3f0d95fa261e104';
+import { stockBanks, offeredModels, addStarterBank, defaultSelection, validateSelection, removeModel, lockSynth, synthLock, flashMeter, refit, selectedRegion, fetchAsset } from './palette.js?v=f3f0d95fa261e104';
 
 const $ = (id) => document.getElementById(id);
 const cap = (text) => text.replace(/^./, (c) => c.toUpperCase());
@@ -51,7 +51,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=28252688bdfef7bb', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=f3f0d95fa261e104', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.ready) return;
       if (data.progress !== undefined) {
@@ -95,7 +95,7 @@ const payloads = () => {
 
 let revision = 0;
 // The guide drawings are the largest module and only feed the guide downloads: fetched once the page is usable.
-const guideModule = () => import('./guide.js?v=28252688bdfef7bb')
+const guideModule = () => import('./guide.js?v=f3f0d95fa261e104')
   .catch((cause) => { throw new Error('Could not load the guide drawings. Reload the page.', { cause }); });
 const guideURLs = [];
 const comboURLs = [];
@@ -855,6 +855,7 @@ function renderInspector() {
   }
   const f = featureById(id);
   const e = entryOf(entries, f);
+  const delayNeedsReplacement = f.id === MANUAL_DELAY && !e[5] && !freeSlot(entries, 'action', profile(), f);
   const help = featureHelp(f, selected());
   body.push(el('h3', { id: 'inspector-title', tabindex: '-1', text: f.name }),
     el('p', { class: 'description' }, help.description,
@@ -872,19 +873,33 @@ function renderInspector() {
   body.push(el('fieldset', { class: 'choices' }, el('legend', { text: 'How it works' }),
     ...modes(f).filter(([state]) => state || f.id !== GAIN).map(([state]) => {
       const input = el('input', { type: 'radio', name: 'state', id: `state-${state}`, value: state,
-        onchange: () => setState(f, state) });
+        onchange: () => {
+          if (state === 1 && delayNeedsReplacement) {
+            render();
+            $('where-action').focus();
+          } else setState(f, state);
+        } });
       input.checked = e[1] === state;
       return el('label', { class: 'choice', for: `state-${state}` }, input,
-        el('span', {}, stateLabel(f, state), el('small', { text: stateHint(f, state) })));
+        el('span', {}, stateLabel(f, state), el('small', { text: stateHint(f, state, e) })));
     })));
   if (e[1] && f.id !== GAIN) {
     const label = e[1] === 1 ? 'Value' : 'Starting value';
     if (f.values) {
       const select = el('select', { id: 'value', 'aria-label': `${f.name}: ${label}` });
       const offered = offeredValues(f, profile());
-      f.values.forEach((v, i) => { if (offered.includes(i) && !(f.id === 1 && profile().version === 2 && i >= 2 && !effectiveScales(scales).some((s) => s.id === i)) && !(e[1] === 1 && i === 0 && f.values[0] === 'Off' && !(f.id === 1 && profile().version === 2))) select.add(new Option(valueLabel(f, i), i)); });
+      f.values.forEach((v, i) => { if (offered.includes(i) && !(f.id === 1 && profile().version === 2 && i >= 2 && !effectiveScales(scales).some((s) => s.id === i)) && !(e[1] === 1 && i === 0 && f.values[0] === 'Off' && f.id !== MANUAL_DELAY && !(f.id === 1 && profile().version === 2))) select.add(new Option(valueLabel(f, i), i)); });
       select.value = e[2];
-      select.onchange = () => change(2, Number(select.value));
+      select.onchange = () => {
+        const value = Number(select.value);
+        if (value && delayNeedsReplacement) {
+          render();
+          $('where-action').focus();
+          return;
+        }
+        if (f.id === MANUAL_DELAY && !value) selection = { id: f.id };
+        change(2, value);
+      };
       body.push(el('label', { class: 'field', for: 'value' }, label, select));
     } else {
       const input = el('input', { type: 'number', id: 'value', min: 0, max: 255, step: 1, required: true,
@@ -904,11 +919,13 @@ function renderInspector() {
   }
   for (const [where, allowed, title] of [['page', f.page && e[1] === 2, 'Options page position'],
     ['amount', f.amount && e[1] === 2, 'Hold [A] and turn'],
-    ['action', f.action && (e[1] === 2 || (f.stateless && e[2])), '[A] gesture']]) {
+    ['action', f.action && (delayNeedsReplacement || e[1] === 2 || (f.stateless && e[2])), '[A] gesture']]) {
     if (!allowed) continue;
     const index = KINDS[where].index;
     const select = el('select', { id: `where-${where}`, 'aria-label': `${f.name}: ${title}` });
-    select.add(new Option(e[1] === 2 && where !== 'action' ? 'Not placed' : 'None', 0));
+    select.add(new Option(delayNeedsReplacement ? 'Choose a gesture to replace' :
+      e[1] === 2 && where !== 'action' ? 'Not placed' : 'None', 0));
+    if (delayNeedsReplacement) select.options[0].disabled = true;
     for (let s = 1; s <= slotCount(where, profile()); ++s) {
       if (!fitsSlot(profile(), f, where, s)) continue;
       const other = occupant(entries, where, s);
@@ -1479,7 +1496,7 @@ async function checkCapabilities() {
   }
   // A constructor alone does not establish support for module workers.
   await new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=28252688bdfef7bb', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=f3f0d95fa261e104', { type: 'module' });
     const done = (error) => {
       clearTimeout(timer); worker.terminate();
       error ? reject(error) : resolve();
@@ -1508,7 +1525,7 @@ async function init() {
   }
   $('compatibility').hidden = true;
   try {
-    const response = await fetch('manifest.json?v=28252688bdfef7bb', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=f3f0d95fa261e104', { cache: 'no-cache' });
     manifest = await response.json();
   } catch {
     status('Could not load the release list.', 'error');
@@ -1520,7 +1537,7 @@ async function init() {
     status('Unsupported release list.', 'error'); return;
   }
   try {
-    const response = await fetch('starter-banks.json?v=28252688bdfef7bb');
+    const response = await fetch('starter-banks.json?v=f3f0d95fa261e104');
     if (!response.ok) throw new Error('Could not load starter banks.');
     const bytes = new Uint8Array(await response.arrayBuffer());
     if (await sha256(bytes) !== starterBanksHash) throw new Error('Starter banks differ from this editor version. Reload to update.');
