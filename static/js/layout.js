@@ -7,7 +7,7 @@
 // Editor rules for the layout view: where each feature sits on the module and
 // how a placement, swap or removal changes the six-byte entries. Every result
 // goes through normalise(), so the validator stays the final gate.
-import { normalise, initialEntry, pageLeds, pageSlots, amountSlots, GAIN, FEEDBACK_SLOT, SYNTH, MANUAL_DELAY } from './profile.js?v=500cf3ddb012dbb1';
+import { normalise, initialEntry, pageLeds, pageSlots, amountSlots, GAIN, FEEDBACK_SLOT, SYNTH, MANUAL_DELAY } from './profile.js?v=f3f0d95fa261e104';
 
 export const KNOBS = ['FEEDBACK', 'DRY/WET', 'REVERB'];
 // Entry byte for each kind of destination, and how many there are; a
@@ -91,10 +91,13 @@ export function stateLabel(f, state) {
   return state === 1 ? 'Always use this value' : 'Change on the module';
 }
 // The hint under each state choice.
-export function stateHint(f, state) {
+export function stateHint(f, state, entry) {
   if (f.id === GAIN) return state === 1 ? 'Hold [A] still returns to automatic gain.' : 'Hold [A] and turn it; releasing [A] saves the gain.';
   if (state === 0) return f.id === 12 ? 'Grains go to the reverb unsoftened.' : 'As in Mutable Instruments’ firmware.';
-  if (state === 1 && f.id === MANUAL_DELAY) return 'Use [A] + SEED or [A] + FREEZE to toggle delay.';
+  if (state === 1 && f.id === MANUAL_DELAY) {
+    if (entry?.[1] === 1 && !entry[2]) return 'Delay toggle is off.';
+    return 'An assigned gesture toggles delay in Granular with synth mode off.';
+  }
   if (state === 1) return f.id === 39 ? 'Each start-up until something is saved; [A] still changes it, and once saved your choice wins.' : 'No control on the module.';
   return placeable(f) ? 'On a control; your changes are saved.' : 'Its own gesture changes it; your changes are saved.';
 }

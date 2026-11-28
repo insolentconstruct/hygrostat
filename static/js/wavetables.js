@@ -26,7 +26,7 @@
 //
 // Beads wavetables (WAVE): Mutable Instruments' factory waves and integration, and
 // WAV import and resampling after their Plaits editor, at 256 samples.
-import { checkWaves, WAVE_ROWS, WAVE_ROW } from './region.js?v=500cf3ddb012dbb1';
+import { checkWaves, WAVE_ROWS, WAVE_ROW } from './region.js?v=f3f0d95fa261e104';
 
 export const WAVE_SIZE = 256;
 export const BANKS = 12;

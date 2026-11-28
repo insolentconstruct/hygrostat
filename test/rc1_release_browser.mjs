@@ -68,6 +68,31 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox], ['we
       await page.click('#browse');
       await page.click('#lib-4');
       assert.match(await page.textContent('#action-help'), /Switch to Spectral from Granular, Oliverb or Abyss/);
+      if (expected.name === 'release') {
+        await page.click('#browse');
+        await page.click('#lib-2');
+        assert.match(await page.textContent('#inspector .description'), /In modes that use it, REVERB sets its amount/);
+        await page.click('#browse');
+        await page.click('#lib-53');
+        const before = await page.getAttribute('#summary', 'data-fingerprint');
+        await page.getByText('Assign a delay toggle', { exact: false }).click();
+        assert(await page.locator('#where-action').evaluate((select) => select === document.activeElement));
+        await page.selectOption('#where-action', '1');
+        assert(await page.isVisible('#confirm-replace'));
+        await page.click('#confirm-back');
+        assert.equal(await page.getAttribute('#summary', 'data-fingerprint'), before);
+        await page.selectOption('#where-action', '2');
+        await page.click('#confirm-replace');
+        assert.equal(await page.textContent('#inspector-title'), 'Manual delay toggle');
+        assert.equal(await page.inputValue('#where-action'), '2');
+        assert.match(await page.textContent('label[for="state-1"]'), /Granular with synth mode off/);
+        await until(async () => {
+          const fingerprint = await page.getAttribute('#summary', 'data-fingerprint');
+          return fingerprint && fingerprint !== before;
+        }, 'the replacement profile fingerprint');
+        await page.selectOption('#value', '0');
+        assert.match(await page.textContent('label[for="state-1"]'), /Delay toggle is off/);
+      }
       assert.deepEqual(errors, []);
       console.log(`PASS ${name}: ${expected.name} WAV ${expected.wav} (${wav.length} bytes)`);
       await context.close();

@@ -1,7 +1,7 @@
 // Copyright 2026 Insolent Construct.
 // MIT licence: see encoder.js.
 // Links follow the selected release, including its source revision during development.
-import { TOGGLES, MANUAL_DELAY } from './profile.js?v=500cf3ddb012dbb1';
+import { TOGGLES, MANUAL_DELAY } from './profile.js?v=f3f0d95fa261e104';
 const docs = 'https://github.com/insolentconstruct/eurorack/blob/{TAG}/beads/build/docs/FEATURES.md';
 const descriptions = {
   1: ['Snap final pitch, including PITCH, CV and randomness, to a scale.', 'drizzlet-options'],
@@ -56,7 +56,7 @@ const descriptions = {
   50: ['Trim both synth audio outputs to Stock, Half, Quarter or Eighth after effects and limiting. OUT R triggers keep their level; granular, delay and spectral audio stay unchanged.', 'synth-output-level'],
   51: ['When OUT R carries grain gates, pass the first gate and then every 2nd, 4th, 8th or 16th grain. Gate widths and grain timing stay unchanged; delay, spectral and synths keep stock output.', 'grain-trigger-output'],
   52: ['Limit automatic input gain to Stock (+32 dB), +24 dB, +18 dB or +12 dB. Manual gain stays unchanged. Assign a page knob to preview and save the ceiling.', 'gain-ceiling'],
-  [MANUAL_DELAY]: ['Toggle delay with an assigned gesture in Granular mode.', 'manual-delay-toggle'],
+  [MANUAL_DELAY]: ['Toggle delay with an assigned gesture in Granular with synth mode off.', 'manual-delay-toggle'],
   54: ['Set reverb decay independently of the REVERB mix knob.', 'reverb-decay'],
   55: ['Fine reduces the calibrated TIME CV sensitivity to one eighth.', 'time-cv-range']
 };
@@ -77,7 +77,7 @@ export function featureHelp(feature, release) {
   const [baseDescription, section] = rings(feature) ? ['Beads, Plaits or Rings synth; only installed synths are offered.',
     'synth-and-rings-polyphony'] :
     feature.id === 2 && feature.values?.includes('Plate') ?
-      ['Choose Stock, Clouds-style, Plate or Bloom. REVERB sets the amount during play.', 'reverb-decay'] :
+      ['Choose Stock, Clouds-style, Plate or Bloom for the shared reverb. In modes that use it, REVERB sets its amount during play.', 'reverb-decay'] :
     feature.id === 4 && feature.values?.includes('Abyss') ?
       ['Choose Granular, Spectral, Oliverb or Abyss.', 'drizzlet-options'] : descriptions[feature.id];
   const send = feature.id === 32 && feature.values?.includes('Send');
@@ -114,7 +114,7 @@ export function processorActionHelp(feature, profile) {
 }
 
 export function actionHelp(feature, profile) {
-  if (feature.id === MANUAL_DELAY) return 'Assign [A] + SEED or [A] + FREEZE to toggle delay.';
+  if (feature.id === MANUAL_DELAY) return 'Available gestures are [A] + SEED and [A] + FREEZE.';
   if (feature.id === 13) return 'Change on the module: an [A] gesture switches it; there is no page knob. Always: on or off, no gesture.';
   if (feature.id === 14) return 'Always On or Change on the module turns on the trim gesture.';
   if (feature.id === 9) return 'Manual needs an [A] gesture to start the synth, also when always Manual.';
