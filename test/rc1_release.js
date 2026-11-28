@@ -76,6 +76,9 @@ const custom = JSON.parse(read('test/fixtures/rc1-custom.json'));
 assert.equal(custom.firmware, staged.source_commit);
 const link = new URLSearchParams({ release: staged.tag, profile: custom.profile, setup: JSON.stringify(custom.setup) });
 const shared = unshare(link.toString(), [staged]);
+// Keep Manual delay on [A] + SEED and replace Buffer trim on [A] + FREEZE.
+assert.deepEqual(shared.entries.filter(([, , , , , action]) => action).map(([id, , , , , action]) => [id, action]),
+  [[4, 2], [9, 3], [MANUAL_DELAY, 1]]);
 const selection = validateSelection(shared.setup.selection);
 const written = await selectedRegion(staged, selection, { wave: factoryTable(), terrain: null },
   async (url) => new Response(read('static/' + url)));
