@@ -47,7 +47,7 @@ The tests check the page against the firmware it offers. They need a supported N
 ```sh
 git clone --branch drizzlet https://github.com/insolentconstruct/eurorack.git firmware
 git -C firmware submodule update --init stmlib
-for t in manifest profile draft scales scales_firmware event_costs module_costs downloads combo help layout option_pages readiness costs idle_timeout recent_notes beta3_options hold_rules start_quality options_entry configurable_gestures region catalogue resonator rings wavetables terrain palette starter_banks beta4_output fallback_guide input_limits; do node test/$t.js; done
+for t in manifest profile draft scales scales_firmware event_costs module_costs downloads combo help layout option_pages readiness costs idle_timeout recent_notes beta3_options hold_rules start_quality options_entry configurable_gestures region catalogue resonator rings wavetables terrain palette starter_banks beta4_output rc1_release fallback_guide input_limits; do node test/$t.js; done
 ```
 
 `test/browser.mjs` and `test/scales_browser.mjs` run the page in Chromium, Firefox and WebKit (CI runs it in the Playwright 1.65.0 image). It needs Playwright with its browsers and the page served locally: `SITE=static BASE=http://localhost:8000/ node test/browser.mjs` (and the same command with `test/scales_browser.mjs`, `test/draft_browser.mjs`, `test/beta3_browser.mjs`, `test/pages_browser.mjs` and `test/gestures_browser.mjs`). The scale, Beta 3 and page browser tests use synthetic release lists and never build or offer a synthetic firmware image. `test/option_pages.js` checks options pages 5–7 with a synthetic seven-page release. `test/idle_timeout.js`, `test/recent_notes.js`, `test/beta3_options.js` and `test/option_pages.js` check against the final Beta 3 firmware commit (override with `BETA3_FIRMWARE_REF`); the firmware clone needs its branches. `test/hold_rules.js` checks the Beta 4 [A] hold rules against the firmware merge commit (override with `HOLD_RULES_FIRMWARE_REF`). `test/start_quality.js` checks the Beta 4 Start in quality against the firmware pull request's commit (override with `START_QUALITY_FIRMWARE_REF`). `test/options_entry.js` checks the Beta 4 options page preview and opening page against the firmware merge commit (override with `OPTIONS_ENTRY_FIRMWARE_REF`). `test/configurable_gestures.js` checks the Beta 4 [A] toggles and [A] + FEEDBACK slot against the firmware pull request and the parser before it (override with `GESTURES_FIRMWARE_REF` and `GESTURES_BASE_FIRMWARE_REF`). `test/resonator.js` checks the Beta 4 resonator features, their exact values, the eight Materials and the exact-value page rule against the firmware's catalogue, definitions and parser (override with `RESONATOR_FIRMWARE_REF`). `test/scales_firmware.js` checks the V2 codec against the current firmware parser; it needs firmware with scale-bank support. `test/region.js` checks the region writer (`WAVE`, `TERR`, `PLTS`, `RNGS`) and profile version 3 against the blob firmware commit and its `blob_sections.py` (override with `BLOB_FIRMWARE_REF`); the firmware clone needs its branches. `test/catalogue.js` checks catalogue format 2 (manifest digest, record bytes, factory block) and the firmware's shared profile cases in both codecs against the Beta 4 firmware commit (override with `CATALOGUE_FIRMWARE_REF`). `test/rings.js` checks the Rings synth (Synth value 2, feature 42, the `RNGS` section and the synth rules) against the Beta 4 firmware commit (override with `RINGS_FIRMWARE_REF`); with `REGION_BUILD` set to a firmware build's output directory it also checks that the untouched default region written from that build's blobs equals its `region.bin`.
@@ -89,10 +89,27 @@ freeze, re-import the catalogue from the matching build and use its index as
 `static`. The Pages manifest test performs the full-image pin check for
 region-enabled releases in the live manifest.
 
+The staged RC1 entry is `releases/rc1-development.json`. It pins firmware
+`6d9792888ddc1e3a7fcdc4d16b8fc244bc33e99d` and its release WAV. Its app is
+`releases/drizzlet-dev-6d979288/app.bin`. The entry is absent from
+`static/manifest.json`, and the app is outside the served tree.
+
+Re-import the RC1 catalogue using `region.bin` and `blob/` from
+`objects/region` in the GCC 9 build output for that commit.
+
+```sh
+node tools/import-catalogue.js firmware 6d9792888ddc1e3a7fcdc4d16b8fc244bc33e99d BUILD_DIR/objects/region static/images rc1-catalogue
+```
+
+Use `test/fixtures/rc1-custom.json` as the factory-wavetable custom profile
+for the bench pipeline. `test/rc1_release.js` checks the firmware pins and
+encodes both WAVs in Node. `test/rc1_release_browser.mjs` routes the staged
+entry into the page and checks both downloads in Chromium, Firefox and WebKit.
+
 ## Adding a release
 
-1. After the firmware is tagged, copy the tag's `app.bin` to `static/images/<tag>/` and delete the development image.
-2. Replace the development entry in `static/manifest.json` with the release: tag, name, date, hashes, profile format and catalogue. Preserve historical measurement data. Set `profile.hold_rules: true` for firmware that refuses other features on the [A] hold (Beta 4 on), and `profile.feedback_slot: true` for firmware with the [A] + FEEDBACK slot and feature 40 (Beta 4 on). Add `combo`: the padded bootloader's and the tag's `combo.bin` hashes from `beads/build/expected-hashes.sha256`, the `-combo.hex` hash from the release's `SHA256SUMS`, and `hex` from `node tools/combo-layout.js <tag>-combo.hex`. Add the tag's `options-guide.svg` and `options-guide-mobile.svg` to `RELEASE_GUIDES` in `static/js/release_guides.js`.
+1. After the firmware is tagged, copy the tag's `app.bin` to `static/images/<tag>/` and delete the development image. For a staged app under `releases/`, move it into the tagged directory.
+2. Add the release to `static/manifest.json`, using the staged entry when available, and set its tag, name, date, app path, hashes, profile format and catalogue. Update the staged-entry tests to use the tagged release in the same change. Preserve historical measurement data. Set `profile.hold_rules: true` for firmware that refuses other features on the [A] hold (Beta 4 on), and `profile.feedback_slot: true` for firmware with the [A] + FEEDBACK slot and feature 40 (Beta 4 on). Add `combo`: the padded bootloader's and the tag's `combo.bin` hashes from `beads/build/expected-hashes.sha256`, the `-combo.hex` hash from the release's `SHA256SUMS`, and `hex` from `node tools/combo-layout.js <tag>-combo.hex`. Add the tag's `options-guide.svg` and `options-guide-mobile.svg` to `RELEASE_GUIDES` in `static/js/release_guides.js`.
 3. Add the release's module-measured costs as `costs/<tag>-module.json` and run `node tools/import-costs.js` (see [module-measured costs](docs/DESIGN.md#module-measured-costs)). Then remove `development` and `source_commit`.
 4. Run `node tools/version-assets.js` and the tests.
 5. Merge to `main`. CI tests, builds and deploys the page.

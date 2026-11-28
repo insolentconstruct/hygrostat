@@ -22,7 +22,7 @@
 //
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
-import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=28252688bdfef7bb';
+import { SCALE_RECORD_SIZE, validateScales, readScales, writeScales, effectiveScales } from './scales.js?v=500cf3ddb012dbb1';
 
 // Six-byte entries are kept in wire order: id, state, value, page, amount, action.
 const STATES = ['Off', 'Fixed', 'Adjustable'];
@@ -49,6 +49,7 @@ export const pageSlots = (profile) => pageLeds(profile).length * 3;
 // Firmware with feedback_slot (Beta 4 on) has [A] + FEEDBACK as amount slot 3,
 // which manual gain (feature 40) keeps while that feature is Off.
 export const GAIN = 40;
+export const MANUAL_DELAY = 53;
 export const FEEDBACK_SLOT = 3;
 export const amountSlots = (profile) => profile.feedback_slot === true ? 3 : 2;
 const gainMoved = (entries) => entries.some((e) => e[0] === GAIN && e[1]);
@@ -141,7 +142,7 @@ export function validate(entries, profile, banks = 0) {
         (page && (!f.page || state !== 2)) ||
         (amount && (!f.amount || state !== 2)) ||
         (action && (!f.action || !state || (state === 1 && (!value || !f.stateless)))) ||
-        (id === 9 && state === 1 && value && !action) ||
+        ((id === 9 || id === MANUAL_DELAY) && state === 1 && value && !action) ||
         (id >= 15 && state === 2 && !f.page && f.field == null && f.saved == null && !amount) ||
         (holdRules && ((id === 9 && state === 2 && !action) || (action === 3 && id !== 9))) ||
         (id === SYNTH && action === 2)) {

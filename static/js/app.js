@@ -9,26 +9,26 @@
 // in the browser, check the .wav, offer it for download.
 
 import { defaults, decodeSettings, encodeProfile, equal, sha256, fingerprint, filenames, share, unshare, templates, validate, modes, GAIN,
-  pageLeds, gestureFirmware, exactPageRule, offeredValues } from './profile.js?v=28252688bdfef7bb';
-import { effectiveScales, validateScales } from './scales.js?v=28252688bdfef7bb';
-import { scaleEditor } from './scale_editor.js?v=28252688bdfef7bb';
-import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=28252688bdfef7bb';
-import { featureHelp, actionHelp } from './help.js?v=28252688bdfef7bb';
+  pageLeds, gestureFirmware, exactPageRule, offeredValues, MANUAL_DELAY } from './profile.js?v=500cf3ddb012dbb1';
+import { effectiveScales, validateScales } from './scales.js?v=500cf3ddb012dbb1';
+import { scaleEditor } from './scale_editor.js?v=500cf3ddb012dbb1';
+import { mountCounts, recordDownload, recordBuild, recordVisit, afterInteraction } from './downloads.js?v=500cf3ddb012dbb1';
+import { featureHelp, actionHelp } from './help.js?v=500cf3ddb012dbb1';
 import { KNOBS, KINDS, libraryGroups, EXTRA_GROUPS, extraGroup, extraControl, ACTION_DOES, placeName, pageOf, entryOf, occupant, places, valueLabel, stateLabel,
   summary, stateHint, edit, place, adjust, unplace, afterUnplace, canSwap, freeSlot, changes, fitsSlot, placeable, bankWarning, slotCount,
-  usedPages, compaction, compact } from './layout.js?v=28252688bdfef7bb';
-import { drawPanel, highlight } from './panel.js?v=28252688bdfef7bb';
-import { comboImages } from './combo.js?v=28252688bdfef7bb';
-import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keepAside, keeper, describe } from './draft.js?v=28252688bdfef7bb';
+  usedPages, compaction, compact } from './layout.js?v=500cf3ddb012dbb1';
+import { drawPanel, highlight } from './panel.js?v=500cf3ddb012dbb1';
+import { comboImages } from './combo.js?v=500cf3ddb012dbb1';
+import { DRAFT, BEFORE_LINK, REFUSED, readDraft, setAside, put, forgetDraft, keepAside, keeper, describe } from './draft.js?v=500cf3ddb012dbb1';
 
-import { regionSupport, SECTION_NAMES, SECTION_KINDS, MAX_SHARE } from './profile.js?v=28252688bdfef7bb';
-import { regionImage } from './region.js?v=28252688bdfef7bb';
-import { readContent, encodeContent, decodeContent, CONTENT } from './content.js?v=28252688bdfef7bb';
-import { grids } from './terrain.js?v=28252688bdfef7bb';
-import { factoryTable } from './wavetables.js?v=28252688bdfef7bb';
-import { modelInfo } from './model_info.js?v=28252688bdfef7bb';
-import { starterBanksHash } from './starter_banks.js?v=28252688bdfef7bb';
-import { stockBanks, offeredModels, addStarterBank, defaultSelection, validateSelection, removeModel, lockSynth, synthLock, flashMeter, refit, selectedRegion, fetchAsset } from './palette.js?v=28252688bdfef7bb';
+import { regionSupport, SECTION_NAMES, SECTION_KINDS, MAX_SHARE } from './profile.js?v=500cf3ddb012dbb1';
+import { regionImage } from './region.js?v=500cf3ddb012dbb1';
+import { readContent, encodeContent, decodeContent, CONTENT } from './content.js?v=500cf3ddb012dbb1';
+import { grids } from './terrain.js?v=500cf3ddb012dbb1';
+import { factoryTable } from './wavetables.js?v=500cf3ddb012dbb1';
+import { modelInfo } from './model_info.js?v=500cf3ddb012dbb1';
+import { starterBanksHash } from './starter_banks.js?v=500cf3ddb012dbb1';
+import { stockBanks, offeredModels, addStarterBank, defaultSelection, validateSelection, removeModel, lockSynth, synthLock, flashMeter, refit, selectedRegion, fetchAsset } from './palette.js?v=500cf3ddb012dbb1';
 
 const $ = (id) => document.getElementById(id);
 const cap = (text) => text.replace(/^./, (c) => c.toUpperCase());
@@ -51,7 +51,7 @@ function status(text, kind = '') {
 
 function encodeInWorker(app) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=28252688bdfef7bb', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=500cf3ddb012dbb1', { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.ready) return;
       if (data.progress !== undefined) {
@@ -95,7 +95,7 @@ const payloads = () => {
 
 let revision = 0;
 // The guide drawings are the largest module and only feed the guide downloads: fetched once the page is usable.
-const guideModule = () => import('./guide.js?v=28252688bdfef7bb')
+const guideModule = () => import('./guide.js?v=500cf3ddb012dbb1')
   .catch((cause) => { throw new Error('Could not load the guide drawings. Reload the page.', { cause }); });
 const guideURLs = [];
 const comboURLs = [];
@@ -882,7 +882,7 @@ function renderInspector() {
     if (f.values) {
       const select = el('select', { id: 'value', 'aria-label': `${f.name}: ${label}` });
       const offered = offeredValues(f, profile());
-      f.values.forEach((v, i) => { if (offered.includes(i) && !(f.id === 1 && profile().version === 2 && i >= 2 && !effectiveScales(scales).some((s) => s.id === i)) && !(e[1] === 1 && i === 0 && f.values[0] === 'Off' && !(f.id === 1 && profile().version === 2))) select.add(new Option(valueLabel(f, i), i)); });
+      f.values.forEach((v, i) => { if (offered.includes(i) && !(f.id === 1 && profile().version === 2 && i >= 2 && !effectiveScales(scales).some((s) => s.id === i)) && !(e[1] === 1 && i === 0 && f.values[0] === 'Off' && f.id !== MANUAL_DELAY && !(f.id === 1 && profile().version === 2))) select.add(new Option(valueLabel(f, i), i)); });
       select.value = e[2];
       select.onchange = () => change(2, Number(select.value));
       body.push(el('label', { class: 'field', for: 'value' }, label, select));
@@ -1479,7 +1479,7 @@ async function checkCapabilities() {
   }
   // A constructor alone does not establish support for module workers.
   await new Promise((resolve, reject) => {
-    const worker = new Worker('js/worker.js?v=28252688bdfef7bb', { type: 'module' });
+    const worker = new Worker('js/worker.js?v=500cf3ddb012dbb1', { type: 'module' });
     const done = (error) => {
       clearTimeout(timer); worker.terminate();
       error ? reject(error) : resolve();
@@ -1508,7 +1508,7 @@ async function init() {
   }
   $('compatibility').hidden = true;
   try {
-    const response = await fetch('manifest.json?v=28252688bdfef7bb', { cache: 'no-cache' });
+    const response = await fetch('manifest.json?v=500cf3ddb012dbb1', { cache: 'no-cache' });
     manifest = await response.json();
   } catch {
     status('Could not load the release list.', 'error');
@@ -1520,7 +1520,7 @@ async function init() {
     status('Unsupported release list.', 'error'); return;
   }
   try {
-    const response = await fetch('starter-banks.json?v=28252688bdfef7bb');
+    const response = await fetch('starter-banks.json?v=500cf3ddb012dbb1');
     if (!response.ok) throw new Error('Could not load starter banks.');
     const bytes = new Uint8Array(await response.arrayBuffer());
     if (await sha256(bytes) !== starterBanksHash) throw new Error('Starter banks differ from this editor version. Reload to update.');
